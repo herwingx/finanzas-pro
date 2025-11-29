@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   1. Design Tokens & CSS Variables
+   ========================================================================== */
+:root {
+  /* Accent Colors (Shared) */
+  --color-primary: hsl(250, 84%, 54%);
+  --color-primary-light: hsl(250, 84%, 64%);
+  --color-secondary: hsl(200, 98%, 48%);
+  --color-accent: hsl(280, 100%, 70%);
+  --color-success: hsl(142, 76%, 46%);
+  --color-danger: hsl(0, 84%, 60%);
+  --color-warning: hsl(38, 92%, 50%);
+
+  /* Light Theme (Default & System Preference) */
+  --color-bg-primary: hsl(240, 25%, 96%);    /* Light Gray */
+  --color-bg-secondary: hsl(0, 0%, 100%);     /* Pure White */
+  --color-bg-elevated: hsl(0, 0%, 100%);    /* Pure White */
+  --color-text-primary: hsl(240, 10%, 10%);    /* Near Black */
+  --color-text-secondary: hsl(240, 5%, 40%);     /* Dark Gray */
+  --color-border: hsl(240, 15%, 89%);      /* Subtle Gray */
+}
+
+.dark {
+  /* Dark Theme */
+  --color-bg-primary: hsl(240, 18%, 8%);      /* Very Dark Blue-Gray */
+  --color-bg-secondary: hsl(240, 15%, 12%);    /* Darker Blue-Gray */
+  --color-bg-elevated: hsl(240, 15%, 15%);   /* Slightly Lighter Dark */
+  --color-text-primary: hsl(0, 0%, 98%);       /* Almost White */
+  --color-text-secondary: hsl(240, 5%, 65%);     /* Lighter Gray */
+  --color-border: hsla(240, 10%, 30%, 0.5); /* Semi-transparent Gray */
+}
+
+/* Fallback for system preference */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    --color-bg-primary: hsl(240, 25%, 96%);
+    --color-bg-secondary: hsl(0, 0%, 100%);
+    --color-bg-elevated: hsl(0, 0%, 100%);
+    --color-text-primary: hsl(240, 10%, 10%);
+    --color-text-secondary: hsl(240, 5%, 40%);
+    --color-border: hsl(240, 15%, 89%);
+  }
+}
+
+/* ==========================================================================
+   2. Base & Global Styles
+   ========================================================================== */
+body {
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+/* Custom fade-in for smoother theme transitions */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

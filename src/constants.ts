@@ -10,15 +10,6 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: '7', name: 'Freelance', icon: 'work', color: 'hsl(250, 84%, 54%)', type: 'income' },
 ];
 
-export const MOCK_TRANSACTIONS = [
-  { id: 't1', amount: 8.50, description: 'Cafetería del Sol', categoryId: '1', date: new Date().toISOString(), type: 'expense' },
-  { id: 't2', amount: 75.40, description: 'Supermercado La Plaza', categoryId: '1', date: new Date(Date.now() - 86400000).toISOString(), type: 'expense' },
-  { id: 't3', amount: 2100.00, description: 'Salario Mensual', categoryId: '6', date: new Date(Date.now() - 172800000).toISOString(), type: 'income' },
-];
+export const MOCK_TRANSACTIONS = [];
 
-export const DEFAULT_BUDGETS = [
-  { categoryId: '1', limit: 500 },
-  { categoryId: '2', limit: 1600 },
-  { categoryId: '3', limit: 400 },
-  { categoryId: '4', limit: 200 },
-];
+export const DEFAULT_BUDGETS = [];

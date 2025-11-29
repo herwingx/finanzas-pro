@@ -22,9 +22,22 @@ export interface Budget {
   limit: number;
 }
 
+export interface UserProfile {
+  name: string;
+  currency: 'USD' | 'EUR' | 'MXN' | 'GBP';
+  avatar?: string; // Base64 encoded image
+}
+
 // Helper type for charts
 export interface ChartDataPoint {
   name: string;
   value: number;
   color?: string;
+}
+
+export interface MonthlySummary {
+  month: string; // YYYY-MM format
+  totalIncome: number;
+  totalExpense: number;
+  net: number;
 }

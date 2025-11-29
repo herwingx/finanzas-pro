@@ -1,27 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StorageService } from '../services/storageService';
-import { Transaction, Category } from '../types';
+import { Transaction } from '../types';
+import { useStorage } from '../hooks/useStorage';
 
 export const History = () => {
   const navigate = useNavigate();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  useEffect(() => {
-    setTransactions(StorageService.getTransactions());
-    setCategories(StorageService.getCategories());
-  }, []);
+  const transactions = useStorage(StorageService.getTransactions, 'transaction');
+  const categories = useStorage(StorageService.getCategories, 'category');
 
   const getCategoryIcon = (id: string) => categories.find(c => c.id === id)?.icon || 'sell';
   const getCategoryColor = (id: string) => categories.find(c => c.id === id)?.color || '#999';
 
   // Group transactions by date
   const grouped = transactions.reduce((groups, tx) => {
-    const date = new Date(tx.date).toLocaleDateString('es-MX', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const date = new Date(tx.date).toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
     if (!groups[date]) {
       groups[date] = [];

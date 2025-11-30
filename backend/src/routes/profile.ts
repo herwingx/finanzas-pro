@@ -1,36 +1,94 @@
 import express from 'express';
 import prisma from '../services/database';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import multer from 'multer';
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
+const defaultCategories = [
+  // Expenses
+  { name: 'Comida', icon: 'restaurant', color: '#FF6B6B', type: 'expense', budgetType: 'need' },
+  { name: 'Transporte', icon: 'directions_car', color: '#FFD166', type: 'expense', budgetType: 'need' },
+  { name: 'Vivienda', icon: 'home', color: '#06D6A0', type: 'expense', budgetType: 'need' },
+  { name: 'Ocio', icon: 'sports_esports', color: '#118AB2', type: 'expense', budgetType: 'want' },
+  { name: 'Salud', icon: 'medical_services', color: '#073B4C', type: 'expense', budgetType: 'need' },
+  { name: 'Ahorros', icon: 'savings', color: '#6B5FFF', type: 'expense', budgetType: 'savings' },
+  // Incomes
+  { name: 'Salario', icon: 'payments', color: '#34D399', type: 'income' },
+];
+
 router.get('/', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
+    const userEmail = req.user!.email;
+
     try {
-        const user = await prisma.user.findUnique({
+        let user = await prisma.user.findUnique({
             where: { id: userId },
-            select: {
-                name: true,
-                email: true,
-            }
+            select: { name: true, email: true, currency: true, avatar: true, _count: { select: { categories: true } } }
         });
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            // User doesn't exist, create them with default categories
+            const newUser = await prisma.user.create({
+                data: {
+                    id: userId,
+                    email: userEmail,
+                    password: '', // Not needed
+                    name: userEmail.split('@')[0] || 'New User',
+                    categories: {
+                        create: defaultCategories,
+                    },
+                },
+                select: { name: true, email: true, currency: true, avatar: true }
+            });
+            return res.json(newUser);
         }
 
-        // For now, we'll return a default currency and empty avatar
-        const profile = {
-            ...user,
-            currency: 'USD',
-            avatar: ''
+        if (user._count.categories === 0) {
+            // User exists but has no categories, add them
+            await prisma.category.createMany({
+                data: defaultCategories.map(cat => ({ ...cat, userId })),
+            });
         }
 
-        res.json(profile);
+        // Refetch user data to include the new categories if they were just added
+        const finalUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, email: true, currency: true, avatar: true }
+        });
+
+        res.json(finalUser);
     } catch (error) {
-        res.status(500).json({ message: 'Failed to retrieve profile.' });
+        console.error("Failed to retrieve or create profile:", error);
+        res.status(500).json({ message: 'Failed to retrieve or create profile.' });
+    }
+});
+
+router.put('/', multer().any(), async (req: AuthRequest, res) => {
+    const userId = req.user!.userId;
+    const { name, currency, avatar } = req.body;
+
+    try {
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                name,
+                currency,
+                avatar
+            },
+            select: {
+                name: true,
+                email: true,
+                currency: true,
+                avatar: true
+            }
+        });
+
+        res.json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to update profile.' });
     }
 });
 

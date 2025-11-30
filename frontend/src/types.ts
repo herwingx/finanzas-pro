@@ -26,22 +26,24 @@ export interface Budget {
   endDate: string;
 }
 
-export type FrequencyType = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+export type FrequencyType = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'biweekly_15_30';
 
 export interface RecurringTransaction {
   id: string;
-  type: TransactionType;
   amount: number;
   description: string;
-  categoryId: string;
+  type: TransactionType;
   frequency: FrequencyType;
   startDate: string;
   nextDueDate: string;
   active: boolean;
+  categoryId: string;
+  category?: Category;
 }
 
 export interface Profile {
-    name: string;
-    currency: 'USD' | 'EUR' | 'GBP' | 'MXN';
-    avatar?: string;
+  name: string;
+  email: string;
+  currency: 'USD' | 'EUR' | 'GBP' | 'MXN';
+  avatar?: string;
 }

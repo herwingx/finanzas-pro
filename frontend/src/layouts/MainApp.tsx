@@ -4,11 +4,16 @@ import Dashboard from '../pages/Dashboard';
 import History from '../pages/History';
 import NewTransaction from '../pages/NewTransaction';
 import Settings from '../pages/Settings';
+import Profile from '../pages/Profile';
+import Reports from '../pages/Reports';
+import More from '../pages/More';
+import Recurring from '../pages/Recurring';
+import Categories from '../pages/Categories';
 import BottomNav from '../components/BottomNav';
 
 const MainApp: React.FC = () => {
-    const location = useLocation();
-    const showBottomNav = !['/new'].includes(location.pathname);
+  const location = useLocation();
+  const showBottomNav = !['/new'].includes(location.pathname);
   return (
     <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
       <main className="pb-16">
@@ -17,6 +22,11 @@ const MainApp: React.FC = () => {
           <Route path="/history" element={<History />} />
           <Route path="/new" element={<NewTransaction />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/more" element={<More />} />
+          <Route path="/recurring" element={<Recurring />} />
+          <Route path="/categories" element={<Categories />} />
         </Routes>
       </main>
       {showBottomNav && <BottomNav />}

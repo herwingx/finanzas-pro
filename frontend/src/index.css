@@ -1,69 +1,417 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+/* Tailwind CSS directives - processed by PostCSS */
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind base;
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind components;
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind utilities;
 
 /* ==========================================================================
-   1. Design Tokens & CSS Variables
+   1. Premium Fintech Design Tokens & CSS Variables
    ========================================================================== */
 :root {
-  /* Accent Colors (Shared) */
-  --color-primary: hsl(250, 84%, 54%);
-  --color-primary-light: hsl(250, 84%, 64%);
-  --color-secondary: hsl(200, 98%, 48%);
-  --color-accent: hsl(280, 100%, 70%);
-  --color-success: hsl(142, 76%, 46%);
-  --color-danger: hsl(0, 84%, 60%);
-  --color-warning: hsl(38, 92%, 50%);
+  /* Premium Fintech Color Palette - Light Mode */
+  /* Primary: Sophisticated Purple-Blue (Trust & Innovation) */
+  --color-primary: hsl(252, 95%, 62%);
+  --color-primary-light: hsl(252, 95%, 72%);
+  --color-primary-dark: hsl(252, 85%, 52%);
 
-  /* Light Theme (Default & System Preference) */
-  --color-bg-primary: hsl(240, 25%, 96%);    /* Light Gray */
-  --color-bg-secondary: hsl(0, 0%, 100%);     /* Pure White */
-  --color-bg-elevated: hsl(0, 0%, 100%);    /* Pure White */
-  --color-text-primary: hsl(240, 10%, 10%);    /* Near Black */
-  --color-text-secondary: hsl(240, 5%, 40%);     /* Dark Gray */
-  --color-border: hsl(240, 15%, 89%);      /* Subtle Gray */
+  /* Secondary: Vibrant Cyan (Energy & Growth) */
+  --color-secondary: hsl(195, 100%, 50%);
+  --color-secondary-light: hsl(195, 100%, 60%);
+
+  /* Accent: Electric Purple (Premium & Modern) */
+  --color-accent: hsl(270, 100%, 68%);
+  --color-accent-light: hsl(270, 100%, 78%);
+
+  /* Success: Fresh Green (Positive Growth) */
+  --color-success: hsl(145, 80%, 42%);
+  --color-success-light: hsl(145, 70%, 52%);
+
+  /* Danger: Vibrant Red (Attention & Alerts) */
+  --color-danger: hsl(355, 85%, 58%);
+  --color-danger-light: hsl(355, 75%, 68%);
+
+  /* Warning: Warm Orange (Caution) */
+  --color-warning: hsl(35, 95%, 55%);
+  --color-warning-light: hsl(35, 95%, 65%);
+
+  /* Light Theme Backgrounds */
+  --color-bg-primary: hsl(220, 30%, 98%);
+  /* Soft Off-White */
+  --color-bg-secondary: hsl(0, 0%, 100%);
+  /* Pure White */
+  --color-bg-elevated: hsl(220, 25%, 99%);
+  /* Slightly Elevated White */
+  --color-bg-overlay: hsla(220, 30%, 98%, 0.95);
+  /* Glassmorphism overlay */
+
+  /* Light Theme Text */
+  --color-text-primary: hsl(220, 25%, 10%);
+  /* Rich Dark Blue-Gray */
+  --color-text-secondary: hsl(220, 15%, 45%);
+  /* Medium Gray */
+  --color-text-tertiary: hsl(220, 10%, 65%);
+  /* Light Gray */
+
+  /* Light Theme Borders & Dividers */
+  --color-border: hsl(220, 20%, 90%);
+  /* Subtle Border */
+  --color-border-light: hsl(220, 20%, 95%);
+  /* Very Subtle Border */
+  --color-divider: hsla(220, 20%, 85%, 0.5);
+  /* Semi-transparent Divider */
+
+  /* Light Theme Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .dark {
-  /* Dark Theme */
-  --color-bg-primary: hsl(240, 18%, 8%);      /* Very Dark Blue-Gray */
-  --color-bg-secondary: hsl(240, 15%, 12%);    /* Darker Blue-Gray */
-  --color-bg-elevated: hsl(240, 15%, 15%);   /* Slightly Lighter Dark */
-  --color-text-primary: hsl(0, 0%, 98%);       /* Almost White */
-  --color-text-secondary: hsl(240, 5%, 65%);     /* Lighter Gray */
-  --color-border: hsla(240, 10%, 30%, 0.5); /* Semi-transparent Gray */
+  /* Premium Fintech Color Palette - Dark Mode */
+  /* Adjusted for better contrast and eye comfort */
+  --color-primary: hsl(252, 90%, 68%);
+  --color-primary-light: hsl(252, 90%, 78%);
+  --color-primary-dark: hsl(252, 80%, 58%);
+
+  --color-secondary: hsl(195, 100%, 55%);
+  --color-secondary-light: hsl(195, 100%, 65%);
+
+  --color-accent: hsl(270, 95%, 72%);
+  --color-accent-light: hsl(270, 95%, 82%);
+
+  --color-success: hsl(145, 70%, 48%);
+  --color-success-light: hsl(145, 65%, 58%);
+
+  --color-danger: hsl(355, 80%, 62%);
+  --color-danger-light: hsl(355, 75%, 72%);
+
+  --color-warning: hsl(35, 90%, 60%);
+  --color-warning-light: hsl(35, 90%, 70%);
+
+  /* Dark Theme Backgrounds */
+  --color-bg-primary: hsl(220, 25%, 7%);
+  /* Deep Dark Blue-Gray */
+  --color-bg-secondary: hsl(220, 22%, 10%);
+  /* Slightly Lighter Dark */
+  --color-bg-elevated: hsl(220, 20%, 14%);
+  /* Elevated Surface */
+  --color-bg-overlay: hsla(220, 25%, 7%, 0.95);
+  /* Glassmorphism overlay */
+
+  /* Dark Theme Text */
+  --color-text-primary: hsl(220, 20%, 98%);
+  /* Almost White */
+  --color-text-secondary: hsl(220, 15%, 70%);
+  /* Light Gray */
+  --color-text-tertiary: hsl(220, 10%, 50%);
+  /* Medium Gray */
+
+  /* Dark Theme Borders & Dividers */
+  --color-border: hsla(220, 20%, 35%, 0.4);
+  /* Subtle Border */
+  --color-border-light: hsla(220, 20%, 40%, 0.2);
+  /* Very Subtle Border */
+  --color-divider: hsla(220, 20%, 40%, 0.3);
+  /* Semi-transparent Divider */
+
+  /* Dark Theme Shadows (with glow effects) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+}
+
+.light {
+  /* Explicitly set light mode colors (same as :root) */
+  --color-primary: hsl(252, 95%, 62%);
+  --color-primary-light: hsl(252, 95%, 72%);
+  --color-primary-dark: hsl(252, 85%, 52%);
+
+  --color-secondary: hsl(195, 100%, 50%);
+  --color-secondary-light: hsl(195, 100%, 60%);
+
+  --color-accent: hsl(270, 100%, 68%);
+  --color-accent-light: hsl(270, 100%, 78%);
+
+  --color-success: hsl(145, 80%, 42%);
+  --color-success-light: hsl(145, 70%, 52%);
+
+  --color-danger: hsl(355, 85%, 58%);
+  --color-danger-light: hsl(355, 75%, 68%);
+
+  --color-warning: hsl(35, 95%, 55%);
+  --color-warning-light: hsl(35, 95%, 65%);
+
+  /* Light Theme Backgrounds */
+  --color-bg-primary: hsl(220, 30%, 98%);
+  --color-bg-secondary: hsl(0, 0%, 100%);
+  --color-bg-elevated: hsl(220, 25%, 99%);
+  --color-bg-overlay: hsla(220, 30%, 98%, 0.95);
+
+  /* Light Theme Text */
+  --color-text-primary: hsl(220, 25%, 10%);
+  --color-text-secondary: hsl(220, 15%, 45%);
+  --color-text-tertiary: hsl(220, 10%, 65%);
+
+  /* Light Theme Borders & Dividers */
+  --color-border: hsl(220, 20%, 90%);
+  --color-border-light: hsl(220, 20%, 95%);
+  --color-divider: hsla(220, 20%, 85%, 0.5);
+
+  /* Light Theme Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* Fallback for system preference */
-@media (prefers-color-scheme: light) {
-  :root:not(.dark) {
-    --color-bg-primary: hsl(240, 25%, 96%);
-    --color-bg-secondary: hsl(0, 0%, 100%);
-    --color-bg-elevated: hsl(0, 0%, 100%);
-    --color-text-primary: hsl(240, 10%, 10%);
-    --color-text-secondary: hsl(240, 5%, 40%);
-    --color-border: hsl(240, 15%, 89%);
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --color-primary: hsl(252, 90%, 68%);
+    --color-primary-light: hsl(252, 90%, 78%);
+    --color-bg-primary: hsl(220, 25%, 7%);
+    --color-bg-secondary: hsl(220, 22%, 10%);
+    --color-bg-elevated: hsl(220, 20%, 14%);
+    --color-text-primary: hsl(220, 20%, 98%);
+    --color-text-secondary: hsl(220, 15%, 70%);
+    --color-border: hsla(220, 20%, 35%, 0.4);
   }
 }
 
 /* ==========================================================================
    2. Base & Global Styles
    ========================================================================== */
-body {
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  transition: background-color 0.2s ease-out, color 0.2s ease-out;
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom fade-in for smoother theme transitions */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
+  /* Prevent horizontal scroll */
+}
+
+/* Custom Scrollbar for internal containers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* ==========================================================================
+   3. Premium Animations & Transitions
+   ========================================================================== */
+
+/* Smooth fade-in animation */
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide up animation */
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale in animation */
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Shimmer loading effect */
+.animate-shimmer {
+  background: linear-gradient(90deg,
+      var(--color-bg-secondary) 0%,
+      var(--color-bg-elevated) 50%,
+      var(--color-bg-secondary) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Pulse animation for important elements */
+.animate-pulse-glow {
+  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ==========================================================================
+   4. Premium Utility Classes
+   ========================================================================== */
+
+/* Glassmorphism effect */
+.glass-effect {
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Premium gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, var(--color-success) 0%, hsl(145, 80%, 52%) 100%);
+}
+
+.gradient-danger {
+  background: linear-gradient(135deg, var(--color-danger) 0%, hsl(355, 85%, 68%) 100%);
+}
+
+/* Subtle gradient overlay for cards */
+.card-gradient {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg,
+      hsla(252, 95%, 62%, 0.03) 0%,
+      hsla(195, 100%, 50%, 0.03) 100%);
+  pointer-events: none;
+}
+
+.dark .card-gradient::before {
+  background: linear-gradient(135deg,
+      hsla(252, 90%, 68%, 0.05) 0%,
+      hsla(195, 100%, 55%, 0.05) 100%);
+}
+
+/* Premium shadow utilities */
+.shadow-premium {
+  box-shadow: var(--shadow-lg);
+}
+
+.shadow-premium-xl {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Smooth hover transitions */
+.transition-premium {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Interactive element states */
+.interactive {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive:hover {
+  transform: translateY(-1px);
+}
+
+.interactive:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   5. Scrollbar Styling
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-bg-primary);
 }

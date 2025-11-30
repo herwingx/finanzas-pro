@@ -8,7 +8,7 @@ const NavItem = ({ to, icon, label, isActive }: { to: string, icon: string, labe
   </Link>
 );
 
-export const BottomNav = () => {
+const BottomNav = () => {
   const location = useLocation();
 
   const HIDDEN_PATHS = ['/new', '/profile', '/settings', '/categories', '/budgets'];
@@ -35,3 +35,5 @@ export const BottomNav = () => {
     </div>
   );
 };
+
+export default BottomNav;

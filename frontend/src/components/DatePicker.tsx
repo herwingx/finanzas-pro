@@ -1,40 +1,46 @@
-import React, { forwardRef } from 'react';
-import ReactDatePicker, { registerLocale } from 'react-datepicker';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import './DatePicker.css';
+"use client"
 
-registerLocale('es', es);
+import * as React from "react"
+import { format } from "date-fns"
+import { es } from 'date-fns/locale';
+
+import { cn } from "../lib/utils"
+import { Calendar } from "./ui/Calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/Popover"
 
 interface DatePickerProps {
   date: Date;
-  onDateChange: (date: Date) => void;
+  onDateChange: (date: Date | undefined) => void;
 }
 
-const CustomInput = forwardRef<HTMLButtonElement, { value?: string; onClick?: () => void }>(
-  ({ value, onClick }, ref) => (
-    <button
-      type="button"
-      className="flex items-center gap-3 bg-app-bg p-3 rounded-xl border border-app-border w-full text-left"
-      onClick={onClick}
-      ref={ref}
-    >
-      <span className="material-symbols-outlined text-app-muted">calendar_today</span>
-      <span className="flex-1 text-app-text">{value}</span>
-      <span className="material-symbols-outlined text-app-muted">expand_more</span>
-    </button>
-  )
-);
-
-export const DatePicker = ({ date, onDateChange }: DatePickerProps) => {
+export function DatePicker({ date, onDateChange }: DatePickerProps) {
   return (
-    <ReactDatePicker
-      selected={date}
-      onChange={onDateChange}
-      dateFormat="d 'de' MMMM, yyyy"
-      locale="es"
-      customInput={<CustomInput />}
-      maxDate={new Date()} // Prevent selecting future dates
-    />
-  );
-};
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex h-12 w-full items-center justify-between rounded-xl border border-app-border bg-app-bg px-4 py-2 text-left text-base font-medium text-app-text ring-offset-background hover:bg-app-elevated focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          )}
+        >
+          <span className="material-symbols-outlined text-app-muted mr-3">calendar_today</span>
+          {date ? format(date, "d 'de' MMMM, yyyy", { locale: es }) : <span>Selecciona una fecha</span>}
+          <span className="material-symbols-outlined text-app-muted ml-auto">expand_more</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={onDateChange}
+          initialFocus
+          disabled={(current) => current > new Date()}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}

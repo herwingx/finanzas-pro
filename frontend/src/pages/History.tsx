@@ -1,90 +1,98 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Transaction } from '../types';
-import { useTransactions, useCategories } from '../hooks/useApi';
+import { useTransactions, useCategories, useDeleteTransaction } from '../hooks/useApi';
+import toast from 'react-hot-toast';
 
-export const History = () => {
+const History: React.FC = () => {
   const navigate = useNavigate();
-  const { data: transactions, isLoading: isLoadingTransactions, isError, error } = useTransactions();
+  const { data: transactions, isLoading: isLoadingTransactions } = useTransactions();
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
+  const deleteTransactionMutation = useDeleteTransaction();
 
+  const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
 
-  const getCategoryIcon = (id: string) => categories?.find(c => c.id === id)?.icon || 'sell';
-  const getCategoryColor = (id: string) => categories?.find(c => c.id === id)?.color || '#999';
+  const sortedTxs = useMemo(() => {
+    return transactions ? [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+  }, [transactions]);
 
-  // Group transactions by date
-  const grouped = transactions?.reduce((groups, tx) => {
-    const date = new Date(tx.date).toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    if (!groups[date]) {
-      groups[date] = [];
+  const getCategoryInfo = (id: string) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#999', name: 'General' };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    try {
+      await deleteTransactionMutation.mutateAsync(itemToDelete.id);
+      toast.success('Transacción eliminada');
+      setItemToDelete(null);
+    } catch (error) {
+      toast.error('Error al eliminar.');
     }
+  };
+
+  const grouped = sortedTxs.reduce((groups, tx) => {
+    const date = new Date(tx.date).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+    if (!groups[date]) groups[date] = [];
     groups[date].push(tx);
     return groups;
-  }, {} as Record<string, Transaction[]>) || {};
+  }, {} as Record<string, Transaction[]>);
 
-  if (isLoadingTransactions || isLoadingCategories) {
-    return <div>Loading...</div>
-  }
-
-  if (isError) {
-    return <div>Error: {error.message}</div>
-  }
+  const isLoading = isLoadingTransactions || isLoadingCategories;
 
   return (
-    <div className="pb-28 bg-app-bg min-h-screen">
-      {/* Header */}
-      <div className="sticky top-0 flex items-center p-4 bg-app-bg/95 backdrop-blur z-20 border-b border-white/5">
-        <button onClick={() => navigate(-1)} className="text-white mr-4">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <h1 className="text-lg font-bold flex-1">Historial</h1>
-      </div>
-
-      <div className="px-4 py-2 space-y-6">
-        {Object.keys(grouped).length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-20 text-app-muted opacity-60">
-            <span className="material-symbols-outlined text-6xl mb-4">receipt_long</span>
-            <p>No hay transacciones registradas</p>
-          </div>
-        ) : (
-          Object.keys(grouped).map(date => (
-            <div key={date} className="animate-fade-in">
-              <h3 className="text-app-muted text-sm font-bold mb-3 sticky top-16 bg-app-bg py-2 z-10">{date}</h3>
-              <div className="space-y-3">
-                {grouped[date].map(tx => (
-                  <div 
-                    key={tx.id} 
-                    onClick={() => navigate(`/new?editId=${tx.id}`)}
-                    className="flex items-center gap-4 bg-app-card p-3 rounded-xl border border-transparent active:scale-[0.98] transition-transform cursor-pointer"
-                  >
-                    <div 
-                      className="size-10 rounded-full flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: `${getCategoryColor(tx.categoryId)}20` }}
-                    >
-                      <span className="material-symbols-outlined" style={{ color: getCategoryColor(tx.categoryId) }}>
-                        {getCategoryIcon(tx.categoryId)}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate text-white">{tx.description}</p>
-                      <p className="text-xs text-app-muted">
-                        {categories?.find(c => c.id === tx.categoryId)?.name}
-                      </p>
-                    </div>
-                    <p className={`font-bold ${tx.type === 'income' ? 'text-app-accent' : 'text-white'}`}>
-                      {tx.type === 'expense' ? '-' : '+'}${tx.amount.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
+    <div className="pb-28 bg-app-bg min-h-screen text-app-text">
+      <header className="sticky top-0 p-4 bg-app-bg/95 backdrop-blur z-20 border-b border-app-border"><h1 className="text-lg font-bold text-center">Historial</h1></header>
+      
+      {isLoading ? <div className="p-8 text-center">Cargando...</div> :
+        <div className="px-4 py-2 space-y-6">
+          {Object.keys(grouped).length === 0 ? (
+            <div className="pt-20 text-center text-app-muted">No hay transacciones.</div>
+          ) : (
+            Object.keys(grouped).map(date => (
+              <div key={date}>
+                <h3 className="text-sm font-bold my-3 sticky top-16 bg-app-bg py-2 z-10">{date}</h3>
+                <div className="space-y-3">
+                  {grouped[date].map(tx => {
+                    const category = getCategoryInfo(tx.categoryId);
+                    return (
+                      <div key={tx.id} className="flex items-center gap-4 bg-app-card p-3 rounded-xl">
+                        <div onClick={() => navigate(`/new?editId=${tx.id}`)} className="flex items-center gap-4 flex-1 cursor-pointer">
+                          <div className="size-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
+                            <span className="material-symbols-outlined" style={{ color: category.color }}>{category.icon}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate">{tx.description}</p>
+                            <div className="flex items-center gap-2">
+                               {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted">repeat</span>}
+                              <p className="text-xs text-app-muted">{category.name}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <p className={`font-bold ${tx.type === 'income' ? 'text-app-success' : ''}`}>{tx.type === 'expense' ? '-' : '+'}{tx.amount.toFixed(2)}</p>
+                        <button onClick={() => setItemToDelete(tx)} className="p-2 text-app-muted hover:text-app-danger"><span className="material-symbols-outlined">delete</span></button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+            ))
+          )}
+        </div>
+      }
+
+      {itemToDelete && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-app-card rounded-lg p-6 m-4">
+            <h2 className="text-lg font-bold mb-4">Confirmar Eliminación</h2>
+            <p>¿Seguro que quieres eliminar "{itemToDelete.description}"?</p>
+            <div className="flex justify-end gap-4 mt-6">
+              <button onClick={() => setItemToDelete(null)} className="px-4 py-2 rounded">Cancelar</button>
+              <button onClick={handleDelete} className="px-4 py-2 rounded bg-app-danger text-white">Eliminar</button>
             </div>
-          ))
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export default History;

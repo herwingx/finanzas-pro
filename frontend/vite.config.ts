@@ -8,21 +8,27 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:80',
+          changeOrigin: true,
+        },
+      },
     },
     plugins: [
       react(),
       VitePWA({
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
         manifest: {
-          name: 'Finanzas Pro - Self Hosted',
+          name: 'Finanzas Pro',
           short_name: 'FinanzasPro',
-          description: 'Your personal finance tracker, self-hosted.',
-          theme_color: '#ffffff',
+          description: 'Tu gestor de finanzas personales.',
+          theme_color: '#6B5FFF',
           background_color: '#ffffff',
           display: 'standalone',
           orientation: 'portrait',
-          start_url: '/',
+          start_url: '.',
           icons: [
             {
               src: 'pwa-192x192.png',
@@ -41,6 +47,9 @@ export default defineConfig(({ mode }) => {
               purpose: 'any maskable'
             }
           ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}']
         }
       })
     ],

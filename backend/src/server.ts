@@ -1,14 +1,17 @@
 import express from 'express';
 import cors from 'cors';
+import bodyParser from 'body-parser'; // Import body-parser
 import authRoutes from './routes/auth';
 import transactionRoutes from './routes/transactions';
 import categoryRoutes from './routes/categories';
 import profileRoutes from './routes/profile';
+import recurringRoutes from './routes/recurring';
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json()); // Use body-parser for JSON
+app.use(bodyParser.urlencoded({ extended: true })); // Use body-parser for URL-encoded data
 
 app.get('/', (req, res) => {
   res.send('Finanzas Pro Backend is running!');
@@ -18,6 +21,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/recurring', recurringRoutes);
 
 const PORT = process.env.PORT || 4000;
 

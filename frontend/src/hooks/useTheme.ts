@@ -11,22 +11,32 @@ const useTheme = () => {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
-    // 1. Apply the 'dark' class based on the current theme state
+
+    // Determine if dark mode should be active
     const isDark =
       theme === 'dark' ||
       (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
-    root.classList.toggle('dark', isDark);
 
-    // 2. Save the user's preference to localStorage
+    // Remove both classes first to prevent conflicts
+    root.classList.remove('light', 'dark');
+
+    // Add the appropriate class
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.add('light');
+    }
+
+    // Save the user's preference to localStorage
     localStorage.setItem('theme', theme);
 
-    // 3. Listen for changes in the system's preferred color scheme
+    // Listen for changes in the system's preferred color scheme
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
       if (theme === 'system') {
-        root.classList.toggle('dark', mediaQuery.matches);
+        const systemIsDark = mediaQuery.matches;
+        root.classList.remove('light', 'dark');
+        root.classList.add(systemIsDark ? 'dark' : 'light');
       }
     };
 

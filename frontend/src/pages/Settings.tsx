@@ -1,88 +1,68 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StorageService } from '../services/storageService';
 import useTheme from '../hooks/useTheme';
 
-const ThemeSwitcher = () => {
+const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const [theme, setTheme] = useTheme();
 
-  const options = [
-    { value: 'light', label: 'Claro', icon: 'light_mode' },
-    { value: 'dark', label: 'Oscuro', icon: 'dark_mode' },
-    { value: 'system', label: 'Sistema', icon: 'settings_suggest' },
-  ];
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  return (
-    <div className="flex bg-app-card p-1 rounded-lg border border-app-border">
-      {options.map(option => (
-        <button
-          key={option.value}
-          onClick={() => setTheme(option.value as any)}
-          className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${
-            theme === option.value ? 'bg-app-primary text-white' : 'text-app-muted hover:text-app-text'
-          }`}
-        >
-          <span className="material-symbols-outlined text-base">{option.icon}</span>
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-};
-
-export const Settings = () => {
-  const navigate = useNavigate();
-
-  const handleResetData = () => {
-    if (window.confirm('¿Estás seguro de que quieres borrar todos tus datos? Esta acción no se puede deshacer.')) {
-      const success = StorageService.clearAllData();
-      if (success) {
-        alert('Todos los datos han sido restablecidos.');
-        navigate('/'); // Go back to dashboard to see the changes
-      } else {
-        alert('Hubo un error al restablecer los datos.');
-      }
-    }
+  const handleThemeChange = () => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setTheme(newTheme);
   };
 
   return (
-    <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text">
+    <div className="pb-24 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center bg-app-bg/90 backdrop-blur p-4 border-b border-app-border">
-        <button onClick={() => navigate(-1)} className="text-app-text">
-          <span className="material-symbols-outlined">arrow_back_ios_new</span>
+      <header className="sticky top-0 z-20 flex items-center bg-app-bg/80 backdrop-blur-xl px-4 py-3 border-b border-app-border">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated transition-colors text-app-text">
+          <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
         </button>
-        <h1 className="font-bold text-lg text-center flex-1">Ajustes</h1>
-        <div className="w-8"></div> {/* Spacer */}
+        <h1 className="font-bold text-base text-center flex-1 tracking-tight">Ajustes</h1>
+        <div className="w-10"></div>
       </header>
 
-      <div className="p-4 mt-4 space-y-8">
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Apariencia</h2>
-          <div className="bg-app-card rounded-xl border border-app-border p-4">
-            <p className="text-app-muted mb-4">
-              Elige cómo quieres que se vea la aplicación.
-            </p>
-            <ThemeSwitcher />
-          </div>
-        </div>
+      <div className="p-4 max-w-lg mx-auto space-y-6">
+        {/* Settings Section */}
+        <section className="animate-slide-up">
+          <div className="bg-app-card rounded-2xl border border-app-border overflow-hidden shadow-sm">
+            <div className="divide-y divide-app-border">
+              {/* Dark Mode Toggle */}
+              <div className="flex items-center justify-between p-4 hover:bg-app-elevated/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <span className="material-symbols-outlined text-app-muted">dark_mode</span>
+                  <span className="font-medium text-sm text-app-text">Modo Oscuro</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isDark}
+                    onChange={handleThemeChange}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
+                </label>
+              </div>
 
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Gestión de Datos</h2>
-          <div className="bg-app-card rounded-xl border border-app-border p-4">
-            <p className="text-app-muted mb-4">
-              Restablecer la aplicación borrará todas tus transacciones, categorías y presupuestos. 
-              La aplicación volverá a su estado inicial.
-            </p>
-            <button
-              onClick={handleResetData}
-              className="w-full py-3 bg-app-danger text-white font-bold rounded-lg hover:bg-opacity-80 transition-colors"
-            >
-              Restablecer Todos los Datos
-            </button>
+              {/* Notifications Toggle */}
+              <div className="flex items-center justify-between p-4 hover:bg-app-elevated/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <span className="material-symbols-outlined text-app-muted">notifications</span>
+                  <span className="font-medium text-sm text-app-text">Notificaciones</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" value="" className="sr-only peer" />
+                  <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
+                </label>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
 };
+
+export default Settings;

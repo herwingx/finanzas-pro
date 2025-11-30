@@ -12,11 +12,14 @@ model User {
   email     String   @unique
   password  String
   name      String
+  currency  String   @default("USD")
+  avatar    String?  // Base64 string or URL
   createdAt DateTime @default(now())
 
-  transactions Transaction[]
-  categories   Category[]
-  budgets      Budget[]
+  transactions          Transaction[]
+  categories            Category[]
+  budgets               Budget[]
+  recurringTransactions RecurringTransaction[]
 }
 
 model Transaction {
@@ -30,21 +33,28 @@ model Transaction {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-  
+  category    Category @relation(fields: [categoryId], references: [id], name: "CategoryTransactions")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  recurringTransactionId String?
+  recurringTransaction   RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull, name: "RecurringTransactions")
 }
 
 model Category {
-  id    String @id @default(uuid())
-  name  String
-  icon  String // Icon name or URL
+  id         String  @id @default(uuid())
+  name       String
+  icon       String
+  color      String
+  type       String // "income" or "expense"
+  budgetType String? // "need", "want", "savings" (for 50/30/20 rule)
   
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  transactions Transaction[]
+  transactions          Transaction[] @relation(name: "CategoryTransactions")
+  recurringTransactions RecurringTransaction[]
 
   @@unique([name, userId])
 }
@@ -59,6 +69,29 @@ model Budget {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RecurringTransaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String
+  type        String   // "income" or "expense"
+  frequency   String   // "daily", "weekly", "biweekly", "monthly", "yearly", "biweekly_15_30"
+  startDate   DateTime
+  nextDueDate DateTime
+  active      Boolean  @default(true)
+  lastRun     DateTime?
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  transactions Transaction[] @relation(name: "RecurringTransactions")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

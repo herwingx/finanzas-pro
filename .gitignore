@@ -1,3 +1,20 @@
+# Root .gitignore for monorepo
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+.vite/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
 # Logs
 logs
 *.log
@@ -6,11 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +34,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# SSL certificates
+ssl/
+*.pem
+*.crt
+*.key
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+.dockerignore

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Transaction } from '../types';
 import { useTransactions, useCategories, useDeleteTransaction } from '../hooks/useApi';
 import toast from 'react-hot-toast';
+import { PageHeader } from '../components/PageHeader';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
@@ -40,8 +41,8 @@ const History: React.FC = () => {
 
   return (
     <div className="pb-28 bg-app-bg min-h-screen text-app-text">
-      <header className="sticky top-0 p-4 bg-app-bg/95 backdrop-blur z-20 border-b border-app-border"><h1 className="text-lg font-bold text-center">Historial</h1></header>
-      
+      <PageHeader title="Historial" />
+
       {isLoading ? <div className="p-8 text-center">Cargando...</div> :
         <div className="px-4 py-2 space-y-6">
           {Object.keys(grouped).length === 0 ? (
@@ -62,7 +63,7 @@ const History: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold truncate">{tx.description}</p>
                             <div className="flex items-center gap-2">
-                               {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted">repeat</span>}
+                              {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted">repeat</span>}
                               <p className="text-xs text-app-muted">{category.name}</p>
                             </div>
                           </div>

@@ -1,12 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { DayPicker } from "react-day-picker"
+import { DayPicker, type DayPickerProps } from "react-day-picker"
 import { es } from 'date-fns/locale';
 
 import { cn } from "../../lib/utils"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export type CalendarProps = DayPickerProps
 
 function Calendar({
   className,
@@ -17,41 +17,51 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-4", className)}
       locale={es}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
+        caption: "flex justify-center pt-1 relative items-center mb-1",
+        caption_label: "text-base font-bold text-app-text",
         nav: "space-x-1 flex items-center",
-        nav_button: cn(
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+        button_previous: cn(
+          "h-9 w-9 bg-transparent p-0 rounded-lg hover:bg-app-elevated text-app-text transition-colors flex items-center justify-center absolute left-1"
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell:
-          "text-app-muted rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-app-elevated first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: cn(
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-full hover:bg-app-elevated"
+        button_next: cn(
+          "h-9 w-9 bg-transparent p-0 rounded-lg hover:bg-app-elevated text-app-text transition-colors flex items-center justify-center absolute right-1"
         ),
-        day_selected:
-          "bg-app-primary text-white hover:bg-app-primary/90 focus:bg-app-primary focus:text-white",
-        day_today: "bg-app-elevated text-app-text",
-        day_outside: "text-app-muted opacity-50",
-        day_disabled: "text-app-muted opacity-50",
-        day_range_middle:
+        month_grid: "w-full border-collapse mt-4",
+        weekdays: "flex justify-between",
+        weekday:
+          "text-app-muted rounded-md w-10 font-semibold text-xs uppercase tracking-wide",
+        week: "flex w-full mt-1 justify-between",
+        day_button: cn(
+          "h-10 w-10 p-0 font-medium rounded-lg",
+          "hover:bg-app-elevated hover:text-app-text",
+          "focus:outline-none focus:ring-2 focus:ring-app-primary focus:ring-offset-1",
+          "transition-all duration-150",
+          "flex items-center justify-center"
+        ),
+        selected:
+          "bg-app-primary text-white font-bold hover:bg-app-primary hover:text-white focus:bg-app-primary focus:text-white shadow-md scale-105",
+        today: cn(
+          "bg-app-elevated text-app-text font-bold",
+          "ring-2 ring-app-primary/30"
+        ),
+        outside: "text-app-muted/40 opacity-50 hover:opacity-75",
+        disabled: "text-app-muted/30 opacity-30 hover:bg-transparent cursor-not-allowed",
+        range_middle:
           "aria-selected:bg-app-elevated aria-selected:text-app-text",
-        day_hidden: "invisible",
+        hidden: "invisible",
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <span className="material-symbols-outlined text-base">chevron_left</span>,
-        IconRight: ({ ...props }) => <span className="material-symbols-outlined text-base">chevron_right</span>,
+        Chevron: ({ orientation }) => (
+          <span className="material-symbols-outlined text-lg">
+            {orientation === "left" ? "chevron_left" : "chevron_right"}
+          </span>
+        ),
       }}
       {...props}
     />

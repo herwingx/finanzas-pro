@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useCategories, useAddCategory, useUpdateCategory, useDeleteCategory } from '../hooks/useApi';
 import { TransactionType, Category } from '../types';
 import toast from 'react-hot-toast';
+import { PageHeader } from '../components/PageHeader';
 
-const ICONS = [ 'category', 'shopping_cart', 'restaurant', 'lunch_dining', 'local_cafe', 'directions_car', 'local_gas_station', 'flight', 'hotel', 'home', 'apartment', 'cottage', 'payments', 'savings', 'account_balance', 'credit_card', 'school', 'science', 'sports_esports', 'fitness_center', 'movie', 'music_note', 'medical_services', 'local_hospital', 'pets', 'stroller', 'checkroom', 'watch', 'diamond', 'work', 'business_center', 'build', 'star', 'favorite', 'bolt', 'receipt_long', 'redeem', 'local_offer' ];
+const ICONS = ['category', 'shopping_cart', 'restaurant', 'lunch_dining', 'local_cafe', 'directions_car', 'local_gas_station', 'flight', 'hotel', 'home', 'apartment', 'cottage', 'payments', 'savings', 'account_balance', 'credit_card', 'school', 'science', 'sports_esports', 'fitness_center', 'movie', 'music_note', 'medical_services', 'local_hospital', 'pets', 'stroller', 'checkroom', 'watch', 'diamond', 'work', 'business_center', 'build', 'star', 'favorite', 'bolt', 'receipt_long', 'redeem', 'local_offer'];
 const DEFAULT_CATEGORY_STATE = { name: '', icon: 'category', color: '#6B5FFF', type: 'expense' as TransactionType, budgetType: undefined };
 
 const COLORS = ['#FF6B6B', '#FFD166', '#06D6A0', '#118AB2', '#073B4C', '#6B5FFF', '#FF9F1C', '#FF477E', '#34D399', '#60A5FA'];
@@ -90,7 +91,7 @@ const Categories: React.FC = () => {
         setShowForm(false);
         setEditingCategory(null);
     };
-    
+
     const handleAddOrUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -119,7 +120,7 @@ const Categories: React.FC = () => {
             }
         }
     };
-    
+
     const handleReassignAndDelete = async () => {
         if (!reassigningDelete || !reassignTargetId) return;
         try {
@@ -133,31 +134,29 @@ const Categories: React.FC = () => {
 
     const renderCategoryList = (title: string, catList: Category[]) => (
         <div className="bg-app-card rounded-2xl border border-app-border overflow-hidden shadow-sm">
-          <div className="px-4 py-3 bg-app-elevated/50 border-b border-app-border flex justify-between items-center"><h3 className="font-bold text-xs">{title}</h3><span className="text-[10px] font-bold bg-app-elevated px-2 py-0.5 rounded-full text-app-muted border border-app-border">{catList.length}</span></div>
-          <div className="divide-y divide-app-border">
-            {catList.map(cat => (
-              <div key={cat.id} className="flex items-center gap-3 p-3">
-                <div className="size-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}><span className="material-symbols-outlined text-lg">{cat.icon}</span></div>
-                <span className="flex-1 font-medium text-sm truncate">{cat.name}</span>
-                <button onClick={() => handleOpenForm(cat)} className="p-1.5 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base">edit</span></button>
-                <button onClick={() => handleInitialDelete(cat)} className="p-1.5 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base text-app-danger">delete</span></button>
-              </div>
-            ))}
-          </div>
+            <div className="px-4 py-3 bg-app-elevated/50 border-b border-app-border flex justify-between items-center"><h3 className="font-bold text-xs">{title}</h3><span className="text-[10px] font-bold bg-app-elevated px-2 py-0.5 rounded-full text-app-muted border border-app-border">{catList.length}</span></div>
+            <div className="divide-y divide-app-border">
+                {catList.map(cat => (
+                    <div key={cat.id} className="flex items-center gap-3 p-3">
+                        <div className="size-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}><span className="material-symbols-outlined text-lg">{cat.icon}</span></div>
+                        <span className="flex-1 font-medium text-sm truncate">{cat.name}</span>
+                        <button onClick={() => handleOpenForm(cat)} className="p-1.5 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base">edit</span></button>
+                        <button onClick={() => handleInitialDelete(cat)} className="p-1.5 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base text-app-danger">delete</span></button>
+                    </div>
+                ))}
+            </div>
         </div>
-      );
+    );
 
     return (
         <div className="pb-24 bg-app-bg min-h-screen text-app-text">
-            <header className="sticky top-0 z-20 p-4 bg-app-bg/80 backdrop-blur-xl border-b border-app-border">
-                <h1 className="font-bold text-center">Categorías</h1>
-            </header>
+            <PageHeader title="Categorías" />
             <div className="p-4 max-w-lg mx-auto space-y-6">
                 <div className="flex justify-end">
                     {!showForm && <button onClick={() => handleOpenForm(null)} className="text-xs font-bold text-app-primary bg-app-primary/10 px-3 py-1.5 rounded-lg">Añadir Nueva</button>}
                 </div>
-                {showForm && <CategoryForm category={formState} setCategory={setFormState} onSubmit={handleAddOrUpdate} isSaving={addCategoryMutation.isLoading || updateCategoryMutation.isLoading} formTitle={editingCategory ? 'Editar Categoría' : 'Nueva Categoría'} onCancel={handleCancel} />}
-                {isLoadingCategories ? <p>Cargando...</p> : 
+                {showForm && <CategoryForm category={formState} setCategory={setFormState} onSubmit={handleAddOrUpdate} isSaving={addCategoryMutation.isPending || updateCategoryMutation.isPending} formTitle={editingCategory ? 'Editar Categoría' : 'Nueva Categoría'} onCancel={handleCancel} />}
+                {isLoadingCategories ? <p>Cargando...</p> :
                     <div className="space-y-4">
                         {renderCategoryList('Gastos', categories?.filter(c => c.type === 'expense') || [])}
                         {renderCategoryList('Ingresos', categories?.filter(c => c.type === 'income') || [])}
@@ -178,7 +177,7 @@ const Categories: React.FC = () => {
                         </select>
                         <div className="flex justify-end gap-3">
                             <button onClick={() => setReassigningDelete(null)} className="px-4 py-2 rounded-lg font-semibold text-sm">Cancelar</button>
-                            <button onClick={handleReassignAndDelete} disabled={!reassignTargetId || deleteCategoryMutation.isLoading} className="px-4 py-2 rounded-lg font-semibold text-sm bg-app-danger text-white disabled:opacity-50">{deleteCategoryMutation.isLoading ? 'Eliminando...' : 'Reasignar y Eliminar'}</button>
+                            <button onClick={handleReassignAndDelete} disabled={!reassignTargetId || deleteCategoryMutation.isPending} className="px-4 py-2 rounded-lg font-semibold text-sm bg-app-danger text-white disabled:opacity-50">{deleteCategoryMutation.isPending ? 'Eliminando...' : 'Reasignar y Eliminar'}</button>
                         </div>
                     </div>
                 </div>

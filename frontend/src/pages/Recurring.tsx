@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRecurringTransactions, useCategories, useUpdateRecurringTransaction, useDeleteRecurringTransaction } from '../hooks/useApi';
 import { RecurringTransaction, Category } from '../types';
 import toast from 'react-hot-toast';
+import { PageHeader } from '../components/PageHeader';
 
 const EditRecurringModal: React.FC<any> = ({ transaction, categories, onSave, onCancel, isSaving }) => {
     const [formState, setFormState] = useState(transaction);
@@ -53,8 +54,10 @@ const Recurring: React.FC = () => {
     const { data: recurring, isLoading: isLoadingRecurring } = useRecurringTransactions();
     const { data: categories, isLoading: isLoadingCategories } = useCategories();
     const updateMutation = useUpdateRecurringTransaction();
+    const deleteMutation = useDeleteRecurringTransaction();
 
     const [editingTx, setEditingTx] = useState<RecurringTransaction | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const handleSave = async (updatedTx: RecurringTransaction) => {
         try {
@@ -66,13 +69,21 @@ const Recurring: React.FC = () => {
         }
     };
 
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteMutation.mutateAsync(id);
+            toast.success("Transacción recurrente eliminada");
+            setDeletingId(null);
+        } catch (error) {
+            toast.error("Error al eliminar");
+        }
+    };
+
     const getCategory = (id: string) => categories?.find(c => c.id === id);
 
     return (
         <div className="pb-24 bg-app-bg min-h-screen text-app-text">
-            <header className="sticky top-0 z-20 p-4 bg-app-bg/80 backdrop-blur-xl border-b border-app-border">
-                <h1 className="font-bold text-center">Gastos Recurrentes</h1>
-            </header>
+            <PageHeader title="Gastos Recurrentes" />
 
             <div className="p-4 max-w-lg mx-auto space-y-4">
                 {isLoadingRecurring || isLoadingCategories ? <p>Cargando...</p> :
@@ -87,6 +98,7 @@ const Recurring: React.FC = () => {
                                 </div>
                                 <p className="font-bold">${tx.amount.toFixed(2)}</p>
                                 <button onClick={() => setEditingTx(tx)} className="p-2 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base">edit</span></button>
+                                <button onClick={() => setDeletingId(tx.id)} className="p-2 rounded-md hover:bg-app-elevated text-red-500"><span className="material-symbols-outlined text-base">delete</span></button>
                             </div>
                         )
                     })
@@ -94,6 +106,33 @@ const Recurring: React.FC = () => {
             </div>
 
             {editingTx && <EditRecurringModal transaction={editingTx} categories={categories} onSave={handleSave} onCancel={() => setEditingTx(null)} isSaving={updateMutation.isPending} />}
+
+            {deletingId && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-app-card rounded-2xl p-6 w-full max-w-sm">
+                        <h3 className="font-bold text-lg mb-2">¿Eliminar transacción recurrente?</h3>
+                        <p className="text-sm text-app-muted mb-6">
+                            Esto eliminará la plantilla recurrente y no se generarán más transacciones automáticas.
+                            Las transacciones ya creadas no se eliminarán.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeletingId(null)}
+                                className="px-4 py-2 rounded-lg font-semibold hover:bg-app-elevated"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => handleDelete(deletingId)}
+                                disabled={deleteMutation.isPending}
+                                className="px-4 py-2 rounded-lg font-semibold bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                            >
+                                {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

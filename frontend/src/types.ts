@@ -7,6 +7,7 @@ export interface Transaction {
   description: string;
   categoryId: string;
   date: string;
+  recurringTransactionId?: string;
 }
 
 export interface Category {

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     build: ./frontend
@@ -21,13 +19,13 @@ services:
       - db
     networks:
       - finanzas-pro-network
-    
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-finanzas}
-      POSTG-RES_PASSWORD: REDACTED_PASSWORD
+      POSTGRES_PASSWORD: REDACTED_PASSWORD
       POSTGRES_DB: finanzas_pro
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -67,6 +65,23 @@ services:
     depends_on:
       - frontend
       - backend
+    networks:
+      - finanzas-pro-network
+
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: finanzas-pro-duckdns
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Mexico_City
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN}
+      - TOKEN=${DUCKDNS_TOKEN}
+      - UPDATE_IP=ipv4
+      - LOG_FILE=false
     networks:
       - finanzas-pro-network
 

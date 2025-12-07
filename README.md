@@ -1,186 +1,131 @@
-# Finanzas Pro - Aplicación de Gestión Financiera
+# 💰 Finanzas Pro - Aplicación de Gestión Financiera
 
 Finanzas Pro es una aplicación full-stack diseñada para ayudarte a tomar el control de tus finanzas personales. Permite registrar ingresos y gastos, categorizarlos, gestionar transacciones recurrentes y analizar tus hábitos financieros con reportes detallados.
 
-## Tecnologías Utilizadas
+---
 
-La aplicación está construida con una arquitectura moderna y escalable, utilizando las siguientes tecnologías:
+## 🏗️ Cómo Funciona la App (Arquitectura)
 
--   **Frontend:**
-    -   **React con Vite:** Un entorno de desarrollo frontend rápido y moderno.
-    -   **TypeScript:** Para un código más robusto y mantenible.
-    -   **Tailwind CSS:** Para un diseño de interfaz de usuario rápido y personalizable.
-    -   **TanStack Query (React Query):** Para la gestión del estado del servidor y el fetching de datos.
+La aplicación utiliza **Docker** para ejecutarse, lo que significa que cada parte del sistema vive en su propio contenedor aislado.
 
--   **Backend:**
-    -   **Node.js con Express:** Un framework minimalista y flexible para construir la API.
-    -   **TypeScript:** Para consistencia y seguridad en el tipado.
-    -   **Prisma:** Un ORM de nueva generación para una interacción segura y eficiente con la base de datos.
-    -   **PostgreSQL:** Una base de datos relacional potente y de código abierto.
+### Diagrama de Comunicación
 
--   **Contenerización y Despliegue:**
-    -   **Docker y Docker Compose:** Para crear entornos de desarrollo y producción consistentes y aislados.
-    -   **Nginx:** Como proxy inverso para dirigir el tráfico a los servicios de frontend y backend.
+```mermaid
+graph TD
+    User((Usuario Internet)) -->|HTTPS : 443| Router[Tu Router Casero]
+    Router -->|Port Forwarding| Nginx[Proxy Nginx : 80/443]
+
+    subgraph "Servidor Docker (Tu PC)"
+        Nginx -->|/api/*| Backend[Node.js Backend : 4000]
+        Nginx -->|/*| Frontend[React Frontend : 3000]
+        Backend -->|SQL| DB[(PostgreSQL : 5432)]
+
+        DuckDNS[DuckDNS Updater] -.->|Actualiza IP| Cloud[DuckDNS Servers]
+    end
+```
+
+### Explicación Sencilla
+
+1.  **El Usuario** (tú o tu familiar) entra a `https://controlfinanzas.duckdns.org` desde su celular.
+2.  **Tu Router** recibe la visita y la manda a tu PC (gracias a que abriste los puertos).
+3.  **Nginx (El Portero)** recibe la visita y decide:
+    - ¿Quiere ver la página? -> Le muestra el **Frontend**.
+    - ¿Quiere guardar un gasto? -> Le manda los datos al **Backend**.
+4.  **Backend** guarda los datos en la **Base de Datos** de forma segura.
+5.  **DuckDNS** vigila tu IP de internet. Si tu compañía de internet te cambia la IP, este robot avisa al mundo automáticamente en 5 minutos o menos.
 
 ---
 
-## Despliegue y Ejecución en un Entorno Local
+## 🐳 ¿Por qué usamos Docker? (Beneficios)
 
-La aplicación está completamente dockerizada, lo que simplifica enormemente su despliegue en cualquier máquina con Docker instalado.
-
-### Requisitos
-
--   **Docker:** [Instrucciones de instalación](https://docs.docker.com/engine/install/)
--   **Docker Compose:** [Instrucciones de instalación](https://docs.docker.com/compose/install/) (generalmente incluido con Docker Desktop).
--   **Git:** Para clonar el repositorio.
-
-### Pasos para el Despliegue
-
-1.  **Clonar el Repositorio:**
-    ```bash
-    git clone <URL_DEL_REPOSITORIO>
-    cd finanzas-pro
-    ```
-
-2.  **Configurar Variables de Entorno:**
-    El backend necesita un archivo `.env` para conectarse a la base de datos. Crea un archivo llamado `.env` dentro de la carpeta `backend/` con el siguiente contenido. Docker Compose se encargará de usar estas variables para configurar la base de datos PostgreSQL.
-
-    ```env
-    # backend/.env
-    DATABASE_URL="postgresql://herwingx:REDACTED_PASSWORD@db:5432/finanzas_pro"
-    ```
-
-3.  **Construir y Levantar los Contenedores:**
-    Este comando construirá las imágenes de Docker para el frontend y el backend, y luego iniciará todos los servicios (frontend, backend, base de datos y Nginx) en segundo plano.
-
-    ```bash
-    docker compose up --build -d
-    ```
-    -   `--build`: Fuerza la reconstrucción de las imágenes si ha habido cambios en el código o en los `Dockerfiles`.
-    -   `-d`: Ejecuta los contenedores en modo "detached" (en segundo plano).
-
-4.  **Aplicar las Migraciones de la Base de Datos:**
-    La primera vez que levantes la aplicación, la base de datos estará vacía. Debes aplicar el esquema de Prisma para crear las tablas necesarias.
-
-    ```bash
-    docker compose exec backend npx prisma migrate dev
-    ```
-    Este comando se ejecuta *dentro* del contenedor del backend para asegurar que tenga conexión con la base de datos.
-
-5.  **Acceder a la Aplicación:**
-    ¡Listo! La aplicación ahora debería estar disponible en tu navegador en la siguiente dirección:
-    [http://localhost](http://localhost) (o la IP de tu máquina si la estás ejecutando en un servidor local).
+1.  **Resiliencia (Soporta apagones):**
+    - Hemos configurado `restart: unless-stopped`. Si se va la luz en tu casa, cuando vuelva y prendas la PC, **la aplicación arrancará sola**.
+2.  **Seguridad:**
+    - La base de datos está aislada. Si algún virus entra a tu PC, es difícil que afecte los datos dentro del contenedor.
+3.  **Portabilidad:**
+    - Si cambias de computadora, solo copias la carpeta, instalas Docker y corres un comando. Todo funcionará igual.
 
 ---
 
-## Gestión de Cambios y Desarrollo
+## 🔒 ¿Cómo funciona el SSL (Candadito Verde)?
 
-Para realizar cambios en el código y verlos reflejados, sigue este flujo de trabajo:
+Para que tu aplicación sea segura y nadie pueda interceptar tus datos financieros, usamos **SSL/HTTPS**. Así funciona en nuestro sistema:
 
-1.  **Realiza tus cambios:** Modifica el código en el frontend o el backend según sea necesario.
-
-2.  **Reconstruye la imagen del servicio modificado:** Si cambiaste código del backend, reconstruye solo el backend. Esto es más rápido que reconstruir todo.
-    ```bash
-    # Ejemplo para el backend
-    docker compose build backend
-    ```
-
-3.  **Reinicia los servicios para aplicar los cambios:** El comando `up` aplicará los cambios y recreará solo los contenedores necesarios.
-    ```bash
-    docker compose up -d
-    ```
-
-4.  **Si modificas el esquema de la base de datos (`schema.prisma`):** Este es un cambio crítico que requiere una migración.
-    -   **Crea la migración:**
-        ```bash
-        docker compose exec backend npx prisma migrate dev --name "nombre-descriptivo-de-la-migracion"
-        ```
-    -   Esto aplicará la migración y generará los nuevos tipos para Prisma Client. Después, es una buena práctica reconstruir la imagen del backend.
+1.  **Let's Encrypt:** Es una entidad gratuita que emite certificados de seguridad.
+2.  **El Script (`install_ssl.sh`):**
+    - Detiene momentáneamente tu servidor web.
+    - Llama Certbot para hablar con Let's Encrypt.
+    - Let's Encrypt verifica que controlas `controlfinanzas.duckdns.org` conectándose a tu IP pública (por eso la configuración del router `0.0.0.0 ~ 255.255.255.255` es vital).
+    - Si todo está bien, te entrega el certificado.
+3.  **Nginx:** Usa ese certificado para proteger tu conexión.
 
 ---
 
-## Disponibilidad Continua y Persistencia de Datos
+## 🚀 Guía de Instalación (Completa)
 
-### Disponibilidad
+### Paso 1: Configurar Variables
 
-La aplicación está configurada para ser resiliente. En el archivo `docker-compose.yml`, todos los servicios clave (frontend, backend, db, nginx) tienen la política `restart: unless-stopped`.
-
--   **¿Qué significa esto?** Si un contenedor se detiene por un error o si el servidor se reinicia, Docker lo levantará automáticamente. Esto asegura que la aplicación intente recuperarse por sí misma, minimizando el tiempo de inactividad.
-
-### Persistencia de Datos
-
-**Tus datos están seguros.** La base de datos PostgreSQL utiliza un **Volumen de Docker** (`postgres_data`) para almacenar toda su información.
-
--   **¿Cómo funciona?** Los volúmenes se gestionan por Docker y existen fuera del ciclo de vida de los contenedores. Esto significa que puedes detener, eliminar o reconstruir el contenedor de la base de datos (`db`) sin perder ni un solo dato. Al levantar el contenedor de nuevo, se conectará automáticamente al volumen existente y todos tus usuarios, transacciones y categorías estarán ahí.
-
----
-
-## Monitoreo y Buenas Prácticas
-
-Mantener la aplicación funcionando correctamente es crucial. Aquí hay algunas prácticas recomendadas para monitorear su estado.
-
-### 1. Visualización de Logs en Tiempo Real
-
-Los logs son tu principal fuente de información para depurar problemas. Puedes ver los logs de todos los servicios o de uno en específico.
-
--   **Ver logs de todos los servicios:**
-    ```bash
-    docker compose logs -f
-    ```
-
--   **Ver logs de un servicio específico (ej: backend):**
-    ```bash
-    docker compose logs -f backend
-    ```
-    -   `-f`: Sigue la salida de los logs en tiempo real.
-
-    **¿Qué buscar en los logs del backend?**
-    -   Errores de Prisma (`PrismaClientKnownRequestError`).
-    -   Errores 500 (Internal Server Error) que indiquen fallos no controlados.
-    -   Mensajes de conexión a la base de datos.
-
-    **¿Qué buscar en los logs de Nginx?**
-    -   Errores 404 (Not Found) o 502 (Bad Gateway), que pueden indicar que Nginx no puede comunicarse con el frontend o el backend.
-
-### 2. Estado de los Contenedores
-
-Verifica que todos los contenedores estén en funcionamiento y no se hayan reiniciado inesperadamente.
+Asegúrate de tener tu archivo `.env` en la raíz con tus datos de DuckDNS:
 
 ```bash
-docker compose ps
+# .env
+DUCKDNS_SUBDOMAIN=controlfinanzas
+DUCKDNS_TOKEN=tu-token-largo-de-duckdns
 ```
-El comando te mostrará el estado (`STATUS`) de cada servicio. Deberían estar todos en `Up` o `running`. Si un contenedor está en `restarting` o `exited`, es una señal de que algo anda mal y debes revisar sus logs.
 
-### 3. Conexión a la Base de Datos
+### Paso 2: Arrancar el Sistema
 
-Si la aplicación no puede leer o escribir datos, es posible que haya un problema con la base de datos. Puedes conectarte directamente a la base de datos dentro del contenedor para realizar diagnósticos.
+En la terminal, dentro de la carpeta del proyecto:
 
-1.  **Abrir una sesión de `psql` dentro del contenedor de la base de datos:**
+```bash
+docker compose up -d
+```
+
+_Esto descarga e inicia todos los servicios._
+
+### Paso 3: Configurar el HTTPS Seguro (Candadito Verde)
+
+Como ya **abriste los puertos 80 y 443** en tu router:
+
+1.  Asegúrate de que puedes entrar a `http://controlfinanzas.duckdns.org` (aunque diga "No seguro").
+2.  Ejecuta este comando para instalar el certificado automáticamente:
+
     ```bash
-    docker compose exec db psql -U herwingx -d finanzas_pro
+    ./install_ssl.sh
     ```
 
-2.  **Una vez dentro, puedes ejecutar comandos de SQL para verificar los datos:**
-    -   `\dt`: Lista todas las tablas para confirmar que la migración se aplicó.
-    -   `SELECT * FROM "User";`: Muestra todos los usuarios.
-    -   `\q`: Para salir.
+3.  El script te dirá que los certificados se crearon. Ahora debes editar `nginx/nginx.conf` y descomentar las líneas de SSL (te lo indicará el archivo).
+4.  Reinicia Nginx: `docker compose restart nginx`
 
-### 4. Actualizaciones y Mantenimiento
+¡Listo! Ahora tu app es segura.
 
-Para actualizar la aplicación con los últimos cambios del repositorio:
+---
 
-1.  **Obtener los últimos cambios:**
-    ```bash
-    git pull
-    ```
+## 🛠️ Mantenimiento
 
-2.  **Reconstruir y reiniciar los servicios:**
-    ```bash
-    docker compose up --build -d
-    ```
+- **Ver si todo está funcionando:**
+  ```bash
+  docker compose ps
+  ```
+- **Ver si hay errores (logs):**
+  ```bash
+  docker compose logs -f
+  ```
+- **Actualizar la app (si cambias código):**
+  ```bash
+  docker compose up -d --build
+  ```
+- **Hacer copia de seguridad de tus datos:**
+  ```bash
+  docker compose exec db pg_dump -U herwingx finanzas_pro > respaldo_finanzas.sql
+  ```
 
-3.  **Aplicar nuevas migraciones (si las hay):**
-    Si se ha modificado el `schema.prisma`, es crucial aplicar las nuevas migraciones.
-    ```bash
-    docker compose exec backend npx prisma migrate dev
-    ```
+---
+
+## 📁 Estructura del Proyecto
+
+- `docker-compose.yml`: El archivo maestro que conecta todo.
+- `frontend/`: La página web (React).
+- `backend/`: El cerebro que procesa datos (Node.js).
+- `nginx/`: El servidor web público.
+- `install_ssl.sh`: Tu herramienta mágica para el HTTPS.

@@ -47,4 +47,3 @@ ssl/
 
 # Docker
 .dockerignore
-SOLUCION_TARJETAS.md

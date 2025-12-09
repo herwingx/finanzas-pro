@@ -55,5 +55,6 @@ RUN npx prisma generate
 # Copy built application
 COPY --from=builder /usr/src/app/dist ./dist
 
+RUN apk add --no-cache wget
 EXPOSE 4000
 CMD ["node", "dist/server.js"]

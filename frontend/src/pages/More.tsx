@@ -7,7 +7,9 @@ const More: React.FC = () => {
   const navItems = [
     { path: '/profile', icon: 'person', title: 'Perfil', description: 'Edita tu nombre, avatar y moneda.' },
     { path: '/categories', icon: 'category', title: 'Categorías', description: 'Administra tus categorías de gastos e ingresos.' },
+    { path: '/reports', icon: 'bar_chart', title: 'Reportes', description: 'Visualiza tus gastos e ingresos.' },
     { path: '/recurring', icon: 'update', title: 'Gastos Recurrentes', description: 'Gestiona tus gastos fijos.' },
+    { path: '/installments', icon: 'credit_card', title: 'Meses Sin Intereses', description: 'Administra tus compras a MSI.' },
     { path: '/settings', icon: 'settings', title: 'Ajustes', description: 'Configura la apariencia y notificaciones.' },
   ];
 

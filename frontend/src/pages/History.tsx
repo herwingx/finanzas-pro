@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Transaction } from '../types';
-import { useTransactions, useCategories, useDeleteTransaction } from '../hooks/useApi';
+import { useTransactions, useCategories, useDeleteTransaction, useAccounts } from '../hooks/useApi';
 import toast from 'react-hot-toast';
 import { PageHeader } from '../components/PageHeader';
 
@@ -9,6 +9,7 @@ const History: React.FC = () => {
   const navigate = useNavigate();
   const { data: transactions, isLoading: isLoadingTransactions } = useTransactions();
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
+  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const deleteTransactionMutation = useDeleteTransaction();
 
   const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
@@ -17,7 +18,8 @@ const History: React.FC = () => {
     return transactions ? [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
   }, [transactions]);
 
-  const getCategoryInfo = (id: string) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#999', name: 'General' };
+  const getCategoryInfo = (id: string | null) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#999', name: 'General' };
+  const getAccountName = (id: string | null) => accounts?.find(a => a.id === id)?.name || 'Cuenta desconocida';
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
@@ -37,7 +39,7 @@ const History: React.FC = () => {
     return groups;
   }, {} as Record<string, Transaction[]>);
 
-  const isLoading = isLoadingTransactions || isLoadingCategories;
+  const isLoading = isLoadingTransactions || isLoadingCategories || isLoadingAccounts;
 
   return (
     <div className="pb-28 bg-app-bg min-h-screen text-app-text">
@@ -53,6 +55,26 @@ const History: React.FC = () => {
                 <h3 className="text-sm font-bold my-3 sticky top-16 bg-app-bg py-2 z-10">{date}</h3>
                 <div className="space-y-3">
                   {grouped[date].map(tx => {
+                    if (tx.type === 'transfer') {
+                      return (
+                        <div key={tx.id} className="flex items-center gap-4 bg-app-card p-3 rounded-xl">
+                          <div onClick={() => navigate(`/new?editId=${tx.id}`)} className="flex items-center gap-4 flex-1 cursor-pointer">
+                            <div className="size-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#88888820' }}>
+                              <span className="material-symbols-outlined text-app-muted">swap_horiz</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">Transferencia</p>
+                              <p className="text-xs text-app-muted truncate">
+                                {getAccountName(tx.accountId)} → {getAccountName(tx.destinationAccountId)}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="font-bold text-app-muted">{tx.amount.toFixed(2)}</p>
+                          <button onClick={() => setItemToDelete(tx)} className="p-2 text-app-muted hover:text-app-danger"><span className="material-symbols-outlined">delete</span></button>
+                        </div>
+                      );
+                    }
+
                     const category = getCategoryInfo(tx.categoryId);
                     return (
                       <div key={tx.id} className="flex items-center gap-4 bg-app-card p-3 rounded-xl">
@@ -62,11 +84,11 @@ const History: React.FC = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold truncate">{tx.description}</p>
-                            <div className="flex items-center gap-2">
-                              {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted">repeat</span>}
-                              <p className="text-xs text-app-muted">{category.name}</p>
-                            </div>
-                          </div>
+                                                          <div className="flex items-center gap-2">
+                                                            {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted" title="Recurrente">repeat</span>}
+                                                            {tx.installmentPurchaseId && <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded-md">MSI</span>}
+                                                            <p className="text-xs text-app-muted">{category.name}</p>
+                                                          </div>                          </div>
                         </div>
                         <p className={`font-bold ${tx.type === 'income' ? 'text-app-success' : ''}`}>{tx.type === 'expense' ? '-' : '+'}{tx.amount.toFixed(2)}</p>
                         <button onClick={() => setItemToDelete(tx)} className="p-2 text-app-muted hover:text-app-danger"><span className="material-symbols-outlined">delete</span></button>

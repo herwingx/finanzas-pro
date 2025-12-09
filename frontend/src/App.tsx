@@ -5,11 +5,13 @@ import RegisterPage from './pages/Auth/RegisterPage';
 import ProtectedRoute from './layouts/ProtectedRoute';
 import MainApp from './layouts/MainApp';
 import { ScrollToTop } from './components/ScrollToTop';
+import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
   return (
     <Router>
       <ScrollToTop />
+      <Toaster richColors position="top-center" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

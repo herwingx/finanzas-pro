@@ -23,9 +23,9 @@ router.get('/', async (req: AuthRequest, res) => {
 // Create recurring transaction
 router.post('/', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { amount, description, type, frequency, startDate, categoryId } = req.body || {}; // Provide a default empty object
+  const { amount, description, type, frequency, startDate, categoryId, accountId } = req.body || {}; // Provide a default empty object
 
-  if (!amount || !description || !type || !frequency || !startDate || !categoryId) {
+  if (!amount || !description || !type || !frequency || !startDate || !categoryId || !accountId) {
     return res.status(400).json({ message: 'Missing required fields.' });
   }
 
@@ -40,6 +40,7 @@ router.post('/', async (req: AuthRequest, res) => {
         nextDueDate: new Date(startDate), // First run is on start date
         lastRun: null, // Not run yet
         categoryId,
+        accountId,
         userId,
       },
     });
@@ -54,7 +55,7 @@ router.post('/', async (req: AuthRequest, res) => {
 router.put('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
     const { id } = req.params;
-    const { amount, description, type, frequency, startDate, categoryId } = req.body || {};
+    const { amount, description, type, frequency, startDate, categoryId, accountId } = req.body || {};
 
     try {
         const updated = await prisma.recurringTransaction.updateMany({
@@ -66,6 +67,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
                 frequency,
                 startDate: startDate ? new Date(startDate) : undefined,
                 categoryId,
+                accountId,
             },
         });
 

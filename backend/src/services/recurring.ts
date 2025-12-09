@@ -1,5 +1,5 @@
 import prisma from './database';
-import { RecurringTransaction } from '@prisma/client';
+import { createTransactionAndAdjustBalances } from './transactions';
 
 export const calculateNextDueDate = (currentDate: Date, frequency: string): Date => {
   const nextDate = new Date(currentDate);
@@ -55,29 +55,29 @@ export const processRecurringTransactions = async (userId: string) => {
   });
 
   for (const rt of recurringTransactions) {
-    // Crear la transacción
-    await prisma.transaction.create({
-      data: {
+    await prisma.$transaction(async (tx) => {
+      // 1. Create the transaction and adjust balances
+      await createTransactionAndAdjustBalances(tx, {
         amount: rt.amount,
         description: rt.description,
-        date: new Date(), // Fecha de hoy
-        type: rt.type,
+        date: new Date(),
+        type: rt.type as 'income' | 'expense',
         userId: rt.userId,
+        accountId: rt.accountId,
         categoryId: rt.categoryId,
-        recurringTransactionId: rt.id, // Link to the recurring definition
-      },
-    });
+      });
 
-    // Calcular la siguiente fecha
-    const nextDate = calculateNextDueDate(rt.nextDueDate, rt.frequency);
+      // 2. Calculate the next due date
+      const nextDate = calculateNextDueDate(rt.nextDueDate, rt.frequency);
 
-    // Actualizar la transacción recurrente
-    await prisma.recurringTransaction.update({
-      where: { id: rt.id },
-      data: {
-        lastRun: new Date(),
-        nextDueDate: nextDate,
-      },
+      // 3. Update the recurring transaction
+      await tx.recurringTransaction.update({
+        where: { id: rt.id },
+        data: {
+          lastRun: new Date(),
+          nextDueDate: nextDate,
+        },
+      });
     });
   }
 };

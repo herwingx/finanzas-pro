@@ -1,13 +1,18 @@
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export interface Transaction {
   id: string;
   type: TransactionType;
   amount: number;
   description: string;
-  categoryId: string;
+  categoryId?: string; // categoryId becomes optional for transfers
+  category?: Category;
+  accountId: string;
+  account?: Account;
+  destinationAccountId?: string; // New field for transfers
   date: string;
   recurringTransactionId?: string;
+  installmentPurchaseId?: string;
 }
 
 export interface Category {
@@ -40,6 +45,38 @@ export interface RecurringTransaction {
   active: boolean;
   categoryId: string;
   category?: Category;
+  accountId: string;
+  account?: Account;
+}
+
+export interface InstallmentPurchase {
+  id: string;
+  description: string;
+  totalAmount: number;
+  installments: number;
+  monthlyPayment: number;
+  purchaseDate: string;
+  accountId: string;
+  userId: string;
+  account?: Account;
+  generatedTransactions?: Transaction[];
+  categoryId: string;
+  paidInstallments: number;
+  paidAmount: number;
+}
+
+export type AccountType = 'DEBIT' | 'CREDIT' | 'CASH';
+
+export interface Account {
+  id: string;
+  name: string;
+  type: AccountType;
+  balance: number;
+  creditLimit?: number;
+  cutoffDay?: number;
+  paymentDay?: number;
+  userId: string;
+  transactions?: Transaction[];
 }
 
 export interface Profile {

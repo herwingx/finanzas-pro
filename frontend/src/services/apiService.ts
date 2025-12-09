@@ -1,4 +1,4 @@
-import { Transaction, Category, Budget, Profile, RecurringTransaction } from '../types';
+import { Transaction, Category, Budget, Profile, RecurringTransaction, Account, InstallmentPurchase } from '../types';
 
 const API_URL = '/api';
 
@@ -8,6 +8,109 @@ const getAuthHeaders = () => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
     } as any;
+};
+
+// Installment Purchases
+export const getInstallmentPurchases = async (): Promise<InstallmentPurchase[]> => {
+    const response = await fetch(`${API_URL}/installments`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch installment purchases');
+    return response.json();
+};
+
+export const addInstallmentPurchase = async (purchase: Omit<InstallmentPurchase, 'id' | 'user' | 'account' | 'generatedTransactions' | 'paidInstallments' | 'paidAmount' | 'userId' | 'monthlyPayment'>): Promise<InstallmentPurchase> => {
+    const response = await fetch(`${API_URL}/installments`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(purchase),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add installment purchase');
+    }
+    return response.json();
+};
+
+export const getInstallmentPurchase = async (id: string): Promise<InstallmentPurchase> => {
+    const response = await fetch(`${API_URL}/installments/${id}`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch installment purchase');
+    return response.json();
+};
+
+export const updateInstallmentPurchase = async (id: string, purchase: Partial<Omit<InstallmentPurchase, 'id' | 'user' | 'account' | 'generatedTransactions' | 'paidInstallments' | 'paidAmount' | 'userId' | 'monthlyPayment'>>): Promise<InstallmentPurchase> => {
+    const response = await fetch(`${API_URL}/installments/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(purchase),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update installment purchase');
+    }
+    return response.json();
+};
+
+export const deleteInstallmentPurchase = async (id: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/installments/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete installment purchase');
+    }
+};
+
+export const payInstallment = async (id: string, payment: { amount: number; description?: string; date: string; accountId: string }): Promise<any> => {
+    const response = await fetch(`${API_URL}/installments/${id}/pay`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payment),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to process installment payment');
+    }
+    return response.json();
+};
+
+// Accounts
+export const getAccounts = async (): Promise<Account[]> => {
+    const response = await fetch(`${API_URL}/accounts`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch accounts');
+    return response.json();
+};
+
+export const addAccount = async (account: Omit<Account, 'id' | 'userId' | 'transactions'>): Promise<Account> => {
+    const response = await fetch(`${API_URL}/accounts`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(account),
+    });
+    if (!response.ok) throw new Error('Failed to add account');
+    return response.json();
+};
+
+export const updateAccount = async (id: string, account: Partial<Omit<Account, 'id' | 'userId' | 'transactions'>>): Promise<Account> => {
+    const response = await fetch(`${API_URL}/accounts/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(account),
+    });
+    if (!response.ok) throw new Error('Failed to update account');
+    return response.json();
+};
+
+export const deleteAccount = async (id: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/accounts/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        if (response.status === 409) {
+            throw new Error('Cannot delete account because it has associated transactions.');
+        }
+        throw new Error('Failed to delete account');
+    }
 };
 
 // Transactions
@@ -23,7 +126,7 @@ export const getTransaction = async (id: string): Promise<Transaction> => {
     return response.json();
 }
 
-export const addTransaction = async (transaction: Omit<Transaction, 'id' | 'categoryId'> & { categoryId: string }): Promise<Transaction> => {
+export const addTransaction = async (transaction: Omit<Transaction, 'id'>): Promise<Transaction> => {
     const response = await fetch(`${API_URL}/transactions`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -130,7 +233,7 @@ export const updateProfile = async (profile: Partial<Profile>): Promise<Profile>
         const formData = new FormData();
         formData.append('name', profile.name || '');
         formData.append('currency', profile.currency || '');
-        
+
         // Convertir base64 a blob
         const response = await fetch(profile.avatar);
         const blob = await response.blob();

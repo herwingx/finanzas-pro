@@ -20,26 +20,68 @@ model User {
   categories            Category[]
   budgets               Budget[]
   recurringTransactions RecurringTransaction[]
+  accounts              Account[]
+  installmentPurchases  InstallmentPurchase[]
+}
+
+model Account {
+  id                    String                @id @default(uuid())
+  name                  String
+  type                  String
+  balance               Float
+  creditLimit           Float?
+  cutoffDay             Int?
+  paymentDay            Int?
+  user                  User                  @relation(fields: [userId], references: [id])
+  userId                String
+  transactions          Transaction[]
+  installmentPurchases  InstallmentPurchase[]
+  recurringTransactions RecurringTransaction[]
+  destinationTransactions Transaction[] @relation("DestinationTransactions")
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  amount      Float
-  description String
-  date        DateTime
-  type        String // "income" or "expense"
+  id                      String                @id @default(uuid())
+  amount                  Float
+  description             String
+  date                    DateTime
+  type                    String
+  userId                  String
+  user                    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId              String?
+  category                Category?             @relation(fields: [categoryId], references: [id], name: "CategoryTransactions")
+  accountId               String?
+  account                 Account?              @relation(fields: [accountId], references: [id])
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  recurringTransactionId  String?
+  recurringTransaction    RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull, name: "RecurringTransactions")
+  installmentPurchaseId   String?
+  installmentPurchase     InstallmentPurchase?  @relation("InstallmentTransactions", fields: [installmentPurchaseId], references: [id])
 
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Campos para transferencias
+  destinationAccountId    String?               @map("destination_account_id")
+  destinationAccount      Account?              @relation("DestinationTransactions", fields: [destinationAccountId], references: [id])
+}
 
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id], name: "CategoryTransactions")
+model InstallmentPurchase {
+  id                    String        @id @default(uuid())
+  description           String
+  totalAmount           Float
+  installments          Int
+  monthlyPayment        Float
+  purchaseDate          DateTime
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  recurringTransactionId String?
-  recurringTransaction   RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull, name: "RecurringTransactions")
+  paidInstallments      Int           @default(0)
+  paidAmount            Float         @default(0)
+
+  account               Account       @relation(fields: [accountId], references: [id])
+  accountId             String
+  user                  User          @relation(fields: [userId], references: [id])
+  userId                String
+  generatedTransactions Transaction[] @relation("InstallmentTransactions")
+  categoryId            String
+  category              Category      @relation(fields: [categoryId], references: [id])
 }
 
 model Category {
@@ -55,6 +97,7 @@ model Category {
 
   transactions          Transaction[] @relation(name: "CategoryTransactions")
   recurringTransactions RecurringTransaction[]
+  installmentPurchases  InstallmentPurchase[]
 
   @@unique([name, userId])
 }
@@ -89,6 +132,9 @@ model RecurringTransaction {
 
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
+
+  accountId   String
+  account     Account  @relation(fields: [accountId], references: [id])
 
   transactions Transaction[] @relation(name: "RecurringTransactions")
 

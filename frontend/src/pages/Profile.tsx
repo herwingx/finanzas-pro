@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile, useUpdateProfile } from '../hooks/useApi';
 import useTheme from '../hooks/useTheme';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();

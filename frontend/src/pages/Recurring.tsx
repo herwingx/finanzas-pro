@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRecurringTransactions, useCategories, useUpdateRecurringTransaction, useDeleteRecurringTransaction } from '../hooks/useApi';
 import { RecurringTransaction, Category } from '../types';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/PageHeader';
 
 const EditRecurringModal: React.FC<any> = ({ transaction, categories, onSave, onCancel, isSaving }) => {

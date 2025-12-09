@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import prisma from './database';
 
-type TransactionInput = {
+export type TransactionInput = {
   amount: number;
   description: string;
   date: Date;
@@ -14,32 +14,14 @@ type TransactionInput = {
 };
 
 /**
- * Creates a transaction and updates the balances of the affected accounts within a Prisma transaction.
- * @param tx - The Prisma transaction client.
- * @param data - The transaction data.
- * @returns The created transaction.
+ * Validates strictly if an MSI payment exceeds the remaining balance.
  */
-export async function createTransactionAndAdjustBalances(
-  tx: any,
-  data: TransactionInput
-) {
-  const {
-    amount,
-    description,
-    date,
-    type,
-    userId,
-    accountId,
-    categoryId,
-    destinationAccountId,
-  } = data;
+export async function validateMSIPayment(tx: any, data: TransactionInput) {
+  const { amount, type, installmentPurchaseId, accountId, destinationAccountId } = data;
 
-  // 0. Pre-check InstallmentPurchase for overpayment validation
-  let installment = null; // Keep installment variable for later use
-
-  if (data.installmentPurchaseId && (type === 'income' || type === 'transfer')) {
-    installment = await tx.installmentPurchase.findUnique({
-      where: { id: data.installmentPurchaseId },
+  if (installmentPurchaseId && (type === 'income' || type === 'transfer')) {
+    const installment = await tx.installmentPurchase.findUnique({
+      where: { id: installmentPurchaseId },
     });
 
     if (installment) {
@@ -52,13 +34,27 @@ export async function createTransactionAndAdjustBalances(
           throw new Error('This installment is already fully paid.');
         }
 
-        // 1. Strict Validation: Reject if amount exceeds remaining (User request: "no se debe poder")
+        // Strict Validation: Reject if amount exceeds remaining
         if (amount > remaining + 0.05) {
           throw new Error(`El monto del pago ($${amount.toFixed(2)}) excede el saldo restante de la compra ($${remaining.toFixed(2)}).`);
         }
       }
     }
   }
+}
+
+/**
+ * Updates the balances of the affected accounts based on the transaction data.
+ * Does NOT create a transaction record.
+ */
+export async function updateAccountBalances(tx: any, data: TransactionInput) {
+  const {
+    amount,
+    type,
+    userId,
+    accountId,
+    destinationAccountId,
+  } = data;
 
   // 1. Fetch source account
   const sourceAccount = await tx.account.findUnique({ where: { id: accountId, userId } });
@@ -119,27 +115,17 @@ export async function createTransactionAndAdjustBalances(
       data: { balance: newBalance },
     });
   }
+}
 
-  // 3. Create the transaction record
-  const createdTx = await tx.transaction.create({
-    data: {
-      amount: amount,
-      description,
-      date,
-      type,
-      userId,
-      accountId,
-      categoryId: type === 'transfer' ? null : categoryId,
-      destinationAccountId: type === 'transfer' ? destinationAccountId : null,
-      installmentPurchaseId: data.installmentPurchaseId,
-    },
-    include: { category: true, account: true, destinationAccount: true },
-  });
+/**
+ * Updates the MSI progress if the transaction is a payment.
+ */
+export async function updateInstallmentProgress(tx: any, data: TransactionInput) {
+  const { amount, type, installmentPurchaseId, accountId, destinationAccountId } = data;
 
-  // 4. Update InstallmentPurchase if this is a payment
-  if (data.installmentPurchaseId && (type === 'income' || type === 'transfer')) {
+  if (installmentPurchaseId && (type === 'income' || type === 'transfer')) {
     const installment = await tx.installmentPurchase.findUnique({
-      where: { id: data.installmentPurchaseId },
+      where: { id: installmentPurchaseId },
     });
 
     if (installment) {
@@ -158,6 +144,40 @@ export async function createTransactionAndAdjustBalances(
       }
     }
   }
+}
+
+/**
+ * Creates a transaction and updates the balances (Standard Flow).
+ * Composes the separated functions.
+ */
+export async function createTransactionAndAdjustBalances(
+  tx: any,
+  data: TransactionInput
+) {
+  // 1. Validation
+  await validateMSIPayment(tx, data);
+
+  // 2. Adjust Balances
+  await updateAccountBalances(tx, data);
+
+  // 3. Create the transaction record
+  const createdTx = await tx.transaction.create({
+    data: {
+      amount: data.amount,
+      description: data.description,
+      date: data.date,
+      type: data.type,
+      userId: data.userId,
+      accountId: data.accountId,
+      categoryId: data.type === 'transfer' ? null : data.categoryId,
+      destinationAccountId: data.type === 'transfer' ? data.destinationAccountId : null,
+      installmentPurchaseId: data.installmentPurchaseId,
+    },
+    include: { category: true, account: true, destinationAccount: true },
+  });
+
+  // 4. Update MSI
+  await updateInstallmentProgress(tx, data);
 
   return createdTx;
 }

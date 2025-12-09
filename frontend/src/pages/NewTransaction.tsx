@@ -6,7 +6,7 @@ import {
   useDeleteTransaction, useAddRecurringTransaction, useAccounts,
   useAddInstallmentPurchase, useInstallmentPurchases, usePayInstallment
 } from '../hooks/useApi';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { DatePicker } from '../components/DatePicker';
 
 const NewTransaction: React.FC = () => {
@@ -102,6 +102,22 @@ const NewTransaction: React.FC = () => {
       setCategoryId('');
     }
   }, [type, availableCategories, categoryId]);
+
+  useEffect(() => {
+    if (isMsiPayment) {
+      if (selectedInstallmentId) {
+        const purchase = activeInstallmentsForAccount.find(p => p.id === selectedInstallmentId);
+        if (purchase) {
+          const remainingAmount = purchase.totalAmount - purchase.paidAmount;
+          const suggestedAmount = Math.min(purchase.monthlyPayment, remainingAmount);
+          setAmount(suggestedAmount.toFixed(2));
+        }
+      } else {
+        // Clear amount if MSI mode is on but no plan is selected
+        setAmount('');
+      }
+    }
+  }, [isMsiPayment, selectedInstallmentId, activeInstallmentsForAccount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,14 +236,20 @@ const NewTransaction: React.FC = () => {
 
   const handleDelete = async () => {
     if (!editId) return;
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
-      try {
-        await deleteTransactionMutation.mutateAsync(editId);
-        toast.success('Transacción eliminada');
-        navigate(-1);
-      } catch (error) {
-        toast.error('Error al eliminar la transacción.');
+
+    // Safety check for MSI payments
+    if (existingTransaction?.installmentPurchaseId && (existingTransaction.type === 'income' || existingTransaction.type === 'transfer')) {
+      if (!window.confirm('⚠️ ADVERTENCIA DE INTEGRIDAD\n\nEstás eliminando un pago de Meses Sin Intereses. Esto:\n1. Devolverá el dinero a tu cuenta.\n2. Aumentará la deuda en tu tarjeta.\n\nSolo haz esto si fue un error de captura.\n\n¿Continuar?')) {
+        return;
       }
+    }
+
+    try {
+      await deleteTransactionMutation.mutateAsync(editId);
+      toast.success('Transacción eliminada');
+      navigate(-1);
+    } catch (error) {
+      toast.error('Error al eliminar la transacción.');
     }
   };
 
@@ -258,8 +280,8 @@ const NewTransaction: React.FC = () => {
             ) : (
               <div className="text-center">
                 <span className={`px-4 py-2 text-sm font-bold rounded-xl ${type === 'income' ? 'bg-app-success/10 text-app-success' :
-                    type === 'expense' ? 'bg-app-danger/10 text-app-danger' :
-                      'bg-blue-500/10 text-blue-500'
+                  type === 'expense' ? 'bg-app-danger/10 text-app-danger' :
+                    'bg-blue-500/10 text-blue-500'
                   }`}>
                   {type === 'income' ? 'Ingreso' : type === 'expense' ? 'Gasto' : 'Transferencia'}
                 </span>

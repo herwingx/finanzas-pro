@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useTransactions, useCategories, useProfile, useAccounts, useInstallmentPurchases } from '../hooks/useApi';
 import useTheme from '../hooks/useTheme';
 
@@ -41,12 +42,17 @@ const Dashboard: React.FC = () => {
         const nextPaymentNumber = p.paidInstallments + 1;
         const dueDate = new Date(p.purchaseDate);
         dueDate.setMonth(dueDate.getMonth() + nextPaymentNumber);
+
+        // Point 2: Smart Widget - Suggest minimum between monthly payment and remaining balance
+        const remainingBalance = p.totalAmount - p.paidAmount;
+        const suggestedAmount = Math.min(p.monthlyPayment, remainingBalance);
+
         return {
           id: p.id,
           accountId: p.accountId,
           accountName: p.account?.name || 'Tarjeta de Crédito',
           description: p.description,
-          amountDue: p.monthlyPayment,
+          amountDue: parseFloat(suggestedAmount.toFixed(2)),
           dueDate: dueDate,
         };
       })
@@ -138,7 +144,12 @@ const Dashboard: React.FC = () => {
               const sourceAccount = accounts?.find(a => a.id === tx.accountId)?.name;
               const destAccount = accounts?.find(a => a.id === tx.destinationAccountId)?.name;
               return (
-                <Link key={tx.id} to={`/new?editId=${tx.id}`} className="group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-xl hover:bg-app-elevated">
+                <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
+                  if (tx.installmentPurchaseId && tx.type === 'expense') {
+                    e.preventDefault();
+                    toast.info('Administra esta compra desde la sección "Meses Sin Intereses"');
+                  }
+                }} className="group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-xl hover:bg-app-elevated">
                   <div className="size-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#88888820' }}>
                     <span className="material-symbols-outlined text-xl text-app-muted">swap_horiz</span>
                   </div>
@@ -154,7 +165,12 @@ const Dashboard: React.FC = () => {
             }
             const category = getCategoryInfo(tx.categoryId);
             return (
-              <Link key={tx.id} to={`/new?editId=${tx.id}`} className="group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-xl hover:bg-app-elevated">
+              <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
+                if (tx.installmentPurchaseId && tx.type === 'expense') {
+                  e.preventDefault();
+                  toast.info('Administra esta compra desde la sección "Meses Sin Intereses"');
+                }
+              }} className="group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-xl hover:bg-app-elevated">
                 <div className="size-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
                   <span className="material-symbols-outlined text-xl" style={{ color: category.color }}>{category.icon}</span>
                 </div>

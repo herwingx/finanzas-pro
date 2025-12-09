@@ -132,7 +132,10 @@ export const addTransaction = async (transaction: Omit<Transaction, 'id'>): Prom
         headers: getAuthHeaders(),
         body: JSON.stringify(transaction),
     });
-    if (!response.ok) throw new Error('Failed to add transaction');
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add transaction');
+    }
     return response.json();
 };
 
@@ -142,7 +145,10 @@ export const updateTransaction = async (id: string, transaction: Partial<Transac
         headers: getAuthHeaders(),
         body: JSON.stringify(transaction),
     });
-    if (!response.ok) throw new Error('Failed to update transaction');
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update transaction');
+    }
     return response.json();
 };
 

@@ -3,7 +3,7 @@ import prisma from '../services/database';
 import { Prisma } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
-import { createTransactionAndAdjustBalances } from '../services/transactions';
+import { createTransactionAndAdjustBalances, updateAccountBalances } from '../services/transactions';
 import { processRecurringTransactions } from '../services/recurring';
 import { processInstallmentPurchases } from '../services/installments';
 
@@ -106,218 +106,108 @@ router.get('/:id', async (req: AuthRequest, res) => {
 router.put('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
   const { id } = req.params;
-  const { amount, description, date, type, categoryId, accountId, destinationAccountId } = req.body || {};
-
-  if (!amount && !description && !date && !type && !categoryId && !accountId && !destinationAccountId) {
-    return res.status(400).json({ message: 'No fields provided for update.' });
-  }
-
-  // Basic validation for transfers
-  if (type === 'transfer' && !destinationAccountId) {
-    return res.status(400).json({ message: 'destinationAccountId is required for transfer type.' });
-  }
-  if (type === 'transfer' && accountId === destinationAccountId) {
-    return res.status(400).json({ message: 'Source and destination accounts cannot be the same.' });
-  }
+  const data = req.body;
 
   try {
     const updatedTransaction = await prisma.$transaction(async (tx: any) => {
-      // 1. Find the original transaction and its accounts
       const originalTx = await tx.transaction.findFirst({
         where: { id, userId },
         include: { account: true, destinationAccount: true },
       });
 
       if (!originalTx) {
-        throw new Error('Transaction not found or you do not have permission to update it.');
+        throw new Error('Transacción no encontrada.');
       }
 
-      // 1.1 Block editing of Initial MSI Purchase (Point 6)
-      if (originalTx.installmentPurchaseId && originalTx.type === 'expense') {
-        throw new Error('No puedes editar la compra inicial de MSI directamente. Por favor, edita el plan de pagos en la sección de "Meses Sin Intereses".');
+      // --- Validations (Moved to top for early exit) ---
+      if (originalTx.installmentPurchaseId) {
+        const parentInstallment = await tx.installmentPurchase.findUnique({ where: { id: originalTx.installmentPurchaseId } });
+        // Strict Block: If settled, NO EDITING allowed. Force Delete -> Recreate.
+        if (parentInstallment && (parentInstallment.totalAmount - parentInstallment.paidAmount) <= 0.05) {
+          throw new Error('No puedes editar pagos de un plan MSI ya liquidado. Para corregirlo, elimina este pago y crea uno nuevo.');
+        }
+        if (originalTx.type === 'expense') {
+          throw new Error('No puedes editar la compra inicial de MSI. Edita el plan de pagos en la sección "Meses Sin Intereses".');
+        }
       }
 
-      // 1.2 Revert MSI Progress if this was a payment (Point 3)
-      let msiPaymentReverted = false;
-      let relatedInstallment: any = null;
+      // --- Step 1: Revert original transaction's impact on account balances ---
+      if (originalTx.type === 'income') {
+        await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { decrement: originalTx.amount } } });
+      } else if (originalTx.type === 'expense') {
+        await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } });
+      } else if (originalTx.type === 'transfer') {
+        await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } }); // Bring money back to source
+        await tx.account.update({ where: { id: originalTx.destinationAccountId }, data: { balance: { decrement: originalTx.amount } } }); // Remove money from destination
+      }
 
-      if (originalTx.installmentPurchaseId && (originalTx.type === 'income' || originalTx.type === 'transfer')) {
-        relatedInstallment = await tx.installmentPurchase.findUnique({ where: { id: originalTx.installmentPurchaseId } });
-        if (relatedInstallment) {
-          const installmentsToRevert = Math.floor(originalTx.amount / relatedInstallment.monthlyPayment);
+      // --- Step 2: Revert original transaction's impact on InstallmentPurchase (if it was an MSI payment) ---
+      if (originalTx.installmentPurchaseId && originalTx.type === 'income') { // Only payments (income to credit) affect paidAmount/paidInstallments
+        const installment = await tx.installmentPurchase.findUnique({ where: { id: originalTx.installmentPurchaseId } });
+        if (installment) {
+          const installmentsToRevert = Math.floor(originalTx.amount / installment.monthlyPayment);
           await tx.installmentPurchase.update({
-            where: { id: relatedInstallment.id },
+            where: { id: originalTx.installmentPurchaseId },
             data: {
               paidAmount: { decrement: originalTx.amount },
-              paidInstallments: { decrement: installmentsToRevert }
-            }
+              paidInstallments: { decrement: installmentsToRevert },
+            },
           });
-          msiPaymentReverted = true;
         }
       }
 
-      const oldAmount = originalTx.amount;
-      const oldType = originalTx.type;
-      const oldSourceAccountId = originalTx.accountId;
-      const oldDestinationAccountId = originalTx.destinationAccountId;
-
-      // 2. Revert the balances of the original transaction
-      if (oldType === 'transfer') {
-        // Revert source account (increment its balance by oldAmount)
-        await tx.account.update({
-          where: { id: oldSourceAccountId! },
-          data: { balance: { increment: oldAmount } },
-        });
-
-        // Revert destination account
-        const oldDestinationAccount = await tx.account.findUnique({ where: { id: oldDestinationAccountId! } });
-        if (!oldDestinationAccount) throw new Error('Original destination account not found.');
-        const incrementOrDecrement = (oldDestinationAccount.type === 'DEBIT' || oldDestinationAccount.type === 'CASH') ? 'decrement' : 'increment';
-        await tx.account.update({
-          where: { id: oldDestinationAccountId! },
-          data: { balance: { [incrementOrDecrement]: oldAmount } },
-        });
-
-      } else { // Revert for old 'income' or 'expense'
-        const originalAccount = await tx.account.findUnique({ where: { id: oldSourceAccountId! } });
-        if (!originalAccount) throw new Error('Original account not found.');
-
-        let balanceToRevert;
-        if (originalAccount.type === 'CREDIT') {
-          balanceToRevert = oldType === 'expense' ? originalAccount.balance - oldAmount : originalAccount.balance + oldAmount;
-        } else { // DEBIT or CASH
-          balanceToRevert = oldType === 'expense' ? originalAccount.balance + oldAmount : originalAccount.balance - oldAmount;
-        }
-        await tx.account.update({
-          where: { id: oldSourceAccountId! },
-          data: { balance: balanceToRevert },
-        });
-      }
-
-      // 3. Update the transaction record itself
-      const finalAmount = amount ? parseFloat(amount) : originalTx.amount;
-      const finalType = type ?? originalTx.type;
-      const finalSourceAccountId = accountId ?? originalTx.accountId;
-      const finalDestinationAccountId = destinationAccountId ?? originalTx.destinationAccountId;
-      const finalCategoryId = categoryId ?? originalTx.categoryId;
-
-      // Fetch new/updated accounts to apply new balance logic
-      const newSourceAccount = await tx.account.findUnique({ where: { id: finalSourceAccountId! } });
-      if (!newSourceAccount) throw new Error('New source account not found.');
-
-      let newDestinationAccount: any = null;
-      if (finalType === 'transfer') {
-        newDestinationAccount = await tx.account.findUnique({ where: { id: finalDestinationAccountId! } });
-        if (!newDestinationAccount) throw new Error('New destination account not found.');
-
-        // Additional validation for transfers
-        if ((newSourceAccount.type === 'DEBIT' || newSourceAccount.type === 'CASH') && newSourceAccount.balance < finalAmount) {
-          throw new Error('Insufficient funds in new source account.');
-        }
-        if (newDestinationAccount.type === 'CREDIT' && finalAmount > newDestinationAccount.balance) {
-          throw new Error('Cannot transfer more than the current debt to a credit card.');
-        }
-      }
-
-      const txData: any = {
-        amount: finalAmount,
-        description: description ?? originalTx.description,
-        date: date ? new Date(date) : originalTx.date,
-        type: finalType,
-        categoryId: finalCategoryId, // Keep categoryId if it's not a transfer, set to null otherwise
-        accountId: finalSourceAccountId,
-        destinationAccountId: finalDestinationAccountId, // Set to null if not a transfer
-      };
-
-      if (finalType === 'transfer') {
-        txData.categoryId = null; // Transfers don't have categories
-      } else if (finalType !== 'transfer' && !txData.categoryId) {
-        throw new Error('Category ID is required for income/expense transactions.');
-      }
-
+      // --- Step 3: Update the transaction record itself ---
+      const finalAmount = parseFloat(data.amount);
       const updatedTx = await tx.transaction.update({
         where: { id },
-        data: txData,
-        include: { account: true, destinationAccount: true, category: true },
+        data: {
+          amount: finalAmount,
+          description: data.description ?? originalTx.description,
+          date: new Date(data.date ?? originalTx.date),
+          type: data.type ?? originalTx.type,
+          categoryId: data.categoryId ?? originalTx.categoryId,
+          accountId: data.accountId ?? originalTx.accountId,
+          destinationAccountId: data.destinationAccountId ?? originalTx.destinationAccountId,
+          installmentPurchaseId: data.installmentPurchaseId ?? originalTx.installmentPurchaseId,
+        },
+        include: { account: true, destinationAccount: true }, // Include for re-applying balances
       });
 
-      // 4. Apply the new balances based on the updated transaction
-      if (updatedTx.type === 'transfer') {
-        // Apply new source balance (decrement by new amount)
-        await tx.account.update({
-          where: { id: newSourceAccount.id },
-          data: { balance: { decrement: finalAmount } },
-        });
+      // --- Step 4: Apply new transaction's impact on account balances ---
+      // Using updateAccountBalances to specificially adjust balances WITHOUT creating a new transaction record.
+      await updateAccountBalances(tx, { ...updatedTx, userId });
 
-        // Apply new destination balance
-        const incrementOrDecrement = (newDestinationAccount.type === 'DEBIT' || newDestinationAccount.type === 'CASH') ? 'increment' : 'decrement';
-        await tx.account.update({
-          where: { id: newDestinationAccount.id },
-          data: { balance: { [incrementOrDecrement]: finalAmount } },
-        });
+      // --- Step 5: Re-apply new transaction's impact on InstallmentPurchase (if it's an MSI payment) ---
+      if (updatedTx.installmentPurchaseId && updatedTx.type === 'income') { // Only payments (income to credit) affect paidAmount/paidInstallments
+        const installment = await tx.installmentPurchase.findUnique({ where: { id: updatedTx.installmentPurchaseId } });
+        if (!installment) throw new Error('Plan de MSI no encontrado para re-aplicar pago.');
 
-      } else { // Apply for new 'income' or 'expense'
-        let newBalance;
-        if (newSourceAccount.type === 'CREDIT') {
-          newBalance = updatedTx.type === 'expense'
-            ? newSourceAccount.balance + finalAmount
-            : newSourceAccount.balance - finalAmount;
-        } else { // DEBIT or CASH
-          newBalance = updatedTx.type === 'expense'
-            ? newSourceAccount.balance - finalAmount
-            : newSourceAccount.balance + finalAmount;
+        const remaining = installment.totalAmount - installment.paidAmount;
+        // Strict validation: Cannot overpay what's remaining
+        if (updatedTx.amount > remaining + 0.01) { // Allow for small floating point differences
+          throw new Error(`El monto ($${updatedTx.amount.toFixed(2)}) excede el saldo restante de la compra ($${remaining.toFixed(2)}).`);
         }
 
-        await tx.account.update({
-          where: { id: newSourceAccount.id },
-          data: { balance: newBalance },
+        const installmentsToAdd = Math.floor(updatedTx.amount / installment.monthlyPayment);
+        await tx.installmentPurchase.update({
+          where: { id: updatedTx.installmentPurchaseId },
+          data: {
+            paidAmount: { increment: updatedTx.amount },
+            paidInstallments: { increment: installmentsToAdd },
+          },
         });
-      }
-
-      // 5. Re-apply MSI Progress (Point 3 & 1)
-      if (msiPaymentReverted && relatedInstallment) {
-        // Fetch the *current* state of the installment (after revert) to validate
-        const currentInstallment = await tx.installmentPurchase.findUnique({ where: { id: relatedInstallment.id } });
-
-        if (currentInstallment) {
-          const remaining = currentInstallment.totalAmount - currentInstallment.paidAmount;
-
-          // Strict Validation: Cannot overpay what's remaining
-          if (finalAmount > remaining + 0.05) {
-            throw new Error(`El nuevo monto ($${finalAmount.toFixed(2)}) excede el saldo restante de la compra ($${remaining.toFixed(2)}).`);
-          }
-
-          const installmentsToAdd = Math.floor(finalAmount / currentInstallment.monthlyPayment);
-
-          const updateData: any = {
-            paidAmount: { increment: finalAmount }
-          };
-
-          // If this finishes the debt (or close enough), force max installments
-          if (finalAmount >= remaining - 0.05) {
-            updateData.paidInstallments = currentInstallment.installments;
-          } else {
-            // Otherwise just increment
-            updateData.paidInstallments = { increment: installmentsToAdd };
-          }
-
-          await tx.installmentPurchase.update({
-            where: { id: currentInstallment.id },
-            data: updateData
-          });
-        }
       }
 
       return updatedTx;
+    }, {
+      maxWait: 5000,
+      timeout: 10000,
     });
 
     res.json(updatedTransaction);
   } catch (error: any) {
-    if (error.message.includes('Transaction not found')) {
-      return res.status(404).json({ message: error.message });
-    }
-    console.error("Failed to update transaction:", error);
-    res.status(500).json({ message: error.message || 'Failed to update transaction.' });
+    console.error("Failed to update transaction:", error.message);
+    res.status(400).json({ message: error.message || 'Failed to update transaction.' });
   }
 });
 
@@ -328,7 +218,6 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
   try {
     await prisma.$transaction(async (tx: any) => {
-      // 1. Find the transaction to be deleted, including source and destination accounts
       const transaction = await tx.transaction.findFirst({
         where: { id, userId },
         include: { account: true, destinationAccount: true },
@@ -338,110 +227,98 @@ router.delete('/:id', async (req: AuthRequest, res) => {
         throw new Error('Transaction not found or you do not have permission to delete it.');
       }
 
+      // Point 7 Extension: Block deleting Initial MSI Purchase directly
+      if (transaction.installmentPurchaseId) {
+        if (transaction.type === 'expense') {
+          throw new Error('No puedes eliminar la compra inicial de MSI directamente. Debes eliminar el plan completo en la sección de "Meses Sin Intereses".');
+        }
+        // Deleting payments IS allowed to enable error correction ("un-settle" flow).
+      }
+
+      // BETTER STRATEGY: Allow deleting payments even if settled.
+      // This allows correcting the last payment if it was a mistake.
+      // The reversion logic will correctly update paidAmount and "un-settle" the plan.
+
+
       const { account, destinationAccount, amount, type, installmentPurchaseId } = transaction;
 
-      // ... (existing balance update logic) ...
-      if (type === 'transfer') {
-        if (!account || !destinationAccount) {
-          throw new Error('Transfer transaction is missing one or both associated accounts.');
-        }
-        await tx.account.update({
-          where: { id: account.id },
-          data: { balance: { increment: amount } },
-        });
+      // Revert balances for the original transaction
+      if (account) {
+        if (type === 'income') {
+          // Income on Debit: Balance +, Revert -. 
+          // Income on Credit (Payment): Balance - (Debt down), Revert + (Debt up).
+          if (account.type === 'CREDIT') {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+          } else {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+          }
+        } else if (type === 'expense') {
+          // Expense on Debit: Balance -, Revert +.
+          // Expense on Credit: Balance + (Debt up), Revert - (Debt down).
+          if (account.type === 'CREDIT') {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+          } else {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+          }
+        } else if (type === 'transfer') {
+          // Transfer Source: Usually Debit (-). Revert (+).
+          // If Source is Credit (Cash Advance?): Balance + (Debt). Revert -. 
+          // Assuming Source behaves as Debit-like (Funds leave). 
+          // If Source is Credit, funds leaving = Debt increase. Revert = Debt decrease.
+          if (account.type === 'CREDIT') {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+          } else {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+          }
 
-        const incrementOrDecrement = (destinationAccount.type === 'DEBIT' || destinationAccount.type === 'CASH') ? 'decrement' : 'increment';
-        await tx.account.update({
-          where: { id: destinationAccount.id },
-          data: { balance: { [incrementOrDecrement]: amount } },
-        });
-
-      } else {
-        if (!account) {
-          throw new Error('Transaction is missing an associated account.');
+          // Transfer Destination
+          if (destinationAccount) {
+            if (destinationAccount.type === 'CREDIT') {
+              // Dest is Credit (Payment): Balance - (Debt down). Revert + (Debt up).
+              await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { increment: amount } } });
+            } else {
+              // Dest is Debit: Balance +. Revert -.
+              await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { decrement: amount } } });
+            }
+          }
         }
-        let newBalance;
-        if (account.type === 'CREDIT') {
-          newBalance = type === 'expense'
-            ? account.balance - amount
-            : account.balance + amount;
-        } else { // DEBIT or CASH
-          newBalance = type === 'expense'
-            ? account.balance + amount
-            : account.balance - amount;
-        }
-
-        await tx.account.update({
-          where: { id: account.id },
-          data: { balance: newBalance },
-        });
       }
 
-      // Handle InstallmentPurchase updates
-      if (installmentPurchaseId) {
+      // Handle InstallmentPurchase updates for payments (INCOME or TRANSFER)
+      if (installmentPurchaseId && (type === 'income' || type === 'transfer')) {
         const installment = await tx.installmentPurchase.findUnique({ where: { id: installmentPurchaseId } });
         if (installment) {
-          // Case 1: Deleting a Payment (Income or Transfer)
-          if (type === 'income' || type === 'transfer') {
-            // Decrement paid amount/installments
-            const installmentsPaidC = Math.floor(amount / installment.monthlyPayment);
-            await tx.installmentPurchase.update({
-              where: { id: installmentPurchaseId },
-              data: {
-                paidAmount: { decrement: amount },
-                paidInstallments: { decrement: installmentsPaidC }
-              }
-            });
-          }
-          // Case 2: Deleting the Initial Purchase (Expense)
-          else if (type === 'expense') {
-            // User Issue 5: "Al eliminar la transaccion de msi no se quita de /installments"
-            // If we delete the initial transaction, we should probably delete the InstallmentPurchase too.
-            // BUT, we must be careful. deleting InstallmentPurchase might leave OTHER payments orphaned or invalid?
-            // The schema says `generatedTransactions` relate to it.
-            // If we delete InstallmentPurchase, we might need to cascade delete or untie generated transactions.
-            // For now, let's delete the InstallmentPurchase.
-
-            // First, find other transactions linked to this installment (payments)
-            // and maybe unlink them? or delete them?
-            // Usually, if you delete the Purchase, you probably want to delete the plan.
-            // Let's delete it. The schema doesn't strictly enforce cascade on Transaction->Installment, 
-            // but Installment has `generatedTransactions`.
-
-            // We need to delete the installment purchase.
-            // Note: The generic `delete ` on Transaction below will delete THIS transaction.
-            // We need to delete the `InstallmentPurchase` separateley.
-            // And deleting InstallmentPurchase might trigger cascading deletes if configured, 
-            // or fail if there are other foreign keys.
-
-            // Schema: Transaction.installmentPurchaseId -> InstallmentPurchase.id
-            // If we delete InstallmentPurchase, transactions referencing it will fail unless we update them.
-            // Let's just unlink other transactions first.
-
-            await tx.transaction.updateMany({
-              where: { installmentPurchaseId: installmentPurchaseId, id: { not: id } },
-              data: { installmentPurchaseId: null }
-            });
-
-            await tx.installmentPurchase.delete({
-              where: { id: installmentPurchaseId }
-            });
-          }
+          const installmentsPaidC = Math.floor(amount / installment.monthlyPayment);
+          await tx.installmentPurchase.update({
+            where: { id: installmentPurchaseId },
+            data: {
+              paidAmount: { decrement: amount },
+              paidInstallments: { decrement: installmentsPaidC },
+            },
+          });
         }
+      } else if (installmentPurchaseId && type === 'expense') { // Deleting the initial MSI purchase
+        // Unlink any other transactions (payments) from this installment plan
+        await tx.transaction.updateMany({
+          where: { installmentPurchaseId: installmentPurchaseId, id: { not: id } },
+          data: { installmentPurchaseId: null },
+        });
+        // Delete the InstallmentPurchase itself
+        await tx.installmentPurchase.delete({
+          where: { id: installmentPurchaseId },
+        });
       }
 
-      // 3. Delete the single transaction record
+      // Delete the transaction record
       await tx.transaction.delete({
         where: { id },
       });
     });
 
-    res.status(204).send(); // No content
+    res.status(204).send();
   } catch (error: any) {
-    if (error.message.includes('Transaction not found')) {
-      return res.status(404).json({ message: error.message });
-    }
-    res.status(500).json({ message: error.message || 'Failed to delete transaction.' });
+    console.error("Failed to delete transaction:", error.message);
+    res.status(400).json({ message: error.message || 'Failed to delete transaction.' });
   }
 });
 

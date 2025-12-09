@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import { useInstallmentPurchases, useProfile } from '../hooks/useApi';
 import { Link } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 const InstallmentsPage: React.FC = () => {
     const { data: purchases, isLoading, isError } = useInstallmentPurchases();
     const { data: profile } = useProfile();
+    const [activeTab, setActiveTab] = useState<'active' | 'settled'>('active');
 
     const formatCurrency = useMemo(() => (value: number) => {
         const locales: Record<string, string> = { 'USD': 'en-US', 'EUR': 'de-DE', 'GBP': 'en-GB', 'MXN': 'es-MX' };
@@ -15,6 +16,14 @@ const InstallmentsPage: React.FC = () => {
     const activePurchases = useMemo(() => {
         return purchases?.filter(p => p.paidAmount < p.totalAmount) || [];
     }, [purchases]);
+
+    const settledPurchases = useMemo(() => {
+        return purchases?.filter(p => p.paidAmount >= p.totalAmount) || [];
+    }, [purchases]);
+
+    const displayedPurchases = useMemo(() => {
+      return activeTab === 'active' ? activePurchases : settledPurchases;
+    }, [activeTab, activePurchases, settledPurchases]);
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-app-primary"></div></div>;
@@ -28,14 +37,29 @@ const InstallmentsPage: React.FC = () => {
         <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
             <PageHeader title="Mis Meses Sin Intereses" />
 
+            <div className="flex justify-around p-1 bg-app-card rounded-2xl border border-app-border mx-4 mb-4">
+                <button 
+                    onClick={() => setActiveTab('active')}
+                    className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'active' ? 'bg-app-primary text-white' : 'text-app-muted'}`}
+                >
+                    Activos
+                </button>
+                <button 
+                    onClick={() => setActiveTab('settled')}
+                    className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'settled' ? 'bg-app-primary text-white' : 'text-app-muted'}`}
+                >
+                    Liquidados
+                </button>
+            </div>
+
             <div className="p-4 space-y-4">
-                {activePurchases.length === 0 ? (
+                {displayedPurchases.length === 0 ? (
                     <div className="text-center py-20 text-app-muted">
                         <span className="material-symbols-outlined text-5xl mb-2">credit_card_off</span>
-                        <p>No tienes compras a MSI activas.</p>
+                        <p>No tienes compras a MSI {activeTab === 'active' ? 'activas' : 'liquidadas'}.</p>
                     </div>
                 ) : (
-                    activePurchases.map(purchase => {
+                    displayedPurchases.map(purchase => {
                         const paidAmount = purchase.paidAmount;
                         const remainingAmount = purchase.totalAmount - paidAmount;
                         const progressPercentage = (paidAmount / purchase.totalAmount) * 100;

@@ -104,7 +104,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
     try {
         const purchase = await prisma.installmentPurchase.findFirst({
             where: { id, userId },
-            include: { account: true, generatedTransactions: true },
+            include: { account: true, paidAmount: true, paidInstallments: true, generatedTransactions: true },
         });
 
         if (!purchase) {
@@ -138,10 +138,33 @@ router.put('/:id', async (req: AuthRequest, res) => {
                 throw new Error('Installment purchase not found or you do not have permission to update it.');
             }
 
-            // Recalculate monthly payment if totalAmount or installments change
+            // Point 7: Validate integrity when editing plans with existing payments
+            const currentPaidAmount = originalPurchase.paidAmount;
             const newTotalAmount = totalAmount ?? originalPurchase.totalAmount;
             const newInstallments = installments ?? originalPurchase.installments;
+
+            // Case B: If there are existing payments, validate integrity
+            if (currentPaidAmount > 0.05) {
+                if (newTotalAmount < currentPaidAmount - 0.05) {
+                    throw new Error(`No puedes reducir el monto total ($${newTotalAmount.toFixed(2)}) por debajo de lo que ya has pagado ($${currentPaidAmount.toFixed(2)}).`);
+                }
+            }
+
+            // Recalculate monthly payment
             const newMonthlyPayment = parseFloat((newTotalAmount / newInstallments).toFixed(2));
+
+            // Point 7: Recalculate paidInstallments based on new monthly payment
+            let recalculatedPaidInstallments = originalPurchase.paidInstallments;
+
+            if (currentPaidAmount > 0.05 && (totalAmount !== undefined || installments !== undefined)) {
+                // Recalculate how many of the NEW installments have been covered
+                recalculatedPaidInstallments = Math.floor(currentPaidAmount / newMonthlyPayment);
+
+                // Cap at maximum installments (in case of overpayment scenarios)
+                if (recalculatedPaidInstallments > newInstallments) {
+                    recalculatedPaidInstallments = newInstallments;
+                }
+            }
 
             const purchase = await tx.installmentPurchase.update({
                 where: { id },
@@ -150,25 +173,25 @@ router.put('/:id', async (req: AuthRequest, res) => {
                     totalAmount: newTotalAmount,
                     installments: newInstallments,
                     monthlyPayment: newMonthlyPayment,
+                    paidAmount: originalPurchase.paidAmount, // Keep original paid amount
+                    paidInstallments: recalculatedPaidInstallments, // Apply recalculated
                     purchaseDate: purchaseDate ? new Date(purchaseDate) : originalPurchase.purchaseDate,
                 },
                 include: { account: true, generatedTransactions: true },
             });
 
-            // User Issue 1: "Al actualizar... no se actualiza la deuda en mis cuentas"
-            // 1. Find the initial transaction (created at time of purchase)
-            // We assume it's the one with type='expense', installmentPurchaseId=id, and same accountId
+            // User Issue 1: \"Al actualizar... no se actualiza la deuda en mis cuentas\"
+            // Point 7 Case A: Update initial transaction if no payments exist
             const initialTransaction = await tx.transaction.findFirst({
                 where: {
                     installmentPurchaseId: id,
-                    type: 'expense', // Initial purchase is an expense (adds debt to credit card)
-                    // created near purchaseDate? or just the one linked.
+                    type: 'expense',
                 }
             });
 
             if (initialTransaction && (totalAmount !== undefined || description !== undefined || purchaseDate !== undefined)) {
                 const oldTxAmount = initialTransaction.amount;
-                const newTxAmount = newTotalAmount; // Should match the new total amount of the purchase
+                const newTxAmount = newTotalAmount;
 
                 // Update Transaction
                 await tx.transaction.update({
@@ -181,17 +204,8 @@ router.put('/:id', async (req: AuthRequest, res) => {
                 });
 
                 // Update Account Balance (Debt)
-                // If amount changed:
                 if (newTxAmount !== oldTxAmount) {
                     const diff = newTxAmount - oldTxAmount;
-                    // For CREDIT account:
-                    // if newAmount > oldAmount, debt increases (balance increases)
-                    // if newAmount < oldAmount, debt decreases (balance decreases)
-                    // Transaction type 'expense' on CREDIT increases balance.
-
-                    // Diff = new - old.
-                    // If diff is positive, we increment balance.
-                    // If diff is negative, we increment (decrement) balance.
                     await tx.account.update({
                         where: { id: purchase.accountId },
                         data: { balance: { increment: diff } }
@@ -205,7 +219,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
         res.json(updatedPurchase);
     } catch (error: any) {
         console.error("Failed to update installment purchase:", error);
-        res.status(500).json({ message: error.message || 'Failed to update installment purchase.' });
+        res.status(400).json({ message: error.message || 'Failed to update installment purchase.' });
     }
 });
 
@@ -225,44 +239,129 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                 throw new Error('Installment purchase not found or you do not have permission to delete it.');
             }
 
-            // Revert the balance changes from all associated transactions
-            if (purchase.account) {
-                const relatedTransactions = await tx.transaction.findMany({
-                    where: { installmentPurchaseId: id },
-                });
+            // Protect accounting integrity: Cannot delete fully settled plans.
+            const remaining = purchase.totalAmount - purchase.paidAmount;
+            if (remaining <= 0.05) {
+                throw new Error('No puedes eliminar una compra a MSI que ya ha sido liquidada. Forma parte de tu historial contable.');
+            }
 
-                let netEffectOnBalance = 0;
-                relatedTransactions.forEach((trx: any) => {
-                    // For CREDIT accounts: expense increases balance (debt), income decreases it.
-                    if (purchase.account.type === 'CREDIT') {
-                        if (trx.type === 'expense') {
-                            netEffectOnBalance += trx.amount;
-                        } else if (trx.type === 'income') {
-                            netEffectOnBalance -= trx.amount;
+            // Revert the balance changes from all associated transactions
+            // We must process each transaction to handle transfers (multi-account) correctly.
+            const relatedTransactions = await tx.transaction.findMany({
+                where: { installmentPurchaseId: id },
+                include: { account: true, destinationAccount: true }
+            });
+
+            for (const trx of relatedTransactions) {
+                const { account, destinationAccount, amount, type } = trx;
+
+                if (account) {
+                    /*
+                       Reversion Logic:
+                       - Expense (Spent): We increment balance (Undo spend).
+                         (For Credit: Debt decreases? No. 
+                          Expense on Credit -> Balance += amount (Debt Up). 
+                          Revert -> Balance -= amount (Debt Down).
+                          Wait, check existing logic in Transactions Route.
+                          
+                          Transactions Route Revert Logic (Step 389):
+                          - Income: decrement.
+                          - Expense: increment.
+                          - Transfer: increment source, decrement dest.
+                          
+                          Does this apply to CREDIT accounts?
+                          Transaction Route relies on Account Type check?
+                          Let's look at `createTransactionAndAdjustBalances` (Service).
+                          - Expense on Credit: Balance += amount. (Debt Increases).
+                          - Expense on Debit: Balance -= amount. (Asset Decreases).
+                          
+                          So Revert Expense on Credit: Balance -= amount.
+                          Revert Expense on Debit: Balance += amount.
+                          
+                          The Transaction Route logic in Step 389 (DELETE) seemed generic:
+                          `if (type === 'expense') { await tx.account.update({ balance: { increment: amount } }) }`
+                          Wait, if I have $100 Debit (Asset). Expense $50. New Balance $50.
+                          Revert (Increment $50) -> $100. Correct.
+                          
+                          If I have $0 Credit (Liability). Expense $50. New Balance $50 (Debt).
+                          Revert (Increment $50) -> $100 (More Debt)? INCORRECT.
+                          
+                          The Transaction Route logic in Step 389 might be simplify assuming DEBIT?
+                          Let's check Step 389 again.
+                          It replaced specific Credit/Debit logic with generic `increment/decrement`?
+                          NO. Step 389 shows:
+                          `if (type === 'income') { decrement }`
+                          `if (type === 'expense') { increment }`
+                          
+                          If `type=expense` on CREDIT, original was `balance + amount`.
+                          Revert should be `balance - amount`.
+                          But Step 389 says `increment`. That would INCREASE debt upon deletion!
+                          
+                          Wait, let's verify `services/transactions.ts` Step 408 (My Refactor).
+                          `if (sourceAccount.type === 'CREDIT') { newBalance = type === 'expense' ? balance + amount : ... }`
+                          Yes, Expense adds to Credit balance.
+                          
+                          So when DELETING an Expense on Credit, we must SUBTRACT (Decrement).
+                          The code in Step 389 (DELETE) seems to have a BUG if it uses generic increment for expense.
+                          `if (type === 'expense') { increment }`.
+                          This works for Debit (Asset). It FAILS for Credit (Liability).
+                          
+                          UNLESS `account.balance` for Credit is stored as negative?
+                          No, traditionally Credit balance is positive (Amount Owed).
+                          
+                          So I need to implement robust logic here in Installments DELETE which checks Account Type.
+                    */
+
+                    if (type === 'expense') {
+                        if (account.type === 'CREDIT') {
+                            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+                        } else { // DEBIT/CASH
+                            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
                         }
-                    } else { // DEBIT/CASH: expense decreases balance, income increases it.
-                        if (trx.type === 'expense') {
-                            netEffectOnBalance -= trx.amount;
-                        } else if (trx.type === 'income') {
-                            netEffectOnBalance += trx.amount;
+                    } else if (type === 'income') {
+                        if (account.type === 'CREDIT') {
+                            // Income to Credit (Payment) reduces debt (balance -= amount).
+                            // Revert: Increase debt (balance += amount).
+                            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+                        } else { // DEBIT/CASH
+                            // Income to Debit increases asset. Revert: Decrement.
+                            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+                        }
+                    } else if (type === 'transfer') {
+                        // Transfer Source (account) -> Dest (destinationAccount)
+
+                        // Revert Source:
+                        // Transfer Out reduces Debit/Cash or Increases Credit Debt?
+                        // Service: 
+                        //  Debit Source: balance -= amount.
+                        //  Credit Source (?? Cash Advance?): balance += amount. (Not implemented in Service? Service throws for Credit Source?)
+                        //  Service Only allows TRANSFER OUT if Source is DEBIT/CASH (line 84 check: insufficient funds).
+                        //  Wait, Service line 84 checks if Debit/Cash < amount. 
+                        //  Does it allow Credit Source?
+                        //  Service line 95: `balance: { decrement: amount }`.
+                        //  If Source is Credit, decrementing balance (debt) implies paying it off? No.
+                        //  Usually you don't transfer OUT of Credit Card (unless cash advance).
+                        //  Assuming Source is always DEBIT/CASH for transfers in this app context.
+
+                        // Revert Source (Debit): Increment (Refund).
+                        await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+
+                        // Revert Destination:
+                        if (destinationAccount) {
+                            if (destinationAccount.type === 'CREDIT') {
+                                // Transfer INTO Credit (Payment).
+                                // Original: Balance -= amount (Debt down).
+                                // Revert: Balance += amount (Debt up).
+                                await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { increment: amount } } });
+                            } else { // DEBIT/CASH
+                                // Transfer INTO Debit.
+                                // Original: Balance += amount.
+                                // Revert: Balance -= amount.
+                                await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { decrement: amount } } });
+                            }
                         }
                     }
-                });
-
-                // To revert, we apply the opposite of the net effect.
-                // If netEffect is positive, we decrement. If negative, we increment.
-                if (netEffectOnBalance > 0) {
-                    await tx.account.update({
-                        where: { id: purchase.accountId },
-                        data: { balance: { decrement: netEffectOnBalance } },
-                    });
-                } else if (netEffectOnBalance < 0) {
-                    await tx.account.update({
-                        where: { id: purchase.accountId },
-                        data: { balance: { increment: -netEffectOnBalance } },
-                    });
                 }
-                // If netEffect is 0, no balance change needed.
             }
 
             // Delete all generated transactions for this installment purchase
@@ -278,7 +377,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
         res.status(204).send();
     } catch (error: any) {
         console.error("Failed to delete installment purchase:", error);
-        res.status(500).json({ message: error.message || 'Failed to delete installment purchase.' });
+        res.status(400).json({ message: error.message || 'Failed to delete installment purchase.' });
     }
 });
 
@@ -306,6 +405,11 @@ router.post('/:id/pay', async (req: AuthRequest, res) => {
             }
 
             const paymentAmount = parseFloat(amount);
+            const remainingAmount = purchase.totalAmount - purchase.paidAmount;
+
+            if (paymentAmount > remainingAmount) {
+                throw new Error(`El monto del pago (${paymentAmount.toFixed(2)}) excede el saldo restante de la compra (${remainingAmount.toFixed(2)}).`);
+            }
 
             // This is a payment towards the credit card, so it's an "income" for the CREDIT account
             const newTransaction = await createTransactionAndAdjustBalances(tx, {
@@ -320,15 +424,17 @@ router.post('/:id/pay', async (req: AuthRequest, res) => {
             });
 
             // Update the installment purchase progress
-            const installmentsPaid = Math.floor(paymentAmount / purchase.monthlyPayment);
-            const remainder = paymentAmount % purchase.monthlyPayment;
+            const newPaidAmount = purchase.paidAmount + paymentAmount;
+            const newPaidInstallments = Math.min(
+                purchase.installments,
+                Math.floor(newPaidAmount / purchase.monthlyPayment)
+            );
 
             const updatedPurchase = await tx.installmentPurchase.update({
                 where: { id: installmentPurchaseId },
                 data: {
                     paidAmount: { increment: paymentAmount },
-                    paidInstallments: { increment: installmentsPaid },
-                    // We can also consider how to handle remainders, for now, we just track the total amount.
+                    paidInstallments: newPaidInstallments, // Set directly, not increment
                 },
             });
 
@@ -338,7 +444,7 @@ router.post('/:id/pay', async (req: AuthRequest, res) => {
         res.status(201).json(result);
     } catch (error: any) {
         console.error("Failed to process installment payment:", error);
-        res.status(500).json({ message: error.message || 'Failed to process installment payment.' });
+        res.status(400).json({ message: error.message || 'Failed to process installment payment.' });
     }
 });
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories, useAddCategory, useUpdateCategory, useDeleteCategory } from '../hooks/useApi';
 import { TransactionType, Category } from '../types';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/PageHeader';
 
 const ICONS = ['category', 'shopping_cart', 'restaurant', 'lunch_dining', 'local_cafe', 'directions_car', 'local_gas_station', 'flight', 'hotel', 'home', 'apartment', 'cottage', 'payments', 'savings', 'account_balance', 'credit_card', 'school', 'science', 'sports_esports', 'fitness_center', 'movie', 'music_note', 'medical_services', 'local_hospital', 'pets', 'stroller', 'checkroom', 'watch', 'diamond', 'work', 'business_center', 'build', 'star', 'favorite', 'bolt', 'receipt_long', 'redeem', 'local_offer'];

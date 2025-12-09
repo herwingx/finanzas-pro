@@ -95,10 +95,19 @@ const UpsertInstallmentPage: React.FC = () => {
     const handleDelete = async () => {
         if (!id) return;
 
+        const isCritical = isSettled;
+
         toast.custom((t) => (
-            <div className="bg-app-card border border-app-border rounded-xl p-4 flex flex-col gap-3 shadow-lg max-w-sm w-full">
-                <p className="text-app-text font-bold text-sm">¿Estás seguro de eliminar esta compra a MSI?</p>
-                <p className="text-app-muted text-xs">Esta acción eliminará la compra, revertirá la deuda en tu tarjeta y eliminará todas las transacciones de mensualidad generadas.</p>
+            <div className={`bg-app-card border ${isCritical ? 'border-red-500' : 'border-app-border'} rounded-xl p-4 flex flex-col gap-3 shadow-lg max-w-sm w-full`}>
+                <p className={`text-app-text font-bold text-sm ${isCritical ? 'text-red-600 dark:text-red-400' : ''}`}>
+                    {isCritical ? '⚠️ PELIGRO: INTEGRIDAD HISTÓRICA' : '¿Estás seguro de eliminar esta compra a MSI?'}
+                </p>
+                <p className="text-app-muted text-xs">
+                    {isCritical
+                        ? 'Estás a punto de borrar un plan totalmente pagado. Esto revertirá TODOS los pagos históricos, devolviendo el dinero a tus cuentas y reabriendo la deuda. Tus saldos actuales dejarán de coincidir con la realidad de tu banco.'
+                        : 'Esta acción eliminará la compra, revertirá la deuda en tu tarjeta y eliminará todas las transacciones de mensualidad generadas.'}
+                </p>
+                {isCritical && <p className="text-xs font-bold text-red-500">Solo haz esto si TODA la operación fue un error.</p>}
                 <div className="flex gap-2 justify-end">
                     <button
                         onClick={() => toast.dismiss(t)}
@@ -245,26 +254,24 @@ const UpsertInstallmentPage: React.FC = () => {
                 </fieldset>
 
                 {!isSettled && (
-                    <>
-                        <button
-                            type="submit"
-                            className="w-full bg-app-primary text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-primary/90 transition-colors"
-                            disabled={updatePurchaseMutation.isPending}
-                        >
-                            {updatePurchaseMutation.isPending ? 'Guardando...' : 'Actualizar Compra a MSI'}
-                        </button>
+                    <button
+                        type="submit"
+                        className="w-full bg-app-primary text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-primary/90 transition-colors"
+                        disabled={updatePurchaseMutation.isPending}
+                    >
+                        {updatePurchaseMutation.isPending ? 'Guardando...' : 'Actualizar Compra a MSI'}
+                    </button>
+                )}
 
-                        {isEditMode && (
-                            <button
-                                type="button"
-                                onClick={handleDelete}
-                                className="w-full bg-app-danger text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-danger/90 transition-colors mt-3"
-                                disabled={deletePurchaseMutation.isPending}
-                            >
-                                {deletePurchaseMutation.isPending ? 'Eliminando...' : 'Eliminar Compra a MSI'}
-                            </button>
-                        )}
-                    </>
+                {isEditMode && (
+                    <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="w-full bg-app-danger text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-danger/90 transition-colors mt-3"
+                        disabled={deletePurchaseMutation.isPending}
+                    >
+                        {deletePurchaseMutation.isPending ? 'Eliminando...' : 'Eliminar Compra a MSI'}
+                    </button>
                 )}
             </form>
         </div>

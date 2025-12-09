@@ -104,16 +104,49 @@ router.get('/:id', async (req: AuthRequest, res) => {
     try {
         const purchase = await prisma.installmentPurchase.findFirst({
             where: { id, userId },
-            include: { account: true, paidAmount: true, paidInstallments: true, generatedTransactions: true },
+            include: { account: true, generatedTransactions: true },
         });
 
         if (!purchase) {
-            return res.status(404).json({ message: 'Installment purchase not found.' });
+            res.status(404).json({ message: 'Installment purchase not found.' });
+            return; // Ensure we return void
         }
+
+        // --- Self-Healing Logic: Ensure consistency ---
+        // Sum all actual payments related to this plan
+        const actualPayments = await prisma.transaction.findMany({
+            where: {
+                installmentPurchaseId: id,
+                OR: [{ type: 'income' }, { type: 'transfer' }]
+            }
+        });
+
+        const totalPaidReal = actualPayments.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+
+        // Calculate correct installments count (using a small epsilon for float safety)
+        const paidInstallmentsReal = Math.floor((totalPaidReal + 0.01) / purchase.monthlyPayment);
+
+        // If DB state differs from Reality, Auto-Correct it.
+        if (Math.abs(totalPaidReal - purchase.paidAmount) > 0.01 || paidInstallmentsReal !== purchase.paidInstallments) {
+            console.log(`Self-Healing MSI ${id}: Correcting paidAmount ${purchase.paidAmount} -> ${totalPaidReal}, paidInstallments ${purchase.paidInstallments} -> ${paidInstallmentsReal}`);
+
+            const correctedPurchase = await prisma.installmentPurchase.update({
+                where: { id },
+                data: {
+                    paidAmount: totalPaidReal,
+                    paidInstallments: paidInstallmentsReal
+                },
+                include: { account: true, generatedTransactions: true }
+            });
+
+            res.json(correctedPurchase);
+            return;
+        }
+
         res.json(purchase);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to retrieve installment purchase:", error);
-        res.status(500).json({ message: 'Failed to retrieve installment purchase.' });
+        res.status(500).json({ message: error.message || 'Failed to retrieve installment purchase.' });
     }
 });
 
@@ -239,11 +272,10 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                 throw new Error('Installment purchase not found or you do not have permission to delete it.');
             }
 
-            // Protect accounting integrity: Cannot delete fully settled plans.
+            // Protect accounting integrity: Warn but allow.
             const remaining = purchase.totalAmount - purchase.paidAmount;
-            if (remaining <= 0.05) {
-                throw new Error('No puedes eliminar una compra a MSI que ya ha sido liquidada. Forma parte de tu historial contable.');
-            }
+            // Removed strict block to allow user correction if needed.
+            // Frontend will handle the heavy warning.
 
             // Revert the balance changes from all associated transactions
             // We must process each transaction to handle transfers (multi-account) correctly.

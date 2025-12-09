@@ -142,7 +142,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
       }
 
       // --- Step 2: Revert original transaction's impact on InstallmentPurchase (if it was an MSI payment) ---
-      if (originalTx.installmentPurchaseId && originalTx.type === 'income') { // Only payments (income to credit) affect paidAmount/paidInstallments
+      if (originalTx.installmentPurchaseId && (originalTx.type === 'income' || originalTx.type === 'transfer')) { // Include transfers!
         const installment = await tx.installmentPurchase.findUnique({ where: { id: originalTx.installmentPurchaseId } });
         if (installment) {
           const installmentsToRevert = Math.floor(originalTx.amount / installment.monthlyPayment);
@@ -178,7 +178,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
       await updateAccountBalances(tx, { ...updatedTx, userId });
 
       // --- Step 5: Re-apply new transaction's impact on InstallmentPurchase (if it's an MSI payment) ---
-      if (updatedTx.installmentPurchaseId && updatedTx.type === 'income') { // Only payments (income to credit) affect paidAmount/paidInstallments
+      if (updatedTx.installmentPurchaseId && (updatedTx.type === 'income' || updatedTx.type === 'transfer')) { // Include transfers!
         const installment = await tx.installmentPurchase.findUnique({ where: { id: updatedTx.installmentPurchaseId } });
         if (!installment) throw new Error('Plan de MSI no encontrado para re-aplicar pago.');
 

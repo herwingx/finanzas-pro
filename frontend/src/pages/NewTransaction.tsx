@@ -48,21 +48,10 @@ const NewTransaction: React.FC = () => {
   const creditAccounts = useMemo(() => accounts?.filter(acc => acc.type === 'CREDIT') || [], [accounts]);
   const allAccounts = useMemo(() => accounts || [], [accounts]);
 
-  const destinationAccountIsCredit = useMemo(() => {
-    const account = allAccounts.find(a => a.id === destinationAccountId);
-    return account?.type === 'CREDIT';
-  }, [destinationAccountId, allAccounts]);
-
   const activeInstallmentsForAccount = useMemo(() => {
-    // Determine which account holds the MSI plans: AccountID (Income) or DestID (Transfer)
-    let targetAccount = accountId;
-    if (type === 'transfer' && destinationAccountId) {
-      targetAccount = destinationAccountId;
-    }
-
-    if (!targetAccount || !installmentPurchases) return [];
-    return installmentPurchases.filter(p => p.accountId === targetAccount && p.paidAmount < p.totalAmount);
-  }, [accountId, destinationAccountId, type, installmentPurchases]);
+    if (!accountId || !installmentPurchases) return [];
+    return installmentPurchases.filter(p => p.accountId === accountId && p.paidAmount < p.totalAmount);
+  }, [accountId, installmentPurchases]);
 
   const selectedAccountIsCredit = useMemo(() => {
     const account = allAccounts.find(a => a.id === accountId);
@@ -137,49 +126,119 @@ const NewTransaction: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount) {
-      toast.error('Ingresa un monto válido.');
-      return;
-    }
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
+    if (!amount || parseFloat(amount) <= 0) {
       toast.error('El monto debe ser mayor a cero.');
       return;
     }
 
+    const numAmount = parseFloat(amount);
     const finalDescription = description || (availableCategories.find(c => c.id === categoryId)?.name || 'Transacción');
 
     try {
-      if (isMsiPayment && selectedInstallmentId && !editId) {
+      // PRIORITY 1: Handle edits FIRST to prevent duplicate creation
+      if (editId) {
+        // Editing existing transaction - always use PUT endpoint
+        const transactionData: any = {
+          amount: numAmount,
+          description: finalDescription,
+          date: date.toISOString(),
+          type,
+          accountId,
+        };
+
+        // Include category for non-transfers
+        if (type !== 'transfer' && categoryId) {
+          transactionData.categoryId = categoryId;
+        }
+
+        // Include destination for transfers
+        if (type === 'transfer') {
+          if (!destinationAccountId) {
+            toast.error('Selecciona la cuenta de destino para la transferencia.');
+            return;
+          }
+          transactionData.destinationAccountId = destinationAccountId;
+        }
+
+        // Preserve MSI link if editing MSI payment
+        if (existingTransaction?.installmentPurchaseId) {
+          transactionData.installmentPurchaseId = existingTransaction.installmentPurchaseId;
+        }
+
+        await updateTransactionMutation.mutateAsync({ id: editId, transaction: transactionData });
+        toast.success('Transacción actualizada');
+      }
+      // PRIORITY 2: Create new MSI payment (if not editing)
+      else if (isMsiPayment && selectedInstallmentId) {
+        if (!accountId) {
+          toast.error('Selecciona la cuenta de origen del pago.');
+          return;
+        }
         await payInstallmentMutation.mutateAsync({
           id: selectedInstallmentId,
           payment: {
             amount: numAmount,
             description: finalDescription || 'Abono a MSI',
             date: date.toISOString(),
-            accountId: accountId
+            accountId: accountId,
           }
         });
         toast.success('Pago a MSI guardado');
+      }
+      // PRIORITY 3: Create new transfer
+      else if (type === 'transfer') {
+        if (!accountId || !destinationAccountId) {
+          toast.error('Selecciona ambas cuentas para la transferencia.');
+          return;
+        }
+        if (accountId === destinationAccountId) {
+          toast.error('Las cuentas de origen y destino no pueden ser la misma.');
+          return;
+        }
 
-      } else if (isInstallment && !editId) {
-        if (!accountId) { toast.error('Selecciona una tarjeta de crédito.'); return; }
-        if (!installments || parseInt(installments, 10) <= 0) { toast.error('Meses inválidos.'); return; }
-        if (!categoryId) { toast.error('Selecciona una categoría.'); return; }
+        const installmentPurchaseId = searchParams.get('installmentPurchaseId');
 
+        await addTransactionMutation.mutateAsync({
+          amount: numAmount,
+          description: finalDescription || `Transferencia`,
+          date: date.toISOString(),
+          type: 'transfer',
+          accountId,
+          destinationAccountId,
+          installmentPurchaseId: installmentPurchaseId || undefined,
+        } as Omit<Transaction, 'id'>);
+        toast.success('Transferencia guardada');
+      }
+      // PRIORITY 4: Create new MSI purchase
+      else if (isInstallment) {
+        if (!accountId) {
+          toast.error('Selecciona una tarjeta de crédito para la compra a MSI.');
+          return;
+        }
+        if (!installments || parseInt(installments, 10) <= 0) {
+          toast.error('El número de meses debe ser mayor a cero.');
+          return;
+        }
+        if (!categoryId) {
+          toast.error('Selecciona una categoría para las mensualidades de MSI.');
+          return;
+        }
         await addInstallmentMutation.mutateAsync({
           description: finalDescription || 'Compra a MSI',
           totalAmount: numAmount,
           installments: parseInt(installments, 10),
           purchaseDate: date.toISOString(),
           accountId,
-          categoryId
+          categoryId,
         });
         toast.success('Compra a MSI guardada');
-
-      } else if (isRecurring && !editId) {
-        if (!categoryId) { toast.error('Selecciona una categoría.'); return; }
-
+      }
+      // PRIORITY 5: Create recurring transaction
+      else if (isRecurring) {
+        if (!categoryId) {
+          toast.error('Selecciona una categoría para la transacción recurrente.');
+          return;
+        }
         await addRecurringMutation.mutateAsync({
           amount: numAmount,
           description: finalDescription || 'Gasto Recurrente',
@@ -189,37 +248,25 @@ const NewTransaction: React.FC = () => {
           type,
           frequency,
           active: true,
-          nextDueDate: date.toISOString()
+          nextDueDate: date.toISOString(),
         });
         toast.success('Transacción recurrente guardada');
-
-      } else {
-        // Unified Logic for Income, Expense, Transfer (Create & Edit)
-        if (type === 'transfer') {
-          if (!accountId || !destinationAccountId) { toast.error('Selecciona ambas cuentas.'); return; }
-          if (accountId === destinationAccountId) { toast.error('Las cuentas no pueden ser iguales.'); return; }
-        } else {
-          if (!categoryId) { toast.error('Selecciona una categoría.'); return; }
+      }
+      // PRIORITY 6: Create normal transaction
+      else {
+        if (!categoryId) {
+          toast.error('Selecciona una categoría para la transacción.');
+          return;
         }
-
-        const transactionData = {
+        await addTransactionMutation.mutateAsync({
           amount: numAmount,
-          description: finalDescription || (type === 'transfer' ? 'Transferencia' : ''),
-          categoryId: categoryId || undefined,
+          description: finalDescription,
+          categoryId,
           accountId,
-          destinationAccountId: type === 'transfer' ? destinationAccountId : undefined,
           date: date.toISOString(),
           type,
-          installmentPurchaseId: (isMsiPayment && selectedInstallmentId) ? selectedInstallmentId : undefined
-        };
-
-        if (editId) {
-          await updateTransactionMutation.mutateAsync({ id: editId, transaction: transactionData });
-          toast.success('Transacción actualizada');
-        } else {
-          await addTransactionMutation.mutateAsync(transactionData as Omit<Transaction, 'id'>);
-          toast.success('Transacción guardada');
-        }
+        } as Omit<Transaction, 'id'>);
+        toast.success('Transacción guardada');
       }
       navigate(-1);
     } catch (error: any) {
@@ -398,8 +445,8 @@ const NewTransaction: React.FC = () => {
               </div>
             )}
 
-            {/* MSI Payment Toggle & Fields (For Income to Credit OR Transfer to Credit) */}
-            {!editId && ((type === 'income' && selectedAccountIsCredit) || (type === 'transfer' && destinationAccountIsCredit)) && (
+            {/* MSI Payment Toggle & Fields (Only for income on credit accounts, not edit mode) */}
+            {!editId && type === 'income' && selectedAccountIsCredit && (
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">¿Es un abono a Meses Sin Intereses?</label>

@@ -272,136 +272,68 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                 throw new Error('Installment purchase not found or you do not have permission to delete it.');
             }
 
-            // Protect accounting integrity: Warn but allow.
-            const remaining = purchase.totalAmount - purchase.paidAmount;
-            // Removed strict block to allow user correction if needed.
-            // Frontend will handle the heavy warning.
+            console.log(`[DELETE MSI] Found purchase to delete:`, JSON.stringify(purchase, null, 2));
 
             // Revert the balance changes from all associated transactions
-            // We must process each transaction to handle transfers (multi-account) correctly.
             const relatedTransactions = await tx.transaction.findMany({
                 where: { installmentPurchaseId: id },
                 include: { account: true, destinationAccount: true }
             });
 
+            console.log(`[DELETE MSI] Found ${relatedTransactions.length} related transactions to revert:`, JSON.stringify(relatedTransactions, null, 2));
+
             for (const trx of relatedTransactions) {
                 const { account, destinationAccount, amount, type } = trx;
 
                 if (account) {
-                    /*
-                       Reversion Logic:
-                       - Expense (Spent): We increment balance (Undo spend).
-                         (For Credit: Debt decreases? No. 
-                          Expense on Credit -> Balance += amount (Debt Up). 
-                          Revert -> Balance -= amount (Debt Down).
-                          Wait, check existing logic in Transactions Route.
-                          
-                          Transactions Route Revert Logic (Step 389):
-                          - Income: decrement.
-                          - Expense: increment.
-                          - Transfer: increment source, decrement dest.
-                          
-                          Does this apply to CREDIT accounts?
-                          Transaction Route relies on Account Type check?
-                          Let's look at `createTransactionAndAdjustBalances` (Service).
-                          - Expense on Credit: Balance += amount. (Debt Increases).
-                          - Expense on Debit: Balance -= amount. (Asset Decreases).
-                          
-                          So Revert Expense on Credit: Balance -= amount.
-                          Revert Expense on Debit: Balance += amount.
-                          
-                          The Transaction Route logic in Step 389 (DELETE) seemed generic:
-                          `if (type === 'expense') { await tx.account.update({ balance: { increment: amount } }) }`
-                          Wait, if I have $100 Debit (Asset). Expense $50. New Balance $50.
-                          Revert (Increment $50) -> $100. Correct.
-                          
-                          If I have $0 Credit (Liability). Expense $50. New Balance $50 (Debt).
-                          Revert (Increment $50) -> $100 (More Debt)? INCORRECT.
-                          
-                          The Transaction Route logic in Step 389 might be simplify assuming DEBIT?
-                          Let's check Step 389 again.
-                          It replaced specific Credit/Debit logic with generic `increment/decrement`?
-                          NO. Step 389 shows:
-                          `if (type === 'income') { decrement }`
-                          `if (type === 'expense') { increment }`
-                          
-                          If `type=expense` on CREDIT, original was `balance + amount`.
-                          Revert should be `balance - amount`.
-                          But Step 389 says `increment`. That would INCREASE debt upon deletion!
-                          
-                          Wait, let's verify `services/transactions.ts` Step 408 (My Refactor).
-                          `if (sourceAccount.type === 'CREDIT') { newBalance = type === 'expense' ? balance + amount : ... }`
-                          Yes, Expense adds to Credit balance.
-                          
-                          So when DELETING an Expense on Credit, we must SUBTRACT (Decrement).
-                          The code in Step 389 (DELETE) seems to have a BUG if it uses generic increment for expense.
-                          `if (type === 'expense') { increment }`.
-                          This works for Debit (Asset). It FAILS for Credit (Liability).
-                          
-                          UNLESS `account.balance` for Credit is stored as negative?
-                          No, traditionally Credit balance is positive (Amount Owed).
-                          
-                          So I need to implement robust logic here in Installments DELETE which checks Account Type.
-                    */
-
                     if (type === 'expense') {
                         if (account.type === 'CREDIT') {
+                            console.log(`[DELETE MSI] Reverting EXPENSE on CREDIT account ${account.id}. Decrementing balance by ${amount}.`);
                             await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
                         } else { // DEBIT/CASH
+                            console.log(`[DELETE MSI] Reverting EXPENSE on DEBIT/CASH account ${account.id}. Incrementing balance by ${amount}.`);
                             await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
                         }
                     } else if (type === 'income') {
                         if (account.type === 'CREDIT') {
-                            // Income to Credit (Payment) reduces debt (balance -= amount).
-                            // Revert: Increase debt (balance += amount).
+                            console.log(`[DELETE MSI] Reverting INCOME on CREDIT account ${account.id}. Incrementing balance by ${amount}.`);
                             await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
                         } else { // DEBIT/CASH
-                            // Income to Debit increases asset. Revert: Decrement.
+                            console.log(`[DELETE MSI] Reverting INCOME on DEBIT/CASH account ${account.id}. Decrementing balance by ${amount}.`);
                             await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
                         }
                     } else if (type === 'transfer') {
-                        // Transfer Source (account) -> Dest (destinationAccount)
+                        // Revert Source
+                        console.log(`[DELETE MSI] Reverting TRANSFER source account ${account.id}.`);
+                        if (account.type === 'CREDIT') {
+                             console.log(`[DELETE MSI] Reverting TRANSFER on CREDIT source ${account.id}. Decrementing balance by ${amount}.`);
+                            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+                        } else {
+                            console.log(`[DELETE MSI] Reverting TRANSFER on DEBIT/CASH source ${account.id}. Incrementing balance by ${amount}.`);
+                            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+                        }
 
-                        // Revert Source:
-                        // Transfer Out reduces Debit/Cash or Increases Credit Debt?
-                        // Service: 
-                        //  Debit Source: balance -= amount.
-                        //  Credit Source (?? Cash Advance?): balance += amount. (Not implemented in Service? Service throws for Credit Source?)
-                        //  Service Only allows TRANSFER OUT if Source is DEBIT/CASH (line 84 check: insufficient funds).
-                        //  Wait, Service line 84 checks if Debit/Cash < amount. 
-                        //  Does it allow Credit Source?
-                        //  Service line 95: `balance: { decrement: amount }`.
-                        //  If Source is Credit, decrementing balance (debt) implies paying it off? No.
-                        //  Usually you don't transfer OUT of Credit Card (unless cash advance).
-                        //  Assuming Source is always DEBIT/CASH for transfers in this app context.
-
-                        // Revert Source (Debit): Increment (Refund).
-                        await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
-
-                        // Revert Destination:
+                        // Revert Destination
                         if (destinationAccount) {
+                            console.log(`[DELETE MSI] Reverting TRANSFER destination account ${destinationAccount.id}.`);
                             if (destinationAccount.type === 'CREDIT') {
-                                // Transfer INTO Credit (Payment).
-                                // Original: Balance -= amount (Debt down).
-                                // Revert: Balance += amount (Debt up).
+                                console.log(`[DELETE MSI] Reverting TRANSFER on CREDIT destination ${destinationAccount.id}. Incrementing balance by ${amount}.`);
                                 await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { increment: amount } } });
                             } else { // DEBIT/CASH
-                                // Transfer INTO Debit.
-                                // Original: Balance += amount.
-                                // Revert: Balance -= amount.
+                                console.log(`[DELETE MSI] Reverting TRANSFER on DEBIT/CASH destination ${destinationAccount.id}. Decrementing balance by ${amount}.`);
                                 await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { decrement: amount } } });
                             }
                         }
                     }
                 }
             }
-
-            // Delete all generated transactions for this installment purchase
+			
+			// Delete all generated transactions for this installment purchase
             await tx.transaction.deleteMany({
                 where: { installmentPurchaseId: id },
             });
-
-            // Delete the installment purchase itself
+			
+			// Delete the installment purchase itself
             await tx.installmentPurchase.delete({
                 where: { id },
             });

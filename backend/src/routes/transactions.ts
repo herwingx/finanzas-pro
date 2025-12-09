@@ -138,7 +138,15 @@ router.put('/:id', async (req: AuthRequest, res) => {
         await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } });
       } else if (originalTx.type === 'transfer') {
         await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } }); // Bring money back to source
-        await tx.account.update({ where: { id: originalTx.destinationAccountId }, data: { balance: { decrement: originalTx.amount } } }); // Remove money from destination
+
+        // Critical: Check destination account type for correct balance adjustment
+        if (originalTx.destinationAccount!.type === 'CREDIT') {
+          // For credit cards: increment means INCREASE debt (undo the payment)
+          await tx.account.update({ where: { id: originalTx.destinationAccountId }, data: { balance: { increment: originalTx.amount } } });
+        } else {
+          // For debit/cash: decrement means remove money
+          await tx.account.update({ where: { id: originalTx.destinationAccountId }, data: { balance: { decrement: originalTx.amount } } });
+        }
       }
 
       // --- Step 2: Revert original transaction's impact on InstallmentPurchase (if it was an MSI payment) ---

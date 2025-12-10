@@ -48,6 +48,26 @@ const NewTransaction: React.FC = () => {
   const creditAccounts = useMemo(() => accounts?.filter(acc => acc.type === 'CREDIT') || [], [accounts]);
   const allAccounts = useMemo(() => accounts || [], [accounts]);
 
+  // Helper: Format account display with balance info
+  const formatAccountOption = (account: any) => {
+    const typeLabel = account.type === 'CREDIT' ? 'Crédito' : account.type === 'DEBIT' ? 'Débito' : 'Efectivo';
+    const balance = account.balance ?? 0; // Handle null/undefined
+    const balanceLabel = account.type === 'CREDIT'
+      ? `$${balance.toFixed(2)} deuda`
+      : `$${balance.toFixed(2)} disponible`;
+    return `${account.name} (${typeLabel}) - ${balanceLabel}`;
+  };
+
+  // Get destination account info for transfer warnings
+  const destinationAccount = useMemo(() =>
+    allAccounts.find(acc => acc.id === destinationAccountId),
+    [allAccounts, destinationAccountId]
+  );
+
+  const isDestinationCredit = destinationAccount?.type === 'CREDIT';
+  const creditDebt = destinationAccount?.balance || 0;
+  const amountExceedsDebt = isDestinationCredit && parseFloat(amount || '0') > creditDebt;
+
   const activeInstallmentsForAccount = useMemo(() => {
     if (!accountId || !installmentPurchases) return [];
     return installmentPurchases.filter(p => p.accountId === accountId && p.paidAmount < p.totalAmount);
@@ -390,7 +410,7 @@ const NewTransaction: React.FC = () => {
                   >
                     {isLoadingAccounts ? <option value="">Cargando...</option> :
                       debitCashAccounts.map(account => (
-                        <option key={account.id} value={account.id}>{account.name} ({account.type === 'DEBIT' ? 'Débito' : 'Efectivo'})</option>
+                        <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
                       ))
                     }
                   </select>
@@ -406,11 +426,42 @@ const NewTransaction: React.FC = () => {
                   >
                     {isLoadingAccounts ? <option value="">Cargando...</option> :
                       allAccounts.filter(acc => acc.id !== accountId).map(account => (
-                        <option key={account.id} value={account.id}>{account.name} ({account.type === 'CREDIT' ? 'Crédito' : account.type === 'DEBIT' ? 'Débito' : 'Efectivo'})</option>
+                        <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
                       ))
                     }
                   </select>
                 </div>
+
+                {/* Credit Card Debt Warning & Quick Actions */}
+                {isDestinationCredit && destinationAccount && (
+                  <div className="mx-4 mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <span className="material-symbols-outlined text-blue-500 text-xl">credit_card</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-app-text">Abono a Tarjeta de Crédito</p>
+                        <p className="text-xs text-app-muted mt-1">
+                          Deuda actual: <span className="font-bold text-blue-500">${creditDebt.toFixed(2)}</span>
+                        </p>
+                        {amountExceedsDebt && parseFloat(amount) > 0 && (
+                          <p className="text-xs text-red-500 font-bold mt-2 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">error</span>
+                            No puedes abonar más de la deuda actual
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {creditDebt > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAmount(creditDebt.toFixed(2))}
+                        className="mt-3 w-full py-2 px-3 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-lg">check_circle</span>
+                        Liquidar Total (${creditDebt.toFixed(2)})
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-4">

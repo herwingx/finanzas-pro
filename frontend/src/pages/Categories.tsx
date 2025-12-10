@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories, useAddCategory, useUpdateCategory, useDeleteCategory } from '../hooks/useApi';
 import { TransactionType, Category } from '../types';
-import { toast } from 'sonner';
+import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
+import { SkeletonTransactionList } from '../components/Skeleton';
 
 const ICONS = ['category', 'shopping_cart', 'restaurant', 'lunch_dining', 'local_cafe', 'directions_car', 'local_gas_station', 'flight', 'hotel', 'home', 'apartment', 'cottage', 'payments', 'savings', 'account_balance', 'credit_card', 'school', 'science', 'sports_esports', 'fitness_center', 'movie', 'music_note', 'medical_services', 'local_hospital', 'pets', 'stroller', 'checkroom', 'watch', 'diamond', 'work', 'business_center', 'build', 'star', 'favorite', 'bolt', 'receipt_long', 'redeem', 'local_offer'];
 const DEFAULT_CATEGORY_STATE = { name: '', icon: 'category', color: '#6B5FFF', type: 'expense' as TransactionType, budgetType: undefined };
@@ -62,7 +63,7 @@ const CategoryForm: React.FC<any> = ({ category, setCategory, onSubmit, isSaving
                         </div>
                     </div>
                 )}
-                <button type="submit" disabled={isSaving} className="w-full py-3 bg-app-primary text-white font-bold text-sm rounded-xl disabled:opacity-50 mt-2">{isSaving ? 'Guardando...' : 'Guardar'}</button>
+                <button type="submit" disabled={isSaving} className="btn-modern btn-primary w-full py-3 font-bold text-sm shadow-premium mt-2 disabled:opacity-50">{isSaving ? 'Guardando...' : 'Guardar'}</button>
             </form>
         </div>
     );
@@ -111,7 +112,7 @@ const Categories: React.FC = () => {
     const handleInitialDelete = async (category: Category) => {
         try {
             await deleteCategoryMutation.mutateAsync({ id: category.id });
-            toast.success('Categoría eliminada');
+            toastSuccess('Categoría eliminada');
         } catch (error: any) {
             if (error.message === 'in-use') {
                 setReassigningDelete(category);
@@ -125,7 +126,7 @@ const Categories: React.FC = () => {
         if (!reassigningDelete || !reassignTargetId) return;
         try {
             await deleteCategoryMutation.mutateAsync({ id: reassigningDelete.id, newCategoryId: reassignTargetId });
-            toast.success('Categoría reasignada y eliminada');
+            toastSuccess('Categoría reasignada y eliminada');
             setReassigningDelete(null);
         } catch (error: any) {
             toast.error(error.message || 'Error al reasignar');
@@ -140,8 +141,8 @@ const Categories: React.FC = () => {
                     <div key={cat.id} className="flex items-center gap-3 p-3">
                         <div className="size-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}><span className="material-symbols-outlined text-lg">{cat.icon}</span></div>
                         <span className="flex-1 font-medium text-sm truncate">{cat.name}</span>
-                        <button onClick={() => handleOpenForm(cat)} className="p-1.5 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base">edit</span></button>
-                        <button onClick={() => handleInitialDelete(cat)} className="p-1.5 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base text-app-danger">delete</span></button>
+                        <button onClick={() => handleOpenForm(cat)} className="p-1.5 rounded-md hover:bg-app-elevated transition-colors"><span className="material-symbols-outlined text-base">edit</span></button>
+                        <button onClick={() => handleInitialDelete(cat)} className="p-1.5 rounded-md hover:bg-app-elevated transition-colors"><span className="material-symbols-outlined text-base text-app-danger">delete</span></button>
                     </div>
                 ))}
             </div>
@@ -153,10 +154,10 @@ const Categories: React.FC = () => {
             <PageHeader title="Categorías" />
             <div className="p-4 max-w-lg mx-auto space-y-6">
                 <div className="flex justify-end">
-                    {!showForm && <button onClick={() => handleOpenForm(null)} className="text-xs font-bold text-app-primary bg-app-primary/10 px-3 py-1.5 rounded-lg">Añadir Nueva</button>}
+                    {!showForm && <button onClick={() => handleOpenForm(null)} className="btn-modern bg-app-primary/10 text-app-primary text-xs font-bold px-3 py-1.5 hover:bg-app-primary hover:text-white transition-all shadow-none hover:shadow-md">Añadir Nueva</button>}
                 </div>
                 {showForm && <CategoryForm category={formState} setCategory={setFormState} onSubmit={handleAddOrUpdate} isSaving={addCategoryMutation.isPending || updateCategoryMutation.isPending} formTitle={editingCategory ? 'Editar Categoría' : 'Nueva Categoría'} onCancel={handleCancel} />}
-                {isLoadingCategories ? <p>Cargando...</p> :
+                {isLoadingCategories ? <SkeletonTransactionList count={6} /> :
                     <div className="space-y-4">
                         {renderCategoryList('Gastos', categories?.filter(c => c.type === 'expense') || [])}
                         {renderCategoryList('Ingresos', categories?.filter(c => c.type === 'income') || [])}
@@ -176,8 +177,8 @@ const Categories: React.FC = () => {
                             ))}
                         </select>
                         <div className="flex justify-end gap-3">
-                            <button onClick={() => setReassigningDelete(null)} className="px-4 py-2 rounded-lg font-semibold text-sm">Cancelar</button>
-                            <button onClick={handleReassignAndDelete} disabled={!reassignTargetId || deleteCategoryMutation.isPending} className="px-4 py-2 rounded-lg font-semibold text-sm bg-app-danger text-white disabled:opacity-50">{deleteCategoryMutation.isPending ? 'Eliminando...' : 'Reasignar y Eliminar'}</button>
+                            <button onClick={() => setReassigningDelete(null)} className="btn-modern btn-ghost px-4 py-2 font-semibold text-sm">Cancelar</button>
+                            <button onClick={handleReassignAndDelete} disabled={!reassignTargetId || deleteCategoryMutation.isPending} className="btn-modern bg-app-danger text-white hover:bg-app-danger/90 px-4 py-2 font-semibold text-sm disabled:opacity-50 border-none shadow-md">{deleteCategoryMutation.isPending ? 'Eliminando...' : 'Reasignar y Eliminar'}</button>
                         </div>
                     </div>
                 </div>

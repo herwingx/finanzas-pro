@@ -78,36 +78,85 @@ export async function updateAccountBalances(tx: any, data: TransactionInput) {
 
     // Check for sufficient funds in source for non-credit accounts
     if ((sourceAccount.type === 'DEBIT' || sourceAccount.type === 'CASH') && sourceAccount.balance < amount) {
-      throw new Error('Insufficient funds in source account.');
+      throw new Error('Fondos insuficientes en la cuenta de origen.');
     }
     // Special validation for credit card payments: Cannot pay more than the debt.
     if (destinationAccount.type === 'CREDIT' && amount > destinationAccount.balance) {
-      throw new Error('Cannot transfer more than the current debt to a credit card.');
+      throw new Error('No puedes transferir más que la deuda actual de la tarjeta de crédito.');
     }
 
-    // Update source account (always decrease for transfer out)
-    await tx.account.update({
-      where: { id: sourceAccount.id },
-      data: { balance: { decrement: amount } },
-    });
+    // Validate source credit account won't go below 0 (can't have money in favor from withdrawing)
+    if (sourceAccount.type === 'CREDIT') {
+      const newSourceBalance = sourceAccount.balance + amount; // Money leaving credit = debt increases
+      // For credit cards, balance represents debt, so it can increase indefinitely (up to credit limit if enforced elsewhere)
+      // But we should warn if they're "withdrawing" from a credit card (cash advance scenario)
+      // This is actually valid for cash advances, so we'll allow it but could add a warning
+    }
+
+    // Update source account (always decrease for transfer out from DEBIT/CASH, increase debt for CREDIT)
+    if (sourceAccount.type === 'CREDIT') {
+      // Money leaving a credit card = Cash advance = Debt increases
+      await tx.account.update({
+        where: { id: sourceAccount.id },
+        data: { balance: { increment: amount } },
+      });
+    } else {
+      // Money leaving DEBIT/CASH = Balance decreases
+      await tx.account.update({
+        where: { id: sourceAccount.id },
+        data: { balance: { decrement: amount } },
+      });
+    }
 
     // Update destination account
-    const incrementOrDecrement = (destinationAccount.type === 'DEBIT' || destinationAccount.type === 'CASH') ? 'increment' : 'decrement';
-    await tx.account.update({
-      where: { id: destinationAccount.id },
-      data: { balance: { [incrementOrDecrement]: amount } },
-    });
+    if (destinationAccount.type === 'CREDIT') {
+      // Money arriving to credit card = Payment = Debt decreases
+      await tx.account.update({
+        where: { id: destinationAccount.id },
+        data: { balance: { decrement: amount } },
+      });
+    } else {
+      // Money arriving to DEBIT/CASH = Balance increases
+      await tx.account.update({
+        where: { id: destinationAccount.id },
+        data: { balance: { increment: amount } },
+      });
+    }
   } else { // 'income' or 'expense'
+    // CRITICAL FIX: Prevent direct income to CREDIT accounts
+    // This is confusing because it reduces debt but doesn't increase available funds
+    // Users should use transfers to pay credit cards instead
+    if (type === 'income' && sourceAccount.type === 'CREDIT') {
+      throw new Error('No puedes registrar ingresos directamente en una tarjeta de crédito. Para pagar tu tarjeta, usa una Transferencia desde tu cuenta de efectivo/débito.');
+    }
+
     // Check for sufficient funds for expense from non-credit accounts
     if (type === 'expense' && (sourceAccount.type === 'DEBIT' || sourceAccount.type === 'CASH') && sourceAccount.balance < amount) {
-      throw new Error('Insufficient funds for this expense.');
+      throw new Error('Fondos insuficientes para este gasto.');
     }
 
     let newBalance;
     if (sourceAccount.type === 'CREDIT') {
+      // For CREDIT accounts:
+      // - expense = debt increases (balance goes up)
+      // - income = debt decreases (balance goes down) - BUT WE BLOCKED THIS ABOVE
       newBalance = type === 'expense' ? sourceAccount.balance + amount : sourceAccount.balance - amount;
+
+      // Validate credit card won't have negative balance (money in favor)
+      // This can happen if someone registers an income (refund) that exceeds the debt
+      if (type === 'income' && newBalance < 0) {
+        throw new Error('Este abono excede la deuda actual de la tarjeta. La tarjeta quedaría con saldo a favor, lo cual no es válido.');
+      }
     } else { // DEBIT or CASH
+      // For DEBIT/CASH accounts:
+      // - expense = balance decreases
+      // - income = balance increases
       newBalance = type === 'expense' ? sourceAccount.balance - amount : sourceAccount.balance + amount;
+
+      // Validate DEBIT/CASH accounts won't go negative
+      if (newBalance < 0) {
+        throw new Error('Fondos insuficientes. Esta transacción dejaría la cuenta en negativo.');
+      }
     }
 
     await tx.account.update({

@@ -105,10 +105,31 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
     try {
         // Before deleting an account, ensure there are no transactions associated with it
-        const transactionsCount = await prisma.transaction.count({ where: { accountId: id } });
-        if (transactionsCount > 0) {
-            return res.status(409).json({ message: 'Cannot delete account because it has associated transactions.' });
+        // Check for ACTIVE transactions (deletedAt: null)
+        // We consider both source and destination roles
+        const activeTransactionsCount = await prisma.transaction.count({
+            where: {
+                OR: [
+                    { accountId: id },
+                    { destinationAccountId: id }
+                ],
+                deletedAt: null
+            }
+        });
+
+        if (activeTransactionsCount > 0) {
+            return res.status(409).json({ message: 'No puedes eliminar la cuenta porque tiene transacciones activas. Elimina las transacciones primero.' });
         }
+
+        // If only soft-deleted transactions exist, HARD DELETE them to free up the account
+        await prisma.transaction.deleteMany({
+            where: {
+                OR: [
+                    { accountId: id },
+                    { destinationAccountId: id }
+                ]
+            }
+        });
 
         const deletedAccount = await prisma.account.deleteMany({
             where: { id, userId },

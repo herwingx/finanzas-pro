@@ -13,6 +13,7 @@ import AccountsPage from '../pages/AccountsPage';
 import UpsertAccountPage from '../pages/Accounts/UpsertAccountPage';
 import InstallmentsPage from '../pages/InstallmentsPage';
 import UpsertInstallmentPage from '../pages/Installments/UpsertInstallmentPage';
+import TrashPage from '../pages/TrashPage';
 import BottomNav from '../components/BottomNav';
 
 const MainApp: React.FC = () => {
@@ -36,6 +37,7 @@ const MainApp: React.FC = () => {
           <Route path="/accounts/edit/:id" element={<UpsertAccountPage />} />
           <Route path="/installments" element={<InstallmentsPage />} />
           <Route path="/installments/edit/:id" element={<UpsertInstallmentPage />} />
+          <Route path="/trash" element={<TrashPage />} />
         </Routes>
       </main>
       {showBottomNav && <BottomNav />}

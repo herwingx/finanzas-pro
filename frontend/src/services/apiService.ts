@@ -152,12 +152,16 @@ export const updateTransaction = async (id: string, transaction: Partial<Transac
     return response.json();
 };
 
-export const deleteTransaction = async (id: string): Promise<void> => {
-    const response = await fetch(`${API_URL}/transactions/${id}`, {
+export const deleteTransaction = async (id: string, force: boolean = false): Promise<void> => {
+    const url = force ? `${API_URL}/transactions/${id}?force=true` : `${API_URL}/transactions/${id}`;
+    const response = await fetch(url, {
         method: 'DELETE',
         headers: getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to delete transaction');
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete transaction');
+    }
 };
 
 
@@ -299,4 +303,22 @@ export const deleteRecurringTransaction = async (id: string): Promise<void> => {
         headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to delete recurring transaction');
+};
+
+// Deleted Transactions (Trash/Recycle Bin)
+export const getDeletedTransactions = async (): Promise<Transaction[]> => {
+    const response = await fetch(`${API_URL}/transactions/deleted`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch deleted transactions');
+    return response.json();
+};
+
+export const restoreTransaction = async (id: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/transactions/${id}/restore`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to restore transaction');
+    }
 };

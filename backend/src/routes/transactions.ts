@@ -22,7 +22,7 @@ router.get('/', async (req: AuthRequest, res) => {
     // await processInstallmentPurchases(userId);
 
     const transactions = await prisma.transaction.findMany({
-      where: { userId },
+      where: { userId, deletedAt: null },
       orderBy: { date: 'desc' },
       include: { category: true, account: true },
     });
@@ -80,6 +80,116 @@ router.post('/', async (req: AuthRequest, res) => {
   }
 });
 
+// IMPORTANT: Specific routes must come BEFORE dynamic routes (/:id)
+// Get deleted transactions (for trash/recovery view)
+router.get('/deleted', async (req: AuthRequest, res) => {
+  const userId = req.user!.userId;
+  try {
+    const deletedTransactions = await prisma.transaction.findMany({
+      where: {
+        userId,
+        deletedAt: { not: null }
+      },
+      orderBy: { deletedAt: 'desc' },
+      include: { category: true, account: true, destinationAccount: true },
+    });
+    res.json(deletedTransactions);
+  } catch (error) {
+    console.error("Error fetching deleted transactions:", error);
+    res.status(500).json({ message: 'Failed to retrieve deleted transactions.' });
+  }
+});
+
+// Restore a soft-deleted transaction (UNDO)
+router.post('/:id/restore', async (req: AuthRequest, res) => {
+  const userId = req.user!.userId;
+  const { id } = req.params;
+
+  try {
+    await prisma.$transaction(async (tx: any) => {
+      const transaction = await tx.transaction.findFirst({
+        where: { id, userId, deletedAt: { not: null } },
+        include: { account: true, destinationAccount: true },
+      });
+
+      if (!transaction) {
+        throw new Error('Deleted transaction not found or you do not have permission to restore it.');
+      }
+
+      const { account, destinationAccount, amount, type, installmentPurchaseId, accountId, destinationAccountId } = transaction;
+
+      // 1. Validate Account Integrity before restoring
+      // If the transaction refers to an account (accountId is present) but the account relation is null,
+      // it means the account was physically deleted. We cannot restore balance impact.
+      if (accountId && !account) {
+        throw new Error('No se puede restaurar: La cuenta asociada ya no existe.');
+      }
+
+      // For transfers, validation destination too
+      if (type === 'transfer' && destinationAccountId && !destinationAccount) {
+        throw new Error('No se puede restaurar: La cuenta destino ya no existe.');
+      }
+
+      // Re-apply balances (reverse the deletion reversion)
+      if (account) {
+        if (type === 'income') {
+          if (account.type === 'CREDIT') {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+          } else {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+          }
+        } else if (type === 'expense') {
+          if (account.type === 'CREDIT') {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+          } else {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+          }
+        } else if (type === 'transfer') {
+          if (account.type === 'CREDIT') {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+          } else {
+            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+          }
+
+          if (destinationAccount) {
+            if (destinationAccount.type === 'CREDIT') {
+              await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { decrement: amount } } });
+            } else {
+              await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { increment: amount } } });
+            }
+          }
+        }
+      }
+
+      // Re-apply InstallmentPurchase updates for payments
+      if (installmentPurchaseId && (type === 'income' || type === 'transfer')) {
+        const installment = await tx.installmentPurchase.findUnique({ where: { id: installmentPurchaseId } });
+        if (installment) {
+          const installmentsPaidC = Math.floor(amount / installment.monthlyPayment);
+          await tx.installmentPurchase.update({
+            where: { id: installmentPurchaseId },
+            data: {
+              paidAmount: { increment: amount },
+              paidInstallments: { increment: installmentsPaidC },
+            },
+          });
+        }
+      }
+
+      // Clear the deletedAt flag to restore the transaction
+      await tx.transaction.update({
+        where: { id },
+        data: { deletedAt: null },
+      });
+    });
+
+    res.status(200).json({ message: 'Transaction restored successfully.' });
+  } catch (error: any) {
+    console.error("Failed to restore transaction:", error.message);
+    res.status(400).json({ message: error.message || 'Failed to restore transaction.' });
+  }
+});
+
 
 // Get a single transaction by ID
 router.get('/:id', async (req: AuthRequest, res) => {
@@ -89,7 +199,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
   try {
     const transaction = await prisma.transaction.findFirst({
       where: { id, userId },
-      include: { category: true },
+      include: { category: true, account: true, destinationAccount: true },
     });
 
     if (!transaction) {
@@ -224,6 +334,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 router.delete('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
   const { id } = req.params;
+  const force = req.query.force === 'true';
 
   try {
     await prisma.$transaction(async (tx: any) => {
@@ -233,95 +344,84 @@ router.delete('/:id', async (req: AuthRequest, res) => {
       });
 
       if (!transaction) {
+        // If forcing delete, look in deleted
+        if (force) {
+          const deletedTx = await tx.transaction.findFirst({
+            where: { id, userId, deletedAt: { not: null } }
+          });
+          if (deletedTx) {
+            await tx.transaction.delete({ where: { id } });
+            return;
+          }
+        }
         throw new Error('Transaction not found or you do not have permission to delete it.');
       }
 
-      // Point 7 Extension: Block deleting Initial MSI Purchase directly
-      if (transaction.installmentPurchaseId) {
-        if (transaction.type === 'expense') {
-          throw new Error('No puedes eliminar la compra inicial de MSI directamente. Debes eliminar el plan completo en la sección de "Meses Sin Intereses".');
-        }
-        // Deleting payments IS allowed to enable error correction ("un-settle" flow).
-      }
-
-      // BETTER STRATEGY: Allow deleting payments even if settled.
-      // This allows correcting the last payment if it was a mistake.
-      // The reversion logic will correctly update paidAmount and "un-settle" the plan.
-
-
       const { account, destinationAccount, amount, type, installmentPurchaseId } = transaction;
 
-      // Revert balances for the original transaction
-      if (account) {
-        if (type === 'income') {
-          // Income on Debit: Balance +, Revert -. 
-          // Income on Credit (Payment): Balance - (Debt down), Revert + (Debt up).
-          if (account.type === 'CREDIT') {
-            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
-          } else {
-            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
-          }
-        } else if (type === 'expense') {
-          // Expense on Debit: Balance -, Revert +.
-          // Expense on Credit: Balance + (Debt up), Revert - (Debt down).
-          if (account.type === 'CREDIT') {
-            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
-          } else {
-            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
-          }
-        } else if (type === 'transfer') {
-          // Transfer Source: Usually Debit (-). Revert (+).
-          // If Source is Credit (Cash Advance?): Balance + (Debt). Revert -. 
-          // Assuming Source behaves as Debit-like (Funds leave). 
-          // If Source is Credit, funds leaving = Debt increase. Revert = Debt decrease.
-          if (account.type === 'CREDIT') {
-            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
-          } else {
-            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
-          }
-
-          // Transfer Destination
-          if (destinationAccount) {
-            if (destinationAccount.type === 'CREDIT') {
-              // Dest is Credit (Payment): Balance - (Debt down). Revert + (Debt up).
-              await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { increment: amount } } });
+      // 2. Revert balances logic (ONLY if transaction is active/not already soft-deleted)
+      if (!transaction.deletedAt) {
+        if (account) {
+          if (type === 'income') {
+            if (account.type === 'CREDIT') {
+              await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
             } else {
-              // Dest is Debit: Balance +. Revert -.
-              await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { decrement: amount } } });
+              await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+            }
+          } else if (type === 'expense') {
+            if (account.type === 'CREDIT') {
+              await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+            } else {
+              await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+            }
+          } else if (type === 'transfer') {
+            if (account.type === 'CREDIT') {
+              await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
+            } else {
+              await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
+            }
+
+            if (destinationAccount) {
+              if (destinationAccount.type === 'CREDIT') {
+                await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { increment: amount } } });
+              } else {
+                await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { decrement: amount } } });
+              }
             }
           }
         }
-      }
 
-      // Handle InstallmentPurchase updates for payments (INCOME or TRANSFER)
-      if (installmentPurchaseId && (type === 'income' || type === 'transfer')) {
-        const installment = await tx.installmentPurchase.findUnique({ where: { id: installmentPurchaseId } });
-        if (installment) {
-          const installmentsPaidC = Math.floor(amount / installment.monthlyPayment);
-          await tx.installmentPurchase.update({
-            where: { id: installmentPurchaseId },
-            data: {
-              paidAmount: { decrement: amount },
-              paidInstallments: { decrement: installmentsPaidC },
-            },
+        // Handle InstallmentPurchase updates
+        if (installmentPurchaseId && (type === 'income' || type === 'transfer')) {
+          const installment = await tx.installmentPurchase.findUnique({ where: { id: installmentPurchaseId } });
+          if (installment) {
+            const installmentsPaidC = Math.floor(amount / installment.monthlyPayment);
+            await tx.installmentPurchase.update({
+              where: { id: installmentPurchaseId },
+              data: {
+                paidAmount: { decrement: amount },
+                paidInstallments: { decrement: installmentsPaidC },
+              },
+            });
+          }
+        } else if (installmentPurchaseId && type === 'expense') {
+          await tx.transaction.updateMany({
+            where: { installmentPurchaseId: installmentPurchaseId, id: { not: id } },
+            data: { installmentPurchaseId: null },
           });
+          await tx.installmentPurchase.delete({ where: { id: installmentPurchaseId } });
         }
-      } else if (installmentPurchaseId && type === 'expense') { // Deleting the initial MSI purchase
-        // Unlink any other transactions (payments) from this installment plan
-        await tx.transaction.updateMany({
-          where: { installmentPurchaseId: installmentPurchaseId, id: { not: id } },
-          data: { installmentPurchaseId: null },
-        });
-        // Delete the InstallmentPurchase itself
-        await tx.installmentPurchase.delete({
-          where: { id: installmentPurchaseId },
-        });
       }
 
-      // Delete the transaction record
-      await tx.transaction.delete({
-        where: { id },
-      });
+      // 3. Perform Delete
+      if (force) {
+        await tx.transaction.delete({ where: { id } });
+      } else {
+        await tx.transaction.update({
+          where: { id },
+          data: { deletedAt: new Date() },
+        });
+      }
     });
 
     res.status(204).send();
@@ -330,6 +430,5 @@ router.delete('/:id', async (req: AuthRequest, res) => {
     res.status(400).json({ message: error.message || 'Failed to delete transaction.' });
   }
 });
-
 
 export default router;

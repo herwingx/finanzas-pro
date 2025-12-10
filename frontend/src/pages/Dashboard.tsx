@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useTransactions, useCategories, useProfile, useAccounts, useInstallmentPurchases } from '../hooks/useApi';
 import useTheme from '../hooks/useTheme';
+import { SkeletonDashboard } from '../components/Skeleton';
+import { SpendingTrendChart } from '../components/Charts';
+import { toastInfo } from '../utils/toast';
 
 const Dashboard: React.FC = () => {
   const [theme] = useTheme();
@@ -68,11 +70,7 @@ const Dashboard: React.FC = () => {
   };
 
   if (isLoadingTransactions || isLoadingCategories || isLoadingProfile || isLoadingAccounts || isLoadingInstallments) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-app-bg">
-        <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   if (isErrorTransactions || isErrorCategories || isErrorProfile || isErrorAccounts || isErrorInstallments) {
@@ -92,24 +90,40 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-4 px-4 mt-4">
-        <div className="bg-app-card border border-app-border rounded-2xl p-4 shadow-sm">
+        <div className="card-modern p-4 shadow-sm transition-premium">
           <p className="text-app-muted text-xs font-bold uppercase tracking-wider mb-1">Dinero Disponible</p>
           <h2 className="text-2xl font-bold text-app-success">{formatCurrency(availableFunds)}</h2>
         </div>
 
-        <div className="bg-app-card border border-app-border rounded-2xl p-4 shadow-sm">
+        <div className="card-modern p-4 shadow-sm transition-premium">
           <p className="text-app-muted text-xs font-bold uppercase tracking-wider mb-1">Patrimonio Neto</p>
           <h2 className="text-2xl font-bold text-app-text">{formatCurrency(netWorth)}</h2>
         </div>
       </div>
 
+      {/* Spending Trend Chart */}
+      {transactions && transactions.length > 0 && (
+        <div className="px-4 mt-6">
+          <div className="card-modern p-5 shadow-premium transition-premium">
+            <h3 className="text-sm font-bold text-app-text mb-4 flex items-center gap-2">
+              <span className="text-lg">📊</span>
+              Tendencia de Gastos
+            </h3>
+            <SpendingTrendChart transactions={transactions} />
+          </div>
+        </div>
+      )}
+
       {upcomingCreditPayments.length > 0 && (
         <div className="px-4 mt-6">
-          <div className="bg-app-card border border-app-border rounded-3xl p-5 shadow-premium">
-            <h3 className="text-sm font-bold text-app-text mb-4">Próximos Pagos a MSI</h3>
+          <div className="card-modern p-5 shadow-premium">
+            <h3 className="text-sm font-bold text-app-text mb-4 flex items-center gap-2">
+              <span className="text-lg">💳</span>
+              Próximos Pagos a MSI
+            </h3>
             <div className="space-y-3">
               {upcomingCreditPayments.map((payment, index) => (
-                <Link key={index} to={`/new?type=transfer&destinationAccountId=${payment.accountId}&amount=${payment.amountDue}&description=Pago mensualidad ${encodeURIComponent(payment.description)}&installmentPurchaseId=${payment.id}`} className="flex items-center justify-between p-3 bg-app-elevated rounded-xl hover:bg-app-hover transition-colors">
+                <Link key={index} to={`/new?type=transfer&destinationAccountId=${payment.accountId}&amount=${payment.amountDue}&description=Pago mensualidad ${encodeURIComponent(payment.description)}&installmentPurchaseId=${payment.id}`} className="interactive flex items-center justify-between p-3 bg-app-elevated rounded-xl border border-app-border transition-premium">
                   <div>
                     <p className="font-bold text-app-text text-sm">{payment.description}</p>
                     <span className="text-xs text-app-muted">Vence: {payment.dueDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
@@ -123,7 +137,7 @@ const Dashboard: React.FC = () => {
       )}
 
       <div className="px-4 mt-6">
-        <div className="bg-app-card border border-app-border rounded-3xl p-5 shadow-premium">
+        <div className="card-modern p-5 shadow-premium">
           <div className="flex justify-between items-start mb-6">
             <div>
               <p className="text-app-muted text-[10px] font-bold uppercase tracking-wider mb-1">Gastos del Mes (no MSI)</p>
@@ -147,10 +161,10 @@ const Dashboard: React.FC = () => {
                 <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
                   if (tx.installmentPurchaseId && tx.type === 'expense') {
                     e.preventDefault();
-                    toast.info('Administra esta compra desde la sección "Meses Sin Intereses"');
+                    toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
                   }
-                }} className="group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-xl hover:bg-app-elevated">
-                  <div className="size-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#88888820' }}>
+                }} className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
+                  <div className="size-11 rounded-full flex items-center justify-center shrink-0 bg-app-tertiary">
                     <span className="material-symbols-outlined text-xl text-app-muted">swap_horiz</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -158,7 +172,7 @@ const Dashboard: React.FC = () => {
                     <span className="text-xs text-app-muted truncate">{sourceAccount} → {destAccount}</span>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-sm text-app-muted">{formatCurrency(tx.amount)}</p>
+                    <p className="font-bold text-sm text-app-text">{formatCurrency(tx.amount)}</p>
                   </div>
                 </Link>
               )
@@ -168,18 +182,27 @@ const Dashboard: React.FC = () => {
               <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
                 if (tx.installmentPurchaseId && tx.type === 'expense') {
                   e.preventDefault();
-                  toast.info('Administra esta compra desde la sección "Meses Sin Intereses"');
+                  toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
                 }
-              }} className="group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-xl hover:bg-app-elevated">
+              }} className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
                 <div className="size-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
                   <span className="material-symbols-outlined text-xl" style={{ color: category.color }}>{category.icon}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-app-text truncate text-sm">{tx.description}</p>
-                  <span className="text-xs text-app-muted">{category.name}</span>
+                  <div className="flex items-center gap-2">
+                    {tx.installmentPurchaseId && (
+                      <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">
+                        MSI
+                      </span>
+                    )}
+                    <span className="text-xs text-app-muted">{category.name}</span>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className={`font-bold text-sm ${tx.type === 'income' ? 'text-app-success' : 'text-app-text'}`}>{tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}</p>
+                  <p className={`font-bold text-sm ${tx.type === 'income' ? 'text-app-success' : 'text-app-text'}`}>
+                    {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}
+                  </p>
                 </div>
               </Link>
             )

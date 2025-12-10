@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useTransactions, useCategories, useProfile } from '../hooks/useApi';
+import { SkeletonDashboard } from '../components/Skeleton';
 
 const Reports: React.FC = () => {
     const navigate = useNavigate();
@@ -35,7 +36,7 @@ const Reports: React.FC = () => {
             else if (category?.budgetType === 'savings') savings += tx.amount;
             else unclassified += tx.amount;
         });
-        
+
         const totalExpenses = needs + wants + savings + unclassified;
         const chartData = [
             { name: 'Necesidades', value: needs, color: '#ef4444', ideal: 50 },
@@ -64,9 +65,7 @@ const Reports: React.FC = () => {
             </header>
 
             {isLoading ? (
-                <div className="flex items-center justify-center min-h-[50vh]">
-                    <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
+                <SkeletonDashboard />
             ) : (
                 <div className="p-4 max-w-lg mx-auto space-y-6">
                     {/* Monthly Summary */}

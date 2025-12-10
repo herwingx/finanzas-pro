@@ -6,8 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "start": "node dist/server.js"
+    "dev": "dotenv -e .env.local -- ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "node dist/server.js",
+    "migrate": "dotenv -e .env.local -- npx prisma migrate dev",
+    "studio": "dotenv -e .env.local -- npx prisma studio"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +33,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.10.1",
+    "dotenv-cli": "^11.0.0",
     "nodemon": "^3.1.11",
     "prisma": "^5.22.0",
     "ts-node-dev": "^2.0.0",

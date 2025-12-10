@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import { SwipeableItem } from '../components/SwipeableItem';
 import { useNavigate } from 'react-router-dom';
 import { useRecurringTransactions, useCategories, useUpdateRecurringTransaction, useDeleteRecurringTransaction } from '../hooks/useApi';
 import { RecurringTransaction, Category } from '../types';
-import { toast } from 'sonner';
+import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
+import { SkeletonTransactionList } from '../components/Skeleton';
 
 const EditRecurringModal: React.FC<any> = ({ transaction, categories, onSave, onCancel, isSaving }) => {
     const [formState, setFormState] = useState(transaction);
@@ -40,8 +42,8 @@ const EditRecurringModal: React.FC<any> = ({ transaction, categories, onSave, on
                         />
                     </div>
                     <div className="flex justify-end gap-3 mt-6">
-                        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg font-semibold">Cancelar</button>
-                        <button type="submit" disabled={isSaving} className="px-4 py-2 rounded-lg font-semibold bg-app-primary text-white disabled:opacity-50">{isSaving ? 'Guardando...' : 'Guardar'}</button>
+                        <button type="button" onClick={onCancel} className="btn-modern btn-ghost px-4 py-2 rounded-lg font-semibold">Cancelar</button>
+                        <button type="submit" disabled={isSaving} className="btn-modern btn-primary px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50">{isSaving ? 'Guardando...' : 'Guardar'}</button>
                     </div>
                 </form>
             </div>
@@ -86,20 +88,35 @@ const Recurring: React.FC = () => {
             <PageHeader title="Gastos Recurrentes" />
 
             <div className="p-4 max-w-lg mx-auto space-y-4">
-                {isLoadingRecurring || isLoadingCategories ? <p>Cargando...</p> :
+                {isLoadingRecurring || isLoadingCategories ? <SkeletonTransactionList count={5} /> :
                     recurring?.map(tx => {
                         const category = getCategory(tx.categoryId);
                         return (
-                            <div key={tx.id} className="bg-app-card p-4 rounded-2xl border border-app-border flex items-center gap-4">
-                                <div className="size-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${category?.color}20`, color: category?.color }}><span className="material-symbols-outlined">{category?.icon}</span></div>
-                                <div className="flex-1">
-                                    <p className="font-bold">{tx.description}</p>
-                                    <p className="text-xs text-app-muted">{category?.name}</p>
+                            <SwipeableItem
+                                key={tx.id}
+                                onSwipeRight={() => setEditingTx(tx)}
+                                rightAction={{
+                                    icon: 'edit',
+                                    color: '#3b82f6',
+                                    label: 'Editar',
+                                }}
+                                onSwipeLeft={() => setDeletingId(tx.id)}
+                                leftAction={{
+                                    icon: 'delete',
+                                    color: '#ef4444',
+                                    label: 'Eliminar',
+                                }}
+                                className="rounded-2xl"
+                            >
+                                <div className="card-modern bg-app-card p-4 rounded-2xl border border-app-border flex items-center gap-4 transition-premium hover:shadow-md">
+                                    <div className="size-10 rounded-full flex items-center justify-center p-2" style={{ backgroundColor: `${category?.color}20`, color: category?.color }}><span className="material-symbols-outlined">{category?.icon}</span></div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold truncate">{tx.description}</p>
+                                        <p className="text-xs text-app-muted">{category?.name}</p>
+                                    </div>
+                                    <p className="font-bold">${tx.amount.toFixed(2)}</p>
                                 </div>
-                                <p className="font-bold">${tx.amount.toFixed(2)}</p>
-                                <button onClick={() => setEditingTx(tx)} className="p-2 rounded-md hover:bg-app-elevated"><span className="material-symbols-outlined text-base">edit</span></button>
-                                <button onClick={() => setDeletingId(tx.id)} className="p-2 rounded-md hover:bg-app-elevated text-red-500"><span className="material-symbols-outlined text-base">delete</span></button>
-                            </div>
+                            </SwipeableItem>
                         )
                     })
                 }
@@ -118,14 +135,14 @@ const Recurring: React.FC = () => {
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setDeletingId(null)}
-                                className="px-4 py-2 rounded-lg font-semibold hover:bg-app-elevated"
+                                className="btn-modern btn-ghost px-4 py-2 rounded-lg font-semibold hover:bg-app-elevated"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={() => handleDelete(deletingId)}
                                 disabled={deleteMutation.isPending}
-                                className="px-4 py-2 rounded-lg font-semibold bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                                className="btn-modern bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-lg font-semibold disabled:opacity-50 shadow-md"
                             >
                                 {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
                             </button>

@@ -1,12 +1,52 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { SwipeableItem } from '../components/SwipeableItem';
 import { PageHeader } from '../components/PageHeader';
-import { useAccounts, useProfile } from '../hooks/useApi';
+import { useAccounts, useProfile, useDeleteAccount } from '../hooks/useApi';
+import { toastSuccess, toastError, toast } from '../utils/toast';
+import { SkeletonTransactionList } from '../components/Skeleton';
 import { AccountType } from '../types';
 
 const AccountsPage: React.FC = () => {
+    const navigate = useNavigate();
     const { data: accounts, isLoading, isError } = useAccounts();
     const { data: profile } = useProfile();
+    const deleteAccountMutation = useDeleteAccount();
+
+    const handleDelete = (account: any) => {
+        toast.custom((t) => (
+            <div className="bg-app-card border border-app-border rounded-xl p-4 flex flex-col gap-3 shadow-lg max-w-sm w-full font-sans">
+                <p className="text-app-text font-bold text-sm">¿Eliminar cuenta "{account.name}"?</p>
+                <p className="text-app-muted text-xs">Por seguridad, solo podrás eliminar esta cuenta si no tiene transacciones registradas.</p>
+                <div className="flex gap-2 justify-end">
+                    <button
+                        onClick={() => toast.dismiss(t)}
+                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-elevated text-app-text hover:bg-app-hover transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t);
+                            try {
+                                await deleteAccountMutation.mutateAsync(account.id);
+                                toastSuccess('Cuenta eliminada');
+                            } catch (error: any) {
+                                if (error.message.includes('associated transactions') || error.message.includes('in-use')) {
+                                    toastError('No se puede eliminar: Tiene transacciones asociadas.');
+                                } else {
+                                    toastError('Error al eliminar cuenta.');
+                                }
+                            }
+                        }}
+                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-danger text-white hover:bg-app-danger/90 transition-colors"
+                    >
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        ), { duration: Infinity });
+    };
 
     const formatCurrency = useMemo(() => (value: number) => {
         const locales: Record<string, string> = { 'USD': 'en-US', 'EUR': 'de-DE', 'GBP': 'en-GB', 'MXN': 'es-MX' };
@@ -24,8 +64,11 @@ const AccountsPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-app-bg">
-                <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+                <PageHeader title="Mis Cuentas" showBackButton={false} />
+                <div className="px-4 mt-6">
+                    <SkeletonTransactionList count={5} />
+                </div>
             </div>
         );
     }
@@ -67,7 +110,7 @@ const AccountsPage: React.FC = () => {
             <div className="px-4 mt-6">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-bold text-app-text">Cuentas</h2>
-                    <Link to="/accounts/new" className="bg-app-primary text-white text-sm font-bold px-4 py-2 rounded-xl shadow-md hover:bg-app-primary/90 flex items-center gap-1">
+                    <Link to="/accounts/new" className="btn-modern btn-primary text-white text-sm font-bold px-4 py-2 rounded-xl shadow-premium hover:bg-app-primary/90 flex items-center gap-1 transition-transform active:scale-[0.98]">
                         <span className="material-symbols-outlined text-base">add</span>
                         Nueva Cuenta
                     </Link>
@@ -76,21 +119,41 @@ const AccountsPage: React.FC = () => {
                 <div className="space-y-3">
                     {accounts && accounts.length > 0 ? (
                         accounts.map(account => (
-                            <Link to={`/accounts/edit/${account.id}`} key={account.id} className="group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-xl hover:bg-app-elevated">
-                                <div className="size-11 rounded-full flex items-center justify-center shrink-0 bg-app-primary/10">
-                                    <span className="material-symbols-outlined text-xl text-app-primary">{getAccountIcon(account.type)}</span>
+                            <SwipeableItem
+                                key={account.id}
+                                onSwipeRight={() => navigate(`/accounts/edit/${account.id}`)}
+                                rightAction={{
+                                    icon: 'edit',
+                                    color: '#3b82f6',
+                                    label: 'Editar',
+                                }}
+                                onSwipeLeft={() => handleDelete(account)}
+                                leftAction={{
+                                    icon: 'delete',
+                                    color: '#ef4444',
+                                    label: 'Eliminar',
+                                }}
+                                className="rounded-2xl"
+                            >
+                                <div
+                                    onClick={() => navigate(`/accounts/edit/${account.id}`)}
+                                    className="card-modern group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-2xl hover:shadow-md transition-premium cursor-pointer"
+                                >
+                                    <div className="size-11 rounded-full flex items-center justify-center shrink-0 bg-app-primary/10">
+                                        <span className="material-symbols-outlined text-xl text-app-primary">{getAccountIcon(account.type)}</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-app-text truncate text-sm">{account.name}</p>
+                                        <span className="text-xs text-app-muted">{account.type === 'CREDIT' ? 'Tarjeta de Crédito' : account.type === 'DEBIT' ? 'Tarjeta de Débito' : 'Efectivo'}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className={`font-bold text-sm ${account.type === 'CREDIT' ? 'text-app-danger' : 'text-app-success'}`}>{formatCurrency(account.balance)}</p>
+                                        {account.type === 'CREDIT' && account.creditLimit !== undefined && (
+                                            <span className="text-xs text-app-muted">Límite: {formatCurrency(account.creditLimit)}</span>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-app-text truncate text-sm">{account.name}</p>
-                                    <span className="text-xs text-app-muted">{account.type === 'CREDIT' ? 'Tarjeta de Crédito' : account.type === 'DEBIT' ? 'Tarjeta de Débito' : 'Efectivo'}</span>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`font-bold text-sm ${account.type === 'CREDIT' ? 'text-app-danger' : 'text-app-success'}`}>{formatCurrency(account.balance)}</p>
-                                    {account.type === 'CREDIT' && account.creditLimit !== undefined && (
-                                        <span className="text-xs text-app-muted">Límite: {formatCurrency(account.creditLimit)}</span>
-                                    )}
-                                </div>
-                            </Link>
+                            </SwipeableItem>
                         ))
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 text-app-muted bg-app-card/50 rounded-2xl border-dashed border-app-border">

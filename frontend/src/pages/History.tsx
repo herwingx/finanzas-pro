@@ -1,16 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Transaction } from '../types';
-import { useTransactions, useCategories, useDeleteTransaction, useAccounts } from '../hooks/useApi';
-import { toast } from 'sonner';
+import { useTransactions, useCategories, useDeleteTransaction, useAccounts, useRestoreTransaction, useInstallmentPurchases } from '../hooks/useApi';
+import { toastInfo, toastSuccess, toastError, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
+import { DeleteConfirmationSheet, WarningLevel, ImpactDetail } from '../components/DeleteConfirmationSheet';
+import { SwipeableItem } from '../components/SwipeableItem';
+import { SkeletonTransactionList } from '../components/Skeleton';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
   const { data: transactions, isLoading: isLoadingTransactions } = useTransactions();
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { data: installments } = useInstallmentPurchases();
   const deleteTransactionMutation = useDeleteTransaction();
+  const restoreTransactionMutation = useRestoreTransaction();
 
   const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
 
@@ -20,15 +25,138 @@ const History: React.FC = () => {
 
   const getCategoryInfo = (id: string | null) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#999', name: 'General' };
   const getAccountName = (id: string | null) => accounts?.find(a => a.id === id)?.name || 'Cuenta desconocida';
+  const getAccount = (id: string | null) => accounts?.find(a => a.id === id);
+
+  // Calculate warning level and details for deletion
+  const getDeletionImpact = (tx: Transaction): {
+    warningLevel: WarningLevel;
+    warningMessage?: string;
+    warningDetails?: string[];
+    impactPreview?: ImpactDetail;
+    requireConfirmation?: boolean;
+  } => {
+    const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
+    const isMsiPayment = tx.installmentPurchaseId && (tx.type === 'income' || tx.type === 'transfer');
+    const installment = installments?.find(i => i.id === tx.installmentPurchaseId);
+    const isSettled = installment ? (installment.totalAmount - installment.paidAmount) <= 0.05 : false;
+
+    // Level 3: Critical - Settled MSI Plan
+    if (isMsiPayment && isSettled) {
+      return {
+        warningLevel: 'critical',
+        warningMessage: 'PELIGRO: Integridad Histórica Comprometida',
+        warningDetails: [
+          'Este pago pertenece a un plan MSI totalmente liquidado.',
+          'Eliminarlo revertirá TODOS los registros contables.',
+          'Tus saldos actuales dejarán de coincidir con la realidad de tu banco.',
+          'Solo elimina esto si TODA la operación fue un error de captura.',
+        ],
+        impactPreview: {
+          account: getAccountName(tx.accountId),
+          balanceChange: tx.type === 'income' ? -tx.amount : tx.amount,
+          msiPlan: installment?.description,
+          msiProgress: {
+            current: installment?.paidInstallments || 0,
+            total: installment?.installments || 0,
+          },
+        },
+        requireConfirmation: true,
+      };
+    }
+
+    // Level 2: Warning - Active MSI Payment
+    if (isMsiPayment && !isSettled) {
+      return {
+        warningLevel: 'warning',
+        warningMessage: 'Advertencia: Esto afectará tu plan de MSI',
+        warningDetails: [
+          'El dinero regresará a tu cuenta de origen.',
+          'La deuda en tu tarjeta de crédito aumentará.',
+          'El plan MSI retrocederá en progreso.',
+          'Solo elimina esto si fue un error de captura reciente.',
+        ],
+        impactPreview: {
+          account: getAccountName(tx.accountId),
+          balanceChange: tx.type === 'income' ? -tx.amount : tx.amount,
+          msiPlan: installment?.description,
+          msiProgress: {
+            current: installment?.paidInstallments || 0,
+            total: installment?.installments || 0,
+          },
+        },
+      };
+    }
+
+    // Initial MSI should not reach here (blocked earlier), but just in case
+    if (isInitialMsi) {
+      return {
+        warningLevel: 'critical',
+        warningMessage: 'No puedes eliminar esta compra',
+        warningDetails: ['Administra esta compra desde la sección "Meses Sin Intereses".'],
+      };
+    }
+
+    // Level 1: Normal transaction
+    const account = getAccount(tx.accountId);
+    const destinationAccount = tx.destinationAccountId ? getAccount(tx.destinationAccountId) : null;
+
+    let balanceChange = 0;
+    if (tx.type === 'income') {
+      balanceChange = account?.type === 'CREDIT' ? tx.amount : -tx.amount;
+    } else if (tx.type === 'expense') {
+      balanceChange = account?.type === 'CREDIT' ? -tx.amount : tx.amount;
+    } else if (tx.type === 'transfer') {
+      balanceChange = account?.type === 'CREDIT' ? -tx.amount : tx.amount;
+    }
+
+    return {
+      warningLevel: 'normal',
+      impactPreview: {
+        account: getAccountName(tx.accountId),
+        balanceChange,
+      },
+    };
+  };
+
+  const handleDeleteClick = (tx: Transaction) => {
+    const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
+
+    if (isInitialMsi) {
+      toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
+      return;
+    }
+
+    setItemToDelete(tx);
+  };
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
+
+    const deletedTxId = itemToDelete.id;
+    const deletedTxDescription = itemToDelete.description;
+
     try {
       await deleteTransactionMutation.mutateAsync(itemToDelete.id);
-      toast.success('Transacción eliminada');
       setItemToDelete(null);
-    } catch (error) {
-      toast.error('Error al eliminar.');
+
+      // Show success toast with UNDO action
+      toast.success('Transacción eliminada', {
+        description: deletedTxDescription,
+        duration: 5000,
+        action: {
+          label: 'Deshacer',
+          onClick: async () => {
+            try {
+              await restoreTransactionMutation.mutateAsync(deletedTxId);
+              toast.success('Transacción restaurada');
+            } catch (error: any) {
+              toast.error(`Error al restaurar: ${error.message}`);
+            }
+          },
+        },
+      });
+    } catch (error: any) {
+      toast.error(`Error al eliminar: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -41,11 +169,17 @@ const History: React.FC = () => {
 
   const isLoading = isLoadingTransactions || isLoadingCategories || isLoadingAccounts;
 
+  const deletionImpact = itemToDelete ? getDeletionImpact(itemToDelete) : null;
+
   return (
     <div className="pb-28 bg-app-bg min-h-screen text-app-text">
       <PageHeader title="Historial" />
 
-      {isLoading ? <div className="p-8 text-center">Cargando...</div> :
+      {isLoading ? (
+        <div className="px-4 py-6">
+          <SkeletonTransactionList count={8} />
+        </div>
+      ) :
         <div className="px-4 py-2 space-y-6">
           {Object.keys(grouped).length === 0 ? (
             <div className="pt-20 text-center text-app-muted">No hay transacciones.</div>
@@ -57,56 +191,94 @@ const History: React.FC = () => {
                   {grouped[date].map(tx => {
                     if (tx.type === 'transfer') {
                       return (
-                        <div key={tx.id} className="flex items-center gap-4 bg-app-card p-3 rounded-xl">
-                          <div onClick={() => navigate(`/new?editId=${tx.id}`)} className="flex items-center gap-4 flex-1 cursor-pointer">
-                            <div className="size-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#88888820' }}>
-                              <span className="material-symbols-outlined text-app-muted">swap_horiz</span>
+                        <SwipeableItem
+                          key={tx.id}
+                          onSwipeRight={() => navigate(`/new?editId=${tx.id}&mode=edit`)}
+                          rightAction={{
+                            icon: 'edit',
+                            color: '#3b82f6', // Azul moderno
+                            label: 'Editar',
+                          }}
+
+                          onSwipeLeft={() => handleDeleteClick(tx)}
+                          leftAction={{
+                            icon: 'delete',
+                            color: '#ef4444',
+                            label: 'Eliminar',
+                          }}
+                          className="rounded-2xl"
+                        >
+                          <div className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
+                            <div onClick={() => navigate(`/new?editId=${tx.id}`)} className="flex items-center gap-4 flex-1 cursor-pointer">
+                              <div className="size-10 rounded-full flex items-center justify-center shrink-0 bg-app-tertiary">
+                                <span className="material-symbols-outlined text-app-muted">swap_horiz</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold truncate">Transferencia</p>
+                                <p className="text-xs text-app-muted truncate">
+                                  {getAccountName(tx.accountId)} → {getAccountName(tx.destinationAccountId)}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold truncate">Transferencia</p>
-                              <p className="text-xs text-app-muted truncate">
-                                {getAccountName(tx.accountId)} → {getAccountName(tx.destinationAccountId)}
-                              </p>
-                            </div>
+                            <p className="font-bold text-app-text">{tx.amount.toFixed(2)}</p>
+                            <button onClick={() => handleDeleteClick(tx)} className="hidden md:block p-2 text-app-muted hover:text-app-danger transition-colors"><span className="material-symbols-outlined">delete</span></button>
                           </div>
-                          <p className="font-bold text-app-muted">{tx.amount.toFixed(2)}</p>
-                          <button onClick={() => setItemToDelete(tx)} className="p-2 text-app-muted hover:text-app-danger"><span className="material-symbols-outlined">delete</span></button>
-                        </div>
+                        </SwipeableItem>
                       );
                     }
 
                     const category = getCategoryInfo(tx.categoryId);
                     const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
+                    const isAdjustment = tx.description.includes('🔧') || tx.description.toLowerCase().includes('ajuste');
 
                     return (
-                      <div key={tx.id} className="flex items-center gap-4 bg-app-card p-3 rounded-xl">
-                        <div onClick={() => {
+                      <SwipeableItem
+                        key={tx.id}
+                        onSwipeRight={() => {
                           if (isInitialMsi) {
-                            toast('Administra esta compra desde la sección "Meses Sin Intereses"', { icon: 'ℹ️' });
+                            toast.info('Edita esta compra en "Meses Sin Intereses"', { duration: 2000 });
                             return;
                           }
-                          navigate(`/new?editId=${tx.id}`);
-                        }} className="flex items-center gap-4 flex-1 cursor-pointer">
-                          <div className="size-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
-                            <span className="material-symbols-outlined" style={{ color: category.color }}>{category.icon}</span>
+                          if (isAdjustment) {
+                            toast.info('Los ajustes de saldo no son editables', { description: 'Elimínalo y crea uno nuevo si es necesario.', duration: 3000 });
+                            return;
+                          }
+                          navigate(`/new?editId=${tx.id}&mode=edit`);
+                        }}
+                        rightAction={{
+                          icon: (isAdjustment || isInitialMsi) ? 'lock' : 'edit',
+                          color: (isAdjustment || isInitialMsi) ? '#94a3b8' : '#3b82f6', // Grey for locked, Blue for edit
+                          label: (isAdjustment || isInitialMsi) ? 'Bloqueado' : 'Editar',
+                        }}
+                        onSwipeLeft={() => handleDeleteClick(tx)}
+                        leftAction={{
+                          icon: 'delete',
+                          color: '#ef4444',
+                          label: 'Eliminar',
+                        }}
+                        className="rounded-2xl"
+                      >
+                        <div className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
+                          <div onClick={() => {
+                            // Removing block for MSI - allow viewing details
+                            navigate(`/new?editId=${tx.id}`);
+                          }} className="flex items-center gap-4 flex-1 cursor-pointer">
+                            <div className="size-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
+                              <span className="material-symbols-outlined" style={{ color: category.color }}>{category.icon}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{tx.description}</p>
+                              <div className="flex items-center gap-2">
+                                {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted" title="Recurrente">repeat</span>}
+                                {tx.installmentPurchaseId && <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">MSI</span>}
+                                <p className="text-xs text-app-muted truncate">{category.name}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold truncate">{tx.description}</p>
-                            <div className="flex items-center gap-2">
-                              {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted" title="Recurrente">repeat</span>}
-                              {tx.installmentPurchaseId && <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded-md">MSI</span>}
-                              <p className="text-xs text-app-muted">{category.name}</p>
-                            </div>                          </div>
+                          <p className={`font-bold whitespace-nowrap ${tx.type === 'income' ? 'text-app-success' : ''}`}>{tx.type === 'expense' ? '-' : '+'}{tx.amount.toFixed(2)}</p>
+                          <button onClick={() => handleDeleteClick(tx)} className="hidden md:block p-2 text-app-muted hover:text-app-danger transition-colors"><span className="material-symbols-outlined">delete</span></button>
                         </div>
-                        <p className={`font-bold ${tx.type === 'income' ? 'text-app-success' : ''}`}>{tx.type === 'expense' ? '-' : '+'}{tx.amount.toFixed(2)}</p>
-                        <button onClick={() => {
-                          if (isInitialMsi) {
-                            toast('Administra esta compra desde la sección "Meses Sin Intereses"', { icon: 'ℹ️' });
-                            return;
-                          }
-                          setItemToDelete(tx);
-                        }} className="p-2 text-app-muted hover:text-app-danger"><span className="material-symbols-outlined">delete</span></button>
-                      </div>
+                      </SwipeableItem>
                     );
                   })}
                 </div>
@@ -116,40 +288,24 @@ const History: React.FC = () => {
         </div>
       }
 
-      {itemToDelete && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-app-card rounded-lg p-6 m-4">
-            <h2 className="text-lg font-bold mb-4">Confirmar Eliminación</h2>
-            <p>¿Seguro que quieres eliminar "{itemToDelete.description}"?</p>
-
-            {itemToDelete.installmentPurchaseId && (itemToDelete.type === 'income' || itemToDelete.type === 'transfer') && (
-              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-xl text-sm">
-                <p className="font-bold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">warning</span>
-                  Advertencia de Integridad
-                </p>
-                <p className="mt-1">
-                  Este es un pago de un plan a Meses Sin Intereses. Al eliminarlo:
-                </p>
-                <ul className="list-disc list-inside mt-1 ml-1 opacity-90">
-                  <li>El dinero regresará a tu cuenta de origen.</li>
-                  <li>La deuda en tu tarjeta de crédito aumentará.</li>
-                  <li>El plan MSI retrocederá en progreso.</li>
-                </ul>
-                <p className="mt-2 font-bold">
-                  Solo elimina esto si fue un error de captura reciente. Si ya ocurrió en tu banco, borrarlo desajustará tus saldos reales.
-                </p>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-4 mt-6">
-              <button onClick={() => setItemToDelete(null)} className="px-4 py-2 rounded">Cancelar</button>
-              <button onClick={handleDelete} className="px-4 py-2 rounded bg-app-danger text-white">Eliminar</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Delete Confirmation Sheet */}
+      {
+        itemToDelete && deletionImpact && (
+          <DeleteConfirmationSheet
+            isOpen={!!itemToDelete}
+            onClose={() => setItemToDelete(null)}
+            onConfirm={handleDelete}
+            itemName={itemToDelete.description}
+            warningLevel={deletionImpact.warningLevel}
+            warningMessage={deletionImpact.warningMessage}
+            warningDetails={deletionImpact.warningDetails}
+            impactPreview={deletionImpact.impactPreview}
+            requireConfirmation={deletionImpact.requireConfirmation}
+            isDeleting={deleteTransactionMutation.isPending}
+          />
+        )
+      }
+    </div >
   );
 };
 

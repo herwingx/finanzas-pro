@@ -245,3 +245,35 @@ export const useDeleteRecurringTransaction = () => {
         },
     });
 };
+
+// Get deleted transactions (for trash/recycle bin)
+export const useDeletedTransactions = () => {
+    return useQuery<Transaction[], Error>({
+        queryKey: ['deletedTransactions'],
+        queryFn: apiService.getDeletedTransactions,
+    });
+};
+
+// Restore a deleted transaction (undo)
+export const useRestoreTransaction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => apiService.restoreTransaction(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['deletedTransactions'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['installments'] });
+        },
+    });
+};
+
+export const usePermanentDeleteTransaction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => apiService.deleteTransaction(id, true),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['deletedTransactions'] });
+        },
+    });
+};

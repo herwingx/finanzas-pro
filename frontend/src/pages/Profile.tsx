@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile, useUpdateProfile } from '../hooks/useApi';
 import useTheme from '../hooks/useTheme';
-import { toast } from 'sonner';
+import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../utils/toast';
+import { SkeletonAppLoading } from '../components/Skeleton';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const Profile: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024) {
-        toast.error('La imagen debe ser menor a 1MB');
+        toastError('La imagen debe ser menor a 1MB');
         return;
       }
       const reader = new FileReader();
@@ -49,10 +50,10 @@ const Profile: React.FC = () => {
   const handleSave = async () => {
     try {
       await updateProfileMutation.mutateAsync(editData);
-      toast.success('Perfil actualizado');
+      toastSuccess('Perfil actualizado');
       setIsEditing(false);
     } catch (error) {
-      toast.error('Error al actualizar perfil');
+      toastError('Error al actualizar perfil');
     }
   };
 
@@ -62,11 +63,7 @@ const Profile: React.FC = () => {
     navigate('/login');
   };
 
-  if (isLoading) return (
-    <div className="flex items-center justify-center min-h-screen bg-app-bg">
-      <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
+  if (isLoading) return <SkeletonAppLoading />;
 
   if (isError) return <div className="p-8 text-center text-app-danger">Error al cargar el perfil.</div>;
 
@@ -159,7 +156,7 @@ const Profile: React.FC = () => {
             </p>
             <button
               onClick={handleLogout}
-              className="w-full py-3 bg-app-danger/10 text-app-danger font-bold text-sm rounded-xl hover:bg-app-danger/20 transition-colors flex items-center justify-center gap-2"
+              className="btn-modern btn-danger btn-ghost w-full py-3 bg-app-danger/10 text-app-danger hover:bg-app-danger hover:text-white transition-all shadow-none hover:shadow-md flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined text-lg">logout</span>
               Cerrar Sesión

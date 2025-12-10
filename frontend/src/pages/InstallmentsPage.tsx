@@ -1,12 +1,48 @@
 import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
-import { useInstallmentPurchases, useProfile } from '../hooks/useApi';
-import { Link } from 'react-router-dom';
+import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } from '../hooks/useApi';
+import { SkeletonTransactionList } from '../components/Skeleton';
+import { toastSuccess, toastError, toast } from '../utils/toast';
+import { Link, useNavigate } from 'react-router-dom';
+import { SwipeableItem } from '../components/SwipeableItem';
 
 const InstallmentsPage: React.FC = () => {
     const { data: purchases, isLoading, isError } = useInstallmentPurchases();
     const { data: profile } = useProfile();
     const [activeTab, setActiveTab] = useState<'active' | 'settled'>('active');
+    const navigate = useNavigate();
+    const deleteMutation = useDeleteInstallmentPurchase();
+
+    const handleDelete = (purchase: any) => {
+        toast.custom((t) => (
+            <div className="bg-app-card border border-app-border rounded-xl p-4 flex flex-col gap-3 shadow-lg max-w-sm w-full font-sans">
+                <p className="text-app-text font-bold text-sm">¿Eliminar plan MSI "{purchase.description}"?</p>
+                <p className="text-app-muted text-xs">Se eliminarán todas las transacciones y pagos asociados. Esta acción no se puede deshacer.</p>
+                <div className="flex gap-2 justify-end">
+                    <button
+                        onClick={() => toast.dismiss(t)}
+                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-elevated text-app-text hover:bg-app-hover transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t);
+                            try {
+                                await deleteMutation.mutateAsync(purchase.id);
+                                toastSuccess('Plan MSI eliminado');
+                            } catch (error) {
+                                toastError('Error al eliminar');
+                            }
+                        }}
+                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-danger text-white hover:bg-app-danger/90 transition-colors"
+                    >
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        ), { duration: Infinity });
+    };
 
     const formatCurrency = useMemo(() => (value: number) => {
         const locales: Record<string, string> = { 'USD': 'en-US', 'EUR': 'de-DE', 'GBP': 'en-GB', 'MXN': 'es-MX' };
@@ -22,11 +58,18 @@ const InstallmentsPage: React.FC = () => {
     }, [purchases]);
 
     const displayedPurchases = useMemo(() => {
-      return activeTab === 'active' ? activePurchases : settledPurchases;
+        return activeTab === 'active' ? activePurchases : settledPurchases;
     }, [activeTab, activePurchases, settledPurchases]);
 
     if (isLoading) {
-        return <div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-app-primary"></div></div>;
+        return (
+            <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+                <PageHeader title="Mis Meses Sin Intereses" />
+                <div className="p-4 space-y-4">
+                    <SkeletonTransactionList count={5} />
+                </div>
+            </div>
+        );
     }
 
     if (isError) {
@@ -38,13 +81,13 @@ const InstallmentsPage: React.FC = () => {
             <PageHeader title="Mis Meses Sin Intereses" />
 
             <div className="flex justify-around p-1 bg-app-card rounded-2xl border border-app-border mx-4 mb-4">
-                <button 
+                <button
                     onClick={() => setActiveTab('active')}
                     className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'active' ? 'bg-app-primary text-white' : 'text-app-muted'}`}
                 >
                     Activos
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('settled')}
                     className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'settled' ? 'bg-app-primary text-white' : 'text-app-muted'}`}
                 >
@@ -65,31 +108,51 @@ const InstallmentsPage: React.FC = () => {
                         const progressPercentage = (paidAmount / purchase.totalAmount) * 100;
 
                         return (
-                            <Link to={`/installments/edit/${purchase.id}`} key={purchase.id} className="group bg-app-card border border-app-border rounded-2xl p-4 space-y-3 hover:bg-app-elevated transition-colors block">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-bold text-app-text">{purchase.description}</p>
-                                        <p className="text-xs text-app-muted">{purchase.account?.name}</p>
+                            <SwipeableItem
+                                key={purchase.id}
+                                onSwipeRight={() => navigate(`/installments/edit/${purchase.id}`)}
+                                rightAction={{
+                                    icon: 'edit',
+                                    color: '#3b82f6',
+                                    label: 'Editar',
+                                }}
+                                onSwipeLeft={() => handleDelete(purchase)}
+                                leftAction={{
+                                    icon: 'delete',
+                                    color: '#ef4444',
+                                    label: 'Eliminar',
+                                }}
+                                className="rounded-2xl"
+                            >
+                                <div
+                                    onClick={() => navigate(`/installments/edit/${purchase.id}`)}
+                                    className="card-modern bg-app-card border border-app-border rounded-2xl p-4 space-y-3 hover:shadow-md transition-premium block cursor-pointer"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold text-app-text">{purchase.description}</p>
+                                            <p className="text-xs text-app-muted">{purchase.account?.name}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-bold text-lg text-app-text">{formatCurrency(purchase.monthlyPayment)}</p>
+                                            <p className="text-xs text-app-muted">mensual</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-lg text-app-text">{formatCurrency(purchase.monthlyPayment)}</p>
-                                        <p className="text-xs text-app-muted">mensual</p>
-                                    </div>
-                                </div>
 
-                                <div>
-                                    <div className="flex justify-between text-xs text-app-muted mb-1">
-                                        <span>Pagado: {formatCurrency(paidAmount)}</span>
-                                        <span>Restante: {formatCurrency(remainingAmount)}</span>
-                                    </div>
-                                    <div className="w-full bg-app-elevated rounded-full h-2.5">
-                                        <div className="bg-app-primary h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
-                                    </div>
-                                    <div className="text-center text-xs text-app-muted mt-1">
-                                        {purchase.paidInstallments} de {purchase.installments} mensualidades pagadas
+                                    <div>
+                                        <div className="flex justify-between text-xs text-app-muted mb-1">
+                                            <span>Pagado: {formatCurrency(paidAmount)}</span>
+                                            <span>Restante: {formatCurrency(remainingAmount)}</span>
+                                        </div>
+                                        <div className="w-full bg-app-elevated rounded-full h-2.5">
+                                            <div className="bg-app-primary h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+                                        </div>
+                                        <div className="text-center text-xs text-app-muted mt-1">
+                                            {purchase.paidInstallments} de {purchase.installments} mensualidades pagadas
+                                        </div>
                                     </div>
                                 </div>
-                            </Link>
+                            </SwipeableItem>
                         );
                     })
                 )}

@@ -6,7 +6,7 @@ import {
   useDeleteTransaction, useAddRecurringTransaction, useAccounts,
   useAddInstallmentPurchase, useInstallmentPurchases, usePayInstallment
 } from '../hooks/useApi';
-import { toast } from 'sonner';
+import { toastSuccess, toastError, toastWarning, toastInfo, toastLoading, toastUpdateSuccess, toastUpdateError, toastCustom, toast, toastDismiss } from '../utils/toast';
 import { DatePicker } from '../components/DatePicker';
 
 const NewTransaction: React.FC = () => {
@@ -44,8 +44,13 @@ const NewTransaction: React.FC = () => {
   const [isMsiPayment, setIsMsiPayment] = useState(false);
   const [selectedInstallmentId, setSelectedInstallmentId] = useState(searchParams.get('installmentPurchaseId') || '');
 
+  const mode = searchParams.get('mode'); // 'edit' or undefined (view)
+  const [isViewingDetails, setIsViewingDetails] = useState(!!editId && mode !== 'edit');
+
   const debitCashAccounts = useMemo(() => accounts?.filter(acc => acc.type === 'DEBIT' || acc.type === 'CASH') || [], [accounts]);
   const creditAccounts = useMemo(() => accounts?.filter(acc => acc.type === 'CREDIT') || [], [accounts]);
+  // Credit accounts with debt (valid transfer destinations)
+  const creditAccountsWithDebt = useMemo(() => accounts?.filter(acc => acc.type === 'CREDIT' && acc.balance > 0) || [], [accounts]);
   const allAccounts = useMemo(() => accounts || [], [accounts]);
 
   // Helper: Format account display with balance info
@@ -64,6 +69,17 @@ const NewTransaction: React.FC = () => {
     [allAccounts, destinationAccountId]
   );
 
+  // Valid transfer destination accounts (excludes the source account + shows only credit with debt)
+  const validDestinationAccounts = useMemo(() => {
+    if (!accountId) return allAccounts;
+    // For destination: show all except source, but filter credit cards to only those with debt
+    return allAccounts.filter(acc => {
+      if (acc.id === accountId) return false; // Can't transfer to same account
+      if (acc.type === 'CREDIT' && acc.balance <= 0) return false; // Don't show credit cards without debt
+      return true;
+    });
+  }, [allAccounts, accountId]);
+
   const isDestinationCredit = destinationAccount?.type === 'CREDIT';
   const creditDebt = destinationAccount?.balance || 0;
   const amountExceedsDebt = isDestinationCredit && parseFloat(amount || '0') > creditDebt;
@@ -73,10 +89,20 @@ const NewTransaction: React.FC = () => {
     return installmentPurchases.filter(p => p.accountId === accountId && p.paidAmount < p.totalAmount);
   }, [accountId, installmentPurchases]);
 
+  // Active MSI plans for DESTINATION credit card (for transfer payment linking)
+  const activeInstallmentsForDestination = useMemo(() => {
+    if (!destinationAccountId || !installmentPurchases || !isDestinationCredit) return [];
+    return installmentPurchases.filter(p => p.accountId === destinationAccountId && p.paidAmount < p.totalAmount);
+  }, [destinationAccountId, installmentPurchases, isDestinationCredit]);
+
   const selectedAccountIsCredit = useMemo(() => {
     const account = allAccounts.find(a => a.id === accountId);
     return account?.type === 'CREDIT';
   }, [accountId, allAccounts]);
+
+  // State for MSI payment linking in transfers
+  const [linkMsiPayment, setLinkMsiPayment] = useState(false);
+  const [selectedMsiForTransfer, setSelectedMsiForTransfer] = useState('');
 
   useEffect(() => {
     if (existingTransaction) {
@@ -97,11 +123,13 @@ const NewTransaction: React.FC = () => {
 
   useEffect(() => {
     if (allAccounts.length > 0 && !accountId) {
-      if (type === 'transfer') {
+      if (type === 'transfer' || type === 'income') {
+        // For transfers and income: prefer DEBIT/CASH accounts
         const debits = allAccounts.filter(acc => acc.type === 'DEBIT' || acc.type === 'CASH');
         if (debits.length > 0) setAccountId(debits[0].id);
         else setAccountId(allAccounts[0].id);
       } else {
+        // For expenses: any account is fine
         setAccountId(allAccounts[0].id);
       }
     }
@@ -112,11 +140,26 @@ const NewTransaction: React.FC = () => {
   }, [allAccounts, accountId, type, isInstallment, creditAccounts]);
 
   useEffect(() => {
-    if (type === 'transfer' && allAccounts.length > 0 && !destinationAccountId) {
-      const otherAccounts = allAccounts.filter(acc => acc.id !== accountId);
-      if (otherAccounts.length > 0) setDestinationAccountId(otherAccounts[0].id);
+    if (type === 'transfer' && validDestinationAccounts.length > 0 && !destinationAccountId) {
+      // Auto-select first valid destination (preferably a credit card with debt)
+      const creditWithDebt = validDestinationAccounts.find(acc => acc.type === 'CREDIT');
+      setDestinationAccountId(creditWithDebt?.id || validDestinationAccounts[0].id);
     }
-  }, [allAccounts, accountId, destinationAccountId, type]);
+  }, [validDestinationAccounts, accountId, destinationAccountId, type]);
+
+  // Switch away from credit accounts when changing to income type
+  useEffect(() => {
+    if (type === 'income' && accountId) {
+      const currentAccount = allAccounts.find(acc => acc.id === accountId);
+      if (currentAccount && currentAccount.type === 'CREDIT') {
+        // Current account is credit, switch to first DEBIT/CASH account
+        const debits = allAccounts.filter(acc => acc.type === 'DEBIT' || acc.type === 'CASH');
+        if (debits.length > 0) {
+          setAccountId(debits[0].id);
+        }
+      }
+    }
+  }, [type, accountId, allAccounts]);
 
   const availableCategories = useMemo(() => categories?.filter(c => c.type === type) || [], [categories, type]);
 
@@ -147,7 +190,7 @@ const NewTransaction: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || parseFloat(amount) <= 0) {
-      toast.error('El monto debe ser mayor a cero.');
+      toastError('El monto debe ser mayor a cero.');
       return;
     }
 
@@ -174,7 +217,7 @@ const NewTransaction: React.FC = () => {
         // Include destination for transfers
         if (type === 'transfer') {
           if (!destinationAccountId) {
-            toast.error('Selecciona la cuenta de destino para la transferencia.');
+            toastError('Selecciona la cuenta de destino para la transferencia.');
             return;
           }
           transactionData.destinationAccountId = destinationAccountId;
@@ -186,12 +229,12 @@ const NewTransaction: React.FC = () => {
         }
 
         await updateTransactionMutation.mutateAsync({ id: editId, transaction: transactionData });
-        toast.success('Transacción actualizada');
+        toastSuccess('Transacción actualizada');
       }
       // PRIORITY 2: Create new MSI payment (if not editing)
       else if (isMsiPayment && selectedInstallmentId) {
         if (!accountId) {
-          toast.error('Selecciona la cuenta de origen del pago.');
+          toastError('Selecciona la cuenta de origen del pago.');
           return;
         }
         await payInstallmentMutation.mutateAsync({
@@ -203,44 +246,101 @@ const NewTransaction: React.FC = () => {
             accountId: accountId,
           }
         });
-        toast.success('Pago a MSI guardado');
+        toastSuccess('Pago a MSI guardado');
       }
       // PRIORITY 3: Create new transfer
       else if (type === 'transfer') {
         if (!accountId || !destinationAccountId) {
-          toast.error('Selecciona ambas cuentas para la transferencia.');
+          toastError('Selecciona ambas cuentas para la transferencia.');
           return;
         }
         if (accountId === destinationAccountId) {
-          toast.error('Las cuentas de origen y destino no pueden ser la misma.');
+          toastError('Las cuentas de origen y destino no pueden ser la misma.');
           return;
         }
 
-        const installmentPurchaseId = searchParams.get('installmentPurchaseId');
+        // Check if this transfer should be linked to an MSI payment
+        const installmentPurchaseId = searchParams.get('installmentPurchaseId') ||
+          (linkMsiPayment && selectedMsiForTransfer && selectedMsiForTransfer !== '__LIQUIDATE_ALL__' ? selectedMsiForTransfer : undefined);
 
-        await addTransactionMutation.mutateAsync({
-          amount: numAmount,
-          description: finalDescription || `Transferencia`,
-          date: date.toISOString(),
-          type: 'transfer',
-          accountId,
-          destinationAccountId,
-          installmentPurchaseId: installmentPurchaseId || undefined,
-        } as Omit<Transaction, 'id'>);
-        toast.success('Transferencia guardada');
+        // Special case: Liquidate ALL MSI plans
+        if (linkMsiPayment && selectedMsiForTransfer === '__LIQUIDATE_ALL__' && activeInstallmentsForDestination.length > 0) {
+          // Calculate total MSI debt
+          const totalMSIDebt = activeInstallmentsForDestination.reduce((sum, msi) =>
+            sum + (msi.totalAmount - msi.paidAmount), 0
+          );
+
+          // Distribute payment proportionally
+          let remainingAmount = numAmount;
+          const toastId = toastLoading('Distribuyendo pago entre planes MSI...');
+
+          try {
+            for (let i = 0; i < activeInstallmentsForDestination.length; i++) {
+              const msi = activeInstallmentsForDestination[i];
+              const msiDebt = msi.totalAmount - msi.paidAmount;
+
+              // Calculate proportional allocation
+              let allocation;
+              if (i === activeInstallmentsForDestination.length - 1) {
+                // Last one gets all remaining to avoid rounding errors
+                allocation = remainingAmount;
+              } else {
+                allocation = (msiDebt / totalMSIDebt) * numAmount;
+              }
+
+              // Cap at MSI debt
+              allocation = Math.min(allocation, msiDebt);
+
+              // Pay this MSI plan
+              if (allocation > 0) {
+                await payInstallmentMutation.mutateAsync({
+                  id: msi.id,
+                  payment: {
+                    amount: allocation,
+                    description: `Liquidación - ${msi.description}`,
+                    date: date.toISOString(),
+                    accountId: accountId,
+                  }
+                });
+              }
+
+              remainingAmount -= allocation;
+            }
+
+            toastUpdateSuccess(toastId, 'Deuda liquidada y planes MSI actualizados');
+          } catch (error: any) {
+            toastUpdateError(toastId, error.message || 'Error al distribuir pago');
+            throw error;
+          }
+        } else {
+          // Regular transfer (with or without single MSI link)
+          await addTransactionMutation.mutateAsync({
+            amount: numAmount,
+            description: finalDescription || (isDestinationCredit ? 'Pago a Tarjeta de Crédito' : 'Transferencia'),
+            date: date.toISOString(),
+            type: 'transfer',
+            accountId,
+            destinationAccountId,
+            installmentPurchaseId: installmentPurchaseId || undefined,
+          } as Omit<Transaction, 'id'>);
+
+          const successMsg = installmentPurchaseId ? 'Pago a MSI guardado' :
+            isDestinationCredit ? 'Pago a tarjeta guardado' : 'Transferencia guardada';
+          toast.success(successMsg);
+        }
       }
       // PRIORITY 4: Create new MSI purchase
       else if (isInstallment) {
         if (!accountId) {
-          toast.error('Selecciona una tarjeta de crédito para la compra a MSI.');
+          toastError('Selecciona una tarjeta de crédito para la compra a MSI.');
           return;
         }
         if (!installments || parseInt(installments, 10) <= 0) {
-          toast.error('El número de meses debe ser mayor a cero.');
+          toastError('El número de meses debe ser mayor a cero.');
           return;
         }
         if (!categoryId) {
-          toast.error('Selecciona una categoría para las mensualidades de MSI.');
+          toastError('Selecciona una categoría para las mensualidades de MSI.');
           return;
         }
         await addInstallmentMutation.mutateAsync({
@@ -251,12 +351,12 @@ const NewTransaction: React.FC = () => {
           accountId,
           categoryId,
         });
-        toast.success('Compra a MSI guardada');
+        toastSuccess('Compra a MSI guardada');
       }
       // PRIORITY 5: Create recurring transaction
       else if (isRecurring) {
         if (!categoryId) {
-          toast.error('Selecciona una categoría para la transacción recurrente.');
+          toastError('Selecciona una categoría para la transacción recurrente.');
           return;
         }
         await addRecurringMutation.mutateAsync({
@@ -270,12 +370,12 @@ const NewTransaction: React.FC = () => {
           active: true,
           nextDueDate: date.toISOString(),
         });
-        toast.success('Transacción recurrente guardada');
+        toastSuccess('Transacción recurrente guardada');
       }
       // PRIORITY 6: Create normal transaction
       else {
         if (!categoryId) {
-          toast.error('Selecciona una categoría para la transacción.');
+          toastError('Selecciona una categoría para la transacción.');
           return;
         }
         await addTransactionMutation.mutateAsync({
@@ -286,7 +386,7 @@ const NewTransaction: React.FC = () => {
           date: date.toISOString(),
           type,
         } as Omit<Transaction, 'id'>);
-        toast.success('Transacción guardada');
+        toastSuccess('Transacción guardada');
       }
       navigate(-1);
     } catch (error: any) {
@@ -298,10 +398,10 @@ const NewTransaction: React.FC = () => {
   const executeDelete = async () => {
     try {
       await deleteTransactionMutation.mutateAsync(editId!);
-      toast.success('Transacción eliminada');
+      toastSuccess('Transacción eliminada');
       navigate(-1);
     } catch (error) {
-      toast.error('Error al eliminar la transacción.');
+      toastError('Error al eliminar la transacción.');
     }
   };
 
@@ -351,6 +451,132 @@ const NewTransaction: React.FC = () => {
   const isFormDisabled = addTransactionMutation.isPending || updateTransactionMutation.isPending || addRecurringMutation.isPending || addInstallmentMutation.isPending || payInstallmentMutation.isPending;
   const isCategoryRequired = type !== 'transfer' && !isMsiPayment;
 
+  // 1. Loading State to prevent Flicker
+  if (editId && isLoadingExisting) {
+    return (
+      <div className="flex flex-col h-screen bg-app-bg">
+        <header className="p-4 bg-app-bg border-b border-app-border">
+          <div className="h-6 w-32 bg-app-elevated animate-pulse rounded"></div>
+        </header>
+        <div className="flex-1 p-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-app-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Details View (Read Only)
+  if (isViewingDetails && existingTransaction) {
+    const isAdjustment = existingTransaction.description.includes('🔧') || existingTransaction.description.toLowerCase().includes('ajuste');
+    // Check if it's an initial MSI purchase (Expense type with installmentId)
+    const isInitialMsi = existingTransaction.installmentPurchaseId && existingTransaction.type === 'expense';
+
+    const categoryName = existingTransaction.category?.name || (existingTransaction.description) || 'Sin Categoría';
+    const accountName = existingTransaction.account?.name || 'Cuenta Eliminada';
+    const destAccountName = existingTransaction.destinationAccount?.name;
+
+    return (
+      <div className="flex flex-col h-screen bg-app-bg text-app-text">
+        <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
+          <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
+            <span className="material-symbols-outlined">arrow_back_ios_new</span>
+          </button>
+          <h1 className="text-lg font-bold">Detalle de Transacción</h1>
+          <div className="w-10"></div>
+        </header>
+
+        <main className="flex-1 px-6 pt-8 space-y-6 overflow-y-auto">
+          {/* Main Card */}
+          <div className="bg-app-card border border-app-border rounded-3xl p-6 shadow-sm flex flex-col items-center gap-4 animate-fade-in">
+            <div className={`size-16 rounded-full flex items-center justify-center text-3xl shadow-inner ${isAdjustment ? 'bg-slate-100 text-slate-500' :
+                existingTransaction.type === 'expense' ? 'bg-red-100 text-red-500' :
+                  existingTransaction.type === 'income' ? 'bg-green-100 text-green-500' : 'bg-blue-100 text-blue-500'
+              }`}>
+              <span className="material-symbols-outlined text-3xl">
+                {isAdjustment ? 'tune' : existingTransaction.category?.icon || 'receipt'}
+              </span>
+            </div>
+
+            <div className="text-center">
+              <p className="text-sm text-app-muted uppercase font-bold tracking-wider">{categoryName}</p>
+              <h2 className={`text-4xl font-black mt-2 ${existingTransaction.type === 'expense' ? 'text-app-text' :
+                  existingTransaction.type === 'income' ? 'text-green-500' : 'text-blue-500'
+                }`}>
+                {existingTransaction.type === 'expense' ? '-' : '+'}${existingTransaction.amount.toFixed(2)}
+              </h2>
+              <p className="text-app-text mt-2 font-medium">{existingTransaction.description}</p>
+            </div>
+
+            <div className="w-full h-px bg-app-border my-2"></div>
+
+            <div className="w-full space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-app-muted">Fecha</span>
+                <span className="font-medium text-app-text">
+                  {new Date(existingTransaction.date).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-app-muted">Cuenta</span>
+                <span className="font-medium text-app-text">{accountName}</span>
+              </div>
+              {destAccountName && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-app-muted">Destino</span>
+                  <span className="font-medium text-app-text">{destAccountName}</span>
+                </div>
+              )}
+
+              {/* Information Banners */}
+              {isAdjustment && (
+                <div className="mt-4 p-3 bg-app-elevated rounded-xl border border-app-border text-xs text-app-muted flex gap-2 items-start">
+                  <span className="material-symbols-outlined text-sm shrink-0">info</span>
+                  <p>Este es un ajuste de sistema. No se puede editar el monto, pero puedes eliminarlo.</p>
+                </div>
+              )}
+              {isInitialMsi && (
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 text-xs text-blue-600 dark:text-blue-300 flex gap-2 items-start">
+                  <span className="material-symbols-outlined text-sm shrink-0">credit_card</span>
+                  <p>Esta es una compra a Meses Sin Intereses. Gestionala desde la sección MSI.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+
+        <footer className="p-4 bg-app-bg border-t border-app-border flex gap-3">
+          <button
+            onClick={handleDelete}
+            className="flex-1 py-3.5 rounded-2xl font-bold bg-app-danger/10 text-app-danger hover:bg-app-danger/20 transition-all flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-sm">delete</span>
+            Eliminar
+          </button>
+
+          <button
+            onClick={() => {
+              if (isAdjustment) {
+                toastInfo("Los ajustes manuales no son editables. Elimínalo si es incorrecto.");
+                return;
+              }
+              if (isInitialMsi) {
+                toastInfo("Ve a la sección 'Meses Sin Intereses' para gestionar esta compra.");
+                // Optional: navigate('/installments')
+                return;
+              }
+              setIsViewingDetails(false);
+            }}
+            className={`flex-[2] py-3.5 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-app-primary/20 ${isAdjustment || isInitialMsi ? 'bg-slate-400 cursor-not-allowed opacity-50' : 'bg-app-primary hover:bg-app-primary/90'
+              }`}
+          >
+            <span className="material-symbols-outlined text-sm">{isAdjustment || isInitialMsi ? 'lock' : 'edit'}</span>
+            {isAdjustment ? 'No Editable' : isInitialMsi ? 'Ver en MSI' : 'Editar'}
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-app-bg text-app-text">
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
@@ -370,7 +596,7 @@ const NewTransaction: React.FC = () => {
               <div className="flex p-1 bg-app-card rounded-2xl border border-app-border">
                 <button type="button" onClick={() => setType('income')} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${type === 'income' ? 'bg-app-success text-white' : 'text-app-muted'}`}>Ingreso</button>
                 <button type="button" onClick={() => setType('expense')} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${type === 'expense' ? 'bg-app-danger text-white' : 'text-app-muted'}`}>Gasto</button>
-                <button type="button" onClick={() => setType('transfer')} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${type === 'transfer' ? 'bg-blue-500 text-white' : 'text-app-muted'}`}>Transferencia</button>
+                <button type="button" onClick={() => setType('transfer')} className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${type === 'transfer' ? 'bg-app-secondary text-white shadow-md' : 'text-app-muted'}`}>Transferencia</button>
               </div>
             ) : (
               <div className="text-center">
@@ -408,7 +634,7 @@ const NewTransaction: React.FC = () => {
                     className="w-full p-3 bg-app-bg rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
                     required
                   >
-                    {isLoadingAccounts ? <option value="">Cargando...</option> :
+                    {isLoadingAccounts ? <option value="" disabled>Cargando cuentas...</option> :
                       debitCashAccounts.map(account => (
                         <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
                       ))
@@ -424,41 +650,171 @@ const NewTransaction: React.FC = () => {
                     className="w-full p-3 bg-app-bg rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
                     required
                   >
-                    {isLoadingAccounts ? <option value="">Cargando...</option> :
-                      allAccounts.filter(acc => acc.id !== accountId).map(account => (
-                        <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
-                      ))
+                    {isLoadingAccounts ? <option value="" disabled>Cargando cuentas...</option> :
+                      validDestinationAccounts.length > 0 ? (
+                        validDestinationAccounts.map(account => (
+                          <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No hay cuentas de destino disponibles</option>
+                      )
                     }
                   </select>
+                  {validDestinationAccounts.length === 0 && (
+                    <p className="mt-2 text-xs text-app-muted">No hay cuentas válidas para transferir. Las tarjetas de crédito sin deuda no se muestran.</p>
+                  )}
                 </div>
 
-                {/* Credit Card Debt Warning & Quick Actions */}
+                {/* Credit Card Payment Section with MSI Linking */}
                 {isDestinationCredit && destinationAccount && (
-                  <div className="mx-4 mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <span className="material-symbols-outlined text-blue-500 text-xl">credit_card</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-app-text">Abono a Tarjeta de Crédito</p>
-                        <p className="text-xs text-app-muted mt-1">
-                          Deuda actual: <span className="font-bold text-blue-500">${creditDebt.toFixed(2)}</span>
-                        </p>
-                        {amountExceedsDebt && parseFloat(amount) > 0 && (
-                          <p className="text-xs text-red-500 font-bold mt-2 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">error</span>
-                            No puedes abonar más de la deuda actual
+                  <div className="space-y-3">
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <span className="material-symbols-outlined text-blue-500 text-xl">credit_card</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-app-text">Pago a Tarjeta de Crédito</p>
+                          <p className="text-xs text-app-muted mt-1">
+                            Deuda actual: <span className="font-bold text-blue-500">${creditDebt.toFixed(2)}</span>
                           </p>
+                          {amountExceedsDebt && parseFloat(amount) > 0 && (
+                            <p className="text-xs text-red-500 font-bold mt-2 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">error</span>
+                              No puedes abonar más de la deuda actual
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {creditDebt > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Check if there are active MSI plans
+                              if (activeInstallmentsForDestination.length > 0) {
+                                // Show confirmation toast for liquidating with MSI
+                                toast.custom((t) => (
+                                  <div className="bg-white dark:bg-gray-800 border border-blue-500/50 rounded-xl p-4 flex flex-col gap-3 shadow-xl max-w-md w-full">
+                                    <div className="flex items-start gap-3">
+                                      <span className="text-2xl">💳</span>
+                                      <div>
+                                        <p className="text-app-text font-bold text-sm">Liquidar Deuda Total</p>
+                                        <p className="text-app-muted text-xs mt-1">
+                                          Vas a pagar: <span className="font-bold text-blue-500">${creditDebt.toFixed(2)}</span>
+                                        </p>
+                                        {activeInstallmentsForDestination.length > 0 && (
+                                          <div className="mt-2">
+                                            <p className="text-xs font-bold text-app-text">Esto incluye {activeInstallmentsForDestination.length} plan(es) MSI:</p>
+                                            <ul className="list-disc list-inside text-xs text-app-muted mt-1 space-y-0.5">
+                                              {activeInstallmentsForDestination.map(msi => (
+                                                <li key={msi.id}>
+                                                  {msi.description}: ${(msi.totalAmount - msi.paidAmount).toFixed(2)} ({msi.installments - msi.paidInstallments} mens. restantes)
+                                                </li>
+                                              ))}
+                                            </ul>
+                                            <p className="text-xs text-app-muted mt-2 italic">
+                                              ✅ Todos los planes MSI se marcarán como completamente pagados.
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex gap-2 justify-end mt-2">
+                                      <button
+                                        onClick={() => toast.dismiss(t)}
+                                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          toast.dismiss(t);
+                                          setAmount(creditDebt.toFixed(2));
+                                          // Set all MSI plans to be paid
+                                          if (activeInstallmentsForDestination.length > 0) {
+                                            setLinkMsiPayment(true);
+                                            setSelectedMsiForTransfer('__LIQUIDATE_ALL__'); // Special flag
+                                          }
+                                        }}
+                                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                                      >
+                                        Confirmar y Liquidar
+                                      </button>
+                                    </div>
+                                  </div>
+                                ), { duration: Infinity, id: 'liquidate-confirm' });
+                              } else {
+                                // No MSI, just set the amount
+                                setAmount(creditDebt.toFixed(2));
+                              }
+                            }}
+                            className="mt-3 w-full py-2 px-3 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                          >
+                            <span className="material-symbols-outlined text-lg">check_circle</span>
+                            Liquidar Total (${creditDebt.toFixed(2)})
+                          </button>
+                          {activeInstallmentsForDestination.length > 0 && (
+                            <p className="text-xs text-app-muted mt-2 text-center">
+                              Incluye {activeInstallmentsForDestination.length} plan(es) MSI activo(s)
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* MSI Payment Linking */}
+                    {activeInstallmentsForDestination.length > 0 && (
+                      <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-purple-500">calendar_month</span>
+                            <label className="text-sm font-bold text-app-text">¿Es pago de MSI?</label>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={linkMsiPayment}
+                              onChange={(e) => {
+                                setLinkMsiPayment(e.target.checked);
+                                if (!e.target.checked) setSelectedMsiForTransfer('');
+                              }}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                          </label>
+                        </div>
+                        {linkMsiPayment && (
+                          <div>
+                            <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Selecciona el plan MSI</label>
+                            <select
+                              value={selectedMsiForTransfer}
+                              onChange={e => {
+                                setSelectedMsiForTransfer(e.target.value);
+                                // Auto-fill suggested amount
+                                const plan = activeInstallmentsForDestination.find(p => p.id === e.target.value);
+                                if (plan) {
+                                  const remaining = plan.totalAmount - plan.paidAmount;
+                                  const suggested = Math.min(plan.monthlyPayment, remaining);
+                                  setAmount(suggested.toFixed(2));
+                                }
+                              }}
+                              className="w-full p-3 bg-app-bg rounded-xl border border-app-border"
+                              required={linkMsiPayment}
+                            >
+                              <option value="">-- Elige una opción --</option>
+                              {activeInstallmentsForDestination.map(p => (
+                                <option key={p.id} value={p.id}>
+                                  {p.description} - ${(p.totalAmount - p.paidAmount).toFixed(2)} restantes
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-app-muted mt-2 flex items-start gap-1">
+                              <span className="material-symbols-outlined text-sm">info</span>
+                              <span>Vincular este pago actualizará el progreso del plan MSI automáticamente.</span>
+                            </p>
+                          </div>
                         )}
                       </div>
-                    </div>
-                    {creditDebt > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setAmount(creditDebt.toFixed(2))}
-                        className="mt-3 w-full py-2 px-3 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                      >
-                        <span className="material-symbols-outlined text-lg">check_circle</span>
-                        Liquidar Total (${creditDebt.toFixed(2)})
-                      </button>
                     )}
                   </div>
                 )}
@@ -466,13 +822,28 @@ const NewTransaction: React.FC = () => {
             ) : (
               <div className="p-4">
                 <label htmlFor="account" className="block text-xs text-app-muted font-bold mb-3 uppercase">Cuenta</label>
-                <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full p-3 bg-app-bg rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary" required>
-                  {isLoadingAccounts ? <option>Cargando...</option> :
-                    allAccounts.map(account => (
-                      <option key={account.id} value={account.id}>{account.name} ({account.type})</option>
+                <select
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="w-full p-3 bg-app-bg rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
+                  required
+                >
+                  {isLoadingAccounts ? <option disabled>Cargando cuentas...</option> :
+                    // For INCOME: Only show DEBIT/CASH accounts (can't deposit income directly to credit cards)
+                    // For EXPENSE: Show all accounts
+                    (type === 'income' ? debitCashAccounts : allAccounts).map(account => (
+                      <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
                     ))
                   }
                 </select>
+                {type === 'income' && creditAccounts.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <p className="text-xs text-app-muted flex items-start gap-2">
+                      <span className="material-symbols-outlined text-blue-500 text-sm">info</span>
+                      <span>Para pagar tarjetas de crédito, usa <strong>Transferencia</strong> en lugar de Ingreso.</span>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -511,7 +882,7 @@ const NewTransaction: React.FC = () => {
                     <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Selecciona la compra a pagar</label>
                     <select value={selectedInstallmentId} onChange={e => setSelectedInstallmentId(e.target.value)} className="w-full p-3 bg-app-bg rounded-xl border border-app-border" required>
                       <option value="">-- Elige una opción --</option>
-                      {isLoadingInstallments ? <option>Cargando...</option> :
+                      {isLoadingInstallments ? <option disabled>Cargando compras...</option> :
                         activeInstallmentsForAccount.map(p => (
                           <option key={p.id} value={p.id}>
                             {p.description} (${(p.totalAmount - p.paidAmount).toFixed(2)} restantes)
@@ -575,12 +946,12 @@ const NewTransaction: React.FC = () => {
             <div className="p-4"><DatePicker date={date} onDateChange={setDate} /></div>
           </div>
 
-          {editId && <div className="p-4"><button type="button" onClick={handleDelete} className="w-full py-3 bg-app-danger/10 text-app-danger font-bold rounded-xl">Eliminar</button></div>}
+          {editId && <div className="p-4"><button type="button" onClick={handleDelete} className="btn-modern w-full py-3 bg-app-danger/10 text-app-danger font-bold text-base hover:bg-app-danger hover:text-white transition-all shadow-none hover:shadow-lg">Eliminar Transacción</button></div>}
         </main>
 
         <footer className="fixed bottom-0 left-0 right-0 p-4 bg-app-bg/80 backdrop-blur-xl border-t border-app-border">
-          <button type="submit" disabled={isFormDisabled} className="w-full h-14 rounded-2xl text-lg font-bold bg-app-primary text-white disabled:bg-app-elevated disabled:text-app-muted transition-all">
-            Guardar
+          <button type="submit" disabled={isFormDisabled} className="btn-modern w-full h-14 text-lg font-bold btn-primary shadow-premium transition-transform active:scale-[0.98]">
+            Guardar Transacción
           </button>
         </footer>
       </form>

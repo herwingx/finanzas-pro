@@ -9,165 +9,229 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   1. Premium Fintech Design Tokens & CSS Variables
+   1. Modern Futuristic Design System - Perfect Contrast
+   Inspired by: GitHub Dark, Vercel, Linear, Arc Browser
    ========================================================================== */
 :root {
-  /* Premium Fintech Color Palette - Light Mode */
-  /* Primary: Sophisticated Purple-Blue (Trust & Innovation) */
-  --color-primary: hsl(252, 95%, 62%);
-  --color-primary-light: hsl(252, 95%, 72%);
-  --color-primary-dark: hsl(252, 85%, 52%);
+  /* 🎨 LIGHT MODE - Clean, Airy, Premium */
 
-  /* Secondary: Vibrant Cyan (Energy & Growth) */
-  --color-secondary: hsl(195, 100%, 50%);
-  --color-secondary-light: hsl(195, 100%, 60%);
+  /* Core Brand Colors - Vibrant but Professional */
+  --color-primary: hsl(245, 100%, 60%);
+  /* Electric Indigo */
+  --color-primary-light: hsl(245, 100%, 70%);
+  --color-primary-dark: hsl(245, 95%, 50%);
+  --color-primary-glow: hsla(245, 100%, 60%, 0.15);
 
-  /* Accent: Electric Purple (Premium & Modern) */
-  --color-accent: hsl(270, 100%, 68%);
-  --color-accent-light: hsl(270, 100%, 78%);
+  /* Secondary: Cyan-Blue (Trust & Technology) */
+  --color-secondary: hsl(200, 100%, 50%);
+  /* Bright Cyan */
+  --color-secondary-light: hsl(200, 100%, 60%);
+  --color-secondary-glow: hsla(200, 100%, 50%, 0.15);
 
-  /* Success: Fresh Green (Positive Growth) */
-  --color-success: hsl(145, 80%, 42%);
-  --color-success-light: hsl(145, 70%, 52%);
+  /* Accent: Purple (Premium & Energy) */
+  --color-accent: hsl(280, 100%, 65%);
+  /* Vivid Purple */
+  --color-accent-light: hsl(280, 100%, 75%);
+  --color-accent-glow: hsla(280, 100%, 65%, 0.15);
 
-  /* Danger: Vibrant Red (Attention & Alerts) */
-  --color-danger: hsl(355, 85%, 58%);
-  --color-danger-light: hsl(355, 75%, 68%);
+  /* Semantic Colors - High Contrast */
+  --color-success: hsl(142, 76%, 45%);
+  /* Emerald Green */
+  --color-success-light: hsl(142, 76%, 55%);
+  --color-success-bg: hsla(142, 76%, 45%, 0.1);
 
-  /* Warning: Warm Orange (Caution) */
-  --color-warning: hsl(35, 95%, 55%);
-  --color-warning-light: hsl(35, 95%, 65%);
+  --color-danger: hsl(0, 84%, 60%);
+  /* Vibrant Red */
+  --color-danger-light: hsl(0, 84%, 70%);
+  --color-danger-bg: hsla(0, 84%, 60%, 0.1);
 
-  /* Light Theme Backgrounds */
-  --color-bg-primary: hsl(220, 30%, 98%);
-  /* Soft Off-White */
-  --color-bg-secondary: hsl(0, 0%, 100%);
+  --color-warning: hsl(38, 92%, 50%);
+  /* Amber */
+  --color-warning-light: hsl(38, 92%, 60%);
+  --color-warning-bg: hsla(38, 92%, 50%, 0.1);
+
+  --color-info: hsl(199, 89%, 48%);
+  /* Sky Blue */
+  --color-info-light: hsl(199, 89%, 58%);
+  --color-info-bg: hsla(199, 89%, 48%, 0.1);
+
+  /* Light Mode Backgrounds - Ultra Clean */
+  --color-bg-primary: hsl(0, 0%, 100%);
   /* Pure White */
-  --color-bg-elevated: hsl(220, 25%, 99%);
-  /* Slightly Elevated White */
-  --color-bg-overlay: hsla(220, 30%, 98%, 0.95);
-  /* Glassmorphism overlay */
+  --color-bg-secondary: hsl(240, 20%, 99%);
+  /* Off-White with hint of blue */
+  --color-bg-tertiary: hsl(240, 25%, 97%);
+  /* Subtle Gray-Blue */
+  --color-bg-elevated: hsl(0, 0%, 100%);
+  --color-bg-overlay: hsla(0, 0%, 100%, 0.8);
+  --color-bg-hover: hsl(240, 25%, 96%);
+  --color-bg-active: hsl(240, 25%, 94%);
 
-  /* Light Theme Text */
-  --color-text-primary: hsl(220, 25%, 10%);
-  /* Rich Dark Blue-Gray */
-  --color-text-secondary: hsl(220, 15%, 45%);
+  /* Light Mode Text - Perfect Contrast (WCAG AAA) */
+  --color-text-primary: hsl(240, 25%, 8%);
+  /* Almost Black with blue tint */
+  --color-text-secondary: hsl(240, 10%, 40%);
   /* Medium Gray */
-  --color-text-tertiary: hsl(220, 10%, 65%);
+  --color-text-tertiary: hsl(240, 8%, 60%);
   /* Light Gray */
+  --color-text-quaternary: hsl(240, 5%, 75%);
+  /* Very Light Gray */
+  --color-text-inverted: hsl(0, 0%, 100%);
 
-  /* Light Theme Borders & Dividers */
-  --color-border: hsl(220, 20%, 90%);
-  /* Subtle Border */
-  --color-border-light: hsl(220, 20%, 95%);
-  /* Very Subtle Border */
-  --color-divider: hsla(220, 20%, 85%, 0.5);
-  /* Semi-transparent Divider */
+  /* Light Mode Borders - Subtle & Modern */
+  --color-border: hsla(240, 20%, 0%, 0.08);
+  /* Semi-transparent black */
+  --color-border-light: hsla(240, 20%, 0%, 0.04);
+  --color-border-medium: hsla(240, 20%, 0%, 0.12);
+  --color-border-strong: hsla(240, 20%, 0%, 0.16);
 
-  /* Light Theme Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* Light Mode Shadows - Soft & Layered */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
 .dark {
-  /* Premium Fintech Color Palette - Dark Mode */
-  /* Adjusted for better contrast and eye comfort */
-  --color-primary: hsl(252, 90%, 68%);
-  --color-primary-light: hsl(252, 90%, 78%);
-  --color-primary-dark: hsl(252, 80%, 58%);
+  /* 🌙 DARK MODE - Deep, Rich, Futuristic */
 
-  --color-secondary: hsl(195, 100%, 55%);
-  --color-secondary-light: hsl(195, 100%, 65%);
+  /* Core Brand Colors - Slightly Brighter for Dark BG */
+  --color-primary: hsl(245, 100%, 65%);
+  /* Brighter Electric Indigo */
+  --color-primary-light: hsl(245, 100%, 75%);
+  --color-primary-dark: hsl(245, 95%, 55%);
+  --color-primary-glow: hsla(245, 100%, 65%, 0.25);
 
-  --color-accent: hsl(270, 95%, 72%);
-  --color-accent-light: hsl(270, 95%, 82%);
+  --color-secondary: hsl(200, 100%, 55%);
+  /* Brighter Cyan */
+  --color-secondary-light: hsl(200, 100%, 65%);
+  --color-secondary-glow: hsla(200, 100%, 55%, 0.25);
 
-  --color-success: hsl(145, 70%, 48%);
-  --color-success-light: hsl(145, 65%, 58%);
+  --color-accent: hsl(280, 100%, 70%);
+  /* Brighter Purple */
+  --color-accent-light: hsl(280, 100%, 80%);
+  --color-accent-glow: hsla(280, 100%, 70%, 0.25);
 
-  --color-danger: hsl(355, 80%, 62%);
-  --color-danger-light: hsl(355, 75%, 72%);
+  /* Semantic Colors - Optimized for Dark */
+  --color-success: hsl(142, 76%, 50%);
+  --color-success-light: hsl(142, 76%, 60%);
+  --color-success-bg: hsla(142, 76%, 50%, 0.15);
 
-  --color-warning: hsl(35, 90%, 60%);
-  --color-warning-light: hsl(35, 90%, 70%);
+  --color-danger: hsl(0, 84%, 65%);
+  --color-danger-light: hsl(0, 84%, 75%);
+  --color-danger-bg: hsla(0, 84%, 65%, 0.15);
 
-  /* Dark Theme Backgrounds */
-  --color-bg-primary: hsl(220, 25%, 7%);
-  /* Deep Dark Blue-Gray */
-  --color-bg-secondary: hsl(220, 22%, 10%);
-  /* Slightly Lighter Dark */
-  --color-bg-elevated: hsl(220, 20%, 14%);
-  /* Elevated Surface */
-  --color-bg-overlay: hsla(220, 25%, 7%, 0.95);
-  /* Glassmorphism overlay */
+  --color-warning: hsl(38, 92%, 55%);
+  --color-warning-light: hsl(38, 92%, 65%);
+  --color-warning-bg: hsla(38, 92%, 55%, 0.15);
 
-  /* Dark Theme Text */
-  --color-text-primary: hsl(220, 20%, 98%);
+  --color-info: hsl(199, 89%, 53%);
+  --color-info-light: hsl(199, 89%, 63%);
+  --color-info-bg: hsla(199, 89%, 53%, 0.15);
+
+  /* Dark Mode Backgrounds - Deep Blue-Black (Like GitHub/Vercel) */
+  --color-bg-primary: hsl(240, 20%, 6%);
+  /* Deep Blue-Black */
+  --color-bg-secondary: hsl(240, 15%, 9%);
+  /* Slightly Lighter */
+  --color-bg-tertiary: hsl(240, 12%, 12%);
+  /* Medium Dark */
+  --color-bg-elevated: hsl(240, 15%, 11%);
+  /* Elevated Cards */
+  --color-bg-overlay: hsla(240, 20%, 6%, 0.95);
+  --color-bg-hover: hsl(240, 12%, 14%);
+  --color-bg-active: hsl(240, 12%, 16%);
+
+  /* Dark Mode Text - Perfect Contrast */
+  --color-text-primary: hsl(240, 20%, 98%);
   /* Almost White */
-  --color-text-secondary: hsl(220, 15%, 70%);
+  --color-text-secondary: hsl(240, 10%, 70%);
   /* Light Gray */
-  --color-text-tertiary: hsl(220, 10%, 50%);
+  --color-text-tertiary: hsl(240, 5%, 50%);
   /* Medium Gray */
+  --color-text-quaternary: hsl(240, 5%, 35%);
+  /* Dark Gray */
+  --color-text-inverted: hsl(240, 25%, 8%);
 
-  /* Dark Theme Borders & Dividers */
-  --color-border: hsla(220, 20%, 35%, 0.4);
-  /* Subtle Border */
-  --color-border-light: hsla(220, 20%, 40%, 0.2);
-  /* Very Subtle Border */
-  --color-divider: hsla(220, 20%, 40%, 0.3);
-  /* Semi-transparent Divider */
+  /* Dark Mode Borders - Subtle Glow */
+  --color-border: hsla(240, 20%, 100%, 0.08);
+  /* Semi-transparent white */
+  --color-border-light: hsla(240, 20%, 100%, 0.04);
+  --color-border-medium: hsla(240, 20%, 100%, 0.12);
+  --color-border-strong: hsla(240, 20%, 100%, 0.16);
 
-  /* Dark Theme Shadows (with glow effects) */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  /* Dark Mode Shadows - With Glow */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.5), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+
+  /* Glow Shadows for Premium Elements */
+  --shadow-glow-sm: 0 0 10px hsla(245, 100%, 65%, 0.15);
+  --shadow-glow-md: 0 0 15px hsla(245, 100%, 65%, 0.2);
+  --shadow-glow-lg: 0 0 20px hsla(245, 100%, 65%, 0.25);
 }
 
 .light {
-  /* Explicitly set light mode colors (same as :root) */
-  --color-primary: hsl(252, 95%, 62%);
-  --color-primary-light: hsl(252, 95%, 72%);
-  --color-primary-dark: hsl(252, 85%, 52%);
+  /* Light Mode Variables (same as :root for explicit class) */
+  --color-primary: hsl(245, 100%, 60%);
+  --color-primary-light: hsl(245, 100%, 70%);
+  --color-primary-dark: hsl(245, 95%, 50%);
+  --color-primary-glow: hsla(245, 100%, 60%, 0.15);
 
-  --color-secondary: hsl(195, 100%, 50%);
-  --color-secondary-light: hsl(195, 100%, 60%);
+  --color-secondary: hsl(200, 100%, 50%);
+  --color-secondary-light: hsl(200, 100%, 60%);
+  --color-secondary-glow: hsla(200, 100%, 50%, 0.15);
 
-  --color-accent: hsl(270, 100%, 68%);
-  --color-accent-light: hsl(270, 100%, 78%);
+  --color-accent: hsl(280, 100%, 65%);
+  --color-accent-light: hsl(280, 100%, 75%);
+  --color-accent-glow: hsla(280, 100%, 65%, 0.15);
 
-  --color-success: hsl(145, 80%, 42%);
-  --color-success-light: hsl(145, 70%, 52%);
+  --color-success: hsl(142, 76%, 45%);
+  --color-success-light: hsl(142, 76%, 55%);
+  --color-success-bg: hsla(142, 76%, 45%, 0.1);
 
-  --color-danger: hsl(355, 85%, 58%);
-  --color-danger-light: hsl(355, 75%, 68%);
+  --color-danger: hsl(0, 84%, 60%);
+  --color-danger-light: hsl(0, 84%, 70%);
+  --color-danger-bg: hsla(0, 84%, 60%, 0.1);
 
-  --color-warning: hsl(35, 95%, 55%);
-  --color-warning-light: hsl(35, 95%, 65%);
+  --color-warning: hsl(38, 92%, 50%);
+  --color-warning-light: hsl(38, 92%, 60%);
+  --color-warning-bg: hsla(38, 92%, 50%, 0.1);
 
-  /* Light Theme Backgrounds */
-  --color-bg-primary: hsl(220, 30%, 98%);
-  --color-bg-secondary: hsl(0, 0%, 100%);
-  --color-bg-elevated: hsl(220, 25%, 99%);
-  --color-bg-overlay: hsla(220, 30%, 98%, 0.95);
+  --color-info: hsl(199, 89%, 48%);
+  --color-info-light: hsl(199, 89%, 58%);
+  --color-info-bg: hsla(199, 89%, 48%, 0.1);
 
-  /* Light Theme Text */
-  --color-text-primary: hsl(220, 25%, 10%);
-  --color-text-secondary: hsl(220, 15%, 45%);
-  --color-text-tertiary: hsl(220, 10%, 65%);
+  --color-bg-primary: hsl(0, 0%, 100%);
+  --color-bg-secondary: hsl(240, 20%, 99%);
+  --color-bg-tertiary: hsl(240, 25%, 97%);
+  --color-bg-elevated: hsl(0, 0%, 100%);
+  --color-bg-overlay: hsla(0, 0%, 100%, 0.8);
+  --color-bg-hover: hsl(240, 25%, 96%);
+  --color-bg-active: hsl(240, 25%, 94%);
 
-  /* Light Theme Borders & Dividers */
-  --color-border: hsl(220, 20%, 90%);
-  --color-border-light: hsl(220, 20%, 95%);
-  --color-divider: hsla(220, 20%, 85%, 0.5);
+  --color-text-primary: hsl(240, 25%, 8%);
+  --color-text-secondary: hsl(240, 10%, 40%);
+  --color-text-tertiary: hsl(240, 8%, 60%);
+  --color-text-quaternary: hsl(240, 5%, 75%);
+  --color-text-inverted: hsl(0, 0%, 100%);
 
-  /* Light Theme Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --color-border: hsla(240, 20%, 0%, 0.08);
+  --color-border-light: hsla(240, 20%, 0%, 0.04);
+  --color-border-medium: hsla(240, 20%, 0%, 0.12);
+  --color-border-strong: hsla(240, 20%, 0%, 0.16);
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
 /* Fallback for system preference */
@@ -314,36 +378,44 @@ body {
 }
 
 /* ==========================================================================
-   4. Premium Utility Classes
+   4. Modern Utility Classes & Components
    ========================================================================== */
 
-/* Glassmorphism effect */
+/* Glassmorphism effect - Updated */
 .glass-effect {
   background: var(--color-bg-overlay);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
-/* Premium gradient backgrounds */
+/* Premium gradient backgrounds - Updated */
 .gradient-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%);
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, var(--color-success) 0%, hsl(145, 80%, 52%) 100%);
+  background: linear-gradient(135deg, var(--color-success) 0%, hsl(142, 76%, 55%) 100%);
 }
 
 .gradient-danger {
-  background: linear-gradient(135deg, var(--color-danger) 0%, hsl(355, 85%, 68%) 100%);
+  background: linear-gradient(135deg, var(--color-danger) 0%, hsl(0, 84%, 70%) 100%);
 }
 
-/* Subtle gradient overlay for cards */
-.card-gradient {
+/* Modern card with subtle gradient overlay */
+.card-modern {
   position: relative;
   overflow: hidden;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card-gradient::before {
+.card-modern::before {
   content: '';
   position: absolute;
   top: 0;
@@ -351,18 +423,57 @@ body {
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg,
-      hsla(252, 95%, 62%, 0.03) 0%,
-      hsla(195, 100%, 50%, 0.03) 100%);
+      var(--color-primary-glow) 0%,
+      var(--color-secondary-glow) 100%);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dark .card-gradient::before {
-  background: linear-gradient(135deg,
-      hsla(252, 90%, 68%, 0.05) 0%,
-      hsla(195, 100%, 55%, 0.05) 100%);
+.card-modern:hover::before {
+  opacity: 1;
 }
 
-/* Premium shadow utilities */
+.card-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-border-medium);
+}
+
+/* Skeleton Loading States */
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--color-bg-secondary) 0%,
+      var(--color-bg-tertiary) 50%,
+      var(--color-bg-secondary) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+  border-radius: 0.5rem;
+}
+
+.skeleton-text {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-title {
+  height: 1.5rem;
+  width: 60%;
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+}
+
+.skeleton-card {
+  height: 8rem;
+  border-radius: 1rem;
+}
+
+/* Premium shadow utilities - Updated */
 .shadow-premium {
   box-shadow: var(--shadow-lg);
 }
@@ -371,22 +482,78 @@ body {
   box-shadow: var(--shadow-xl);
 }
 
+.shadow-glow {
+  box-shadow: var(--shadow-glow-md);
+}
+
+.dark .shadow-glow {
+  box-shadow: var(--shadow-glow-md);
+}
+
 /* Smooth hover transitions */
 .transition-premium {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Interactive element states */
+/* Interactive element states - Updated */
 .interactive {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
 .interactive:hover {
   transform: translateY(-1px);
+  background: var(--color-bg-hover);
 }
 
 .interactive:active {
   transform: translateY(0);
+  background: var(--color-bg-active);
+}
+
+/* Button Modern Styles */
+.btn-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-text-inverted);
+  box-shadow: 0 2px 8px var(--color-primary-glow);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-primary-glow);
+}
+
+.btn-secondary {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-medium);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 
 /* ==========================================================================

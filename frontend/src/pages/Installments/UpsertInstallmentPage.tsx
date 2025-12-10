@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
+import { DeleteConfirmationSheet } from '../../components/DeleteConfirmationSheet';
 import { useInstallmentPurchases, useUpdateInstallmentPurchase, useDeleteInstallmentPurchase, useAccounts, useCategories } from '../../hooks/useApi';
-import { toast } from 'sonner';
+import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../../utils/toast';
 import { DatePicker } from '../../components/DatePicker';
 
 const UpsertInstallmentPage: React.FC = () => {
@@ -21,7 +22,8 @@ const UpsertInstallmentPage: React.FC = () => {
     const [installments, setInstallments] = useState('');
     const [purchaseDate, setPurchaseDate] = useState(new Date());
     const [accountId, setAccountId] = useState('');
-    const [categoryId, setCategoryId] = useState(''); // To store original category for re-creation
+    const [categoryId, setCategoryId] = useState('');
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
     const updatePurchaseMutation = useUpdateInstallmentPurchase();
     const deletePurchaseMutation = useDeleteInstallmentPurchase();
@@ -33,7 +35,6 @@ const UpsertInstallmentPage: React.FC = () => {
             setInstallments(String(existingPurchase.installments));
             setPurchaseDate(new Date(existingPurchase.purchaseDate));
             setAccountId(existingPurchase.accountId);
-            // Find the categoryId from one of the generated transactions, or use a default if possible.
             if (existingPurchase.generatedTransactions && existingPurchase.generatedTransactions.length > 0) {
                 setCategoryId(existingPurchase.generatedTransactions[0].categoryId);
             }
@@ -65,11 +66,11 @@ const UpsertInstallmentPage: React.FC = () => {
         e.preventDefault();
 
         if (!description || !totalAmount || !installments || !accountId || !categoryId) {
-            toast.error('Faltan campos requeridos.');
+            toastError('Faltan campos requeridos.');
             return;
         }
         if (parseFloat(totalAmount) <= 0 || parseInt(installments, 10) <= 0) {
-            toast.error('El monto total y el número de meses deben ser mayores a cero.');
+            toastError('El monto total y el número de meses deben ser mayores a cero.');
             return;
         }
 
@@ -79,12 +80,12 @@ const UpsertInstallmentPage: React.FC = () => {
             installments: parseInt(installments, 10),
             purchaseDate: purchaseDate.toISOString(),
             accountId,
-            categoryId, // Passed to backend for initial transaction creation
+            categoryId,
         };
 
         try {
             await updatePurchaseMutation.mutateAsync({ id: id!, purchase: purchaseData });
-            toast.success('Compra a MSI actualizada con éxito!');
+            toastSuccess('Compra a MSI actualizada con éxito!');
             navigate('/installments');
         } catch (error: any) {
             toast.error(`Error al actualizar la compra a MSI: ${error.message || 'Desconocido'}`);
@@ -92,51 +93,23 @@ const UpsertInstallmentPage: React.FC = () => {
         }
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
+        setShowDeleteConfirmation(true);
+    };
+
+    const confirmDelete = async () => {
         if (!id) return;
 
-        const isCritical = isSettled;
-
-        toast.custom((t) => (
-            <div className={`bg-app-card border ${isCritical ? 'border-red-500' : 'border-app-border'} rounded-xl p-4 flex flex-col gap-3 shadow-lg max-w-sm w-full`}>
-                <p className={`text-app-text font-bold text-sm ${isCritical ? 'text-red-600 dark:text-red-400' : ''}`}>
-                    {isCritical ? '⚠️ PELIGRO: INTEGRIDAD HISTÓRICA' : '¿Estás seguro de eliminar esta compra a MSI?'}
-                </p>
-                <p className="text-app-muted text-xs">
-                    {isCritical
-                        ? 'Estás a punto de borrar un plan totalmente pagado. Esto revertirá TODOS los pagos históricos, devolviendo el dinero a tus cuentas y reabriendo la deuda. Tus saldos actuales dejarán de coincidir con la realidad de tu banco.'
-                        : 'Esta acción eliminará la compra, revertirá la deuda en tu tarjeta y eliminará todas las transacciones de mensualidad generadas.'}
-                </p>
-                {isCritical && <p className="text-xs font-bold text-red-500">Solo haz esto si TODA la operación fue un error.</p>}
-                <div className="flex gap-2 justify-end">
-                    <button
-                        onClick={() => toast.dismiss(t)}
-                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-elevated text-app-text hover:bg-app-hover transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={async () => {
-                            toast.dismiss(t);
-                            try {
-                                await deletePurchaseMutation.mutateAsync(id);
-                                toast.success('Compra a MSI eliminada con éxito.');
-                                navigate('/installments');
-                            } catch (error: any) {
-                                toast.error(`Error al eliminar la compra a MSI: ${error.message || 'Desconocido'}`);
-                                console.error(error);
-                            }
-                        }}
-                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-danger text-white hover:bg-app-danger/90 transition-colors"
-                    >
-                        Eliminar
-                    </button>
-                </div>
-            </div>
-        ), {
-            duration: Infinity, // Keep the toast open until dismissed
-            id: 'delete-installment-confirm',
-        });
+        try {
+            await deletePurchaseMutation.mutateAsync(id);
+            toastSuccess('Compra a MSI eliminada con éxito.');
+            navigate('/installments');
+        } catch (error: any) {
+            toast.error(`Error al eliminar la compra a MSI: ${error.message || 'Desconocido'}`);
+            console.error(error);
+        } finally {
+            setShowDeleteConfirmation(false);
+        }
     };
 
     if (isLoadingPurchases || isLoadingAccounts || isLoadingCategories) {
@@ -214,7 +187,7 @@ const UpsertInstallmentPage: React.FC = () => {
                             required
                         >
                             {isLoadingAccounts ? (
-                                <option value="">Cargando tarjetas...</option>
+                                <option value="" disabled>Cargando tarjetas...</option>
                             ) : availableCreditAccounts.length > 0 ? (
                                 availableCreditAccounts.map(account => (
                                     <option key={account.id} value={account.id}>{account.name}</option>
@@ -240,7 +213,7 @@ const UpsertInstallmentPage: React.FC = () => {
                             required
                         >
                             {isLoadingCategories ? (
-                                <option value="">Cargando categorías...</option>
+                                <option value="" disabled>Cargando categorías...</option>
                             ) : availableCategories.length > 0 ? (
                                 availableCategories.map(cat => (
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -256,7 +229,7 @@ const UpsertInstallmentPage: React.FC = () => {
                 {!isSettled && (
                     <button
                         type="submit"
-                        className="w-full bg-app-primary text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-primary/90 transition-colors"
+                        className="btn-modern btn-primary w-full text-white font-bold p-3 rounded-xl shadow-premium hover:bg-app-primary/90 transition-all active:scale-[0.98]"
                         disabled={updatePurchaseMutation.isPending}
                     >
                         {updatePurchaseMutation.isPending ? 'Guardando...' : 'Actualizar Compra a MSI'}
@@ -267,13 +240,43 @@ const UpsertInstallmentPage: React.FC = () => {
                     <button
                         type="button"
                         onClick={handleDelete}
-                        className="w-full bg-app-danger text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-danger/90 transition-colors mt-3"
+                        className="btn-modern bg-app-danger/10 text-app-danger w-full font-bold p-3 rounded-xl shadow-none hover:bg-app-danger hover:text-white transition-all mt-3"
                         disabled={deletePurchaseMutation.isPending}
                     >
                         {deletePurchaseMutation.isPending ? 'Eliminando...' : 'Eliminar Compra a MSI'}
                     </button>
                 )}
             </form>
+
+            {/* Delete Confirmation Sheet */}
+            <DeleteConfirmationSheet
+                isOpen={showDeleteConfirmation}
+                onClose={() => setShowDeleteConfirmation(false)}
+                onConfirm={confirmDelete}
+                itemName={existingPurchase?.description || ''}
+                warningLevel={isSettled ? 'critical' : 'warning'}
+                warningMessage={
+                    isSettled
+                        ? 'PELIGRO: INTEGRIDAD HISTÓRICA'
+                        : '¿Estás seguro de eliminar esta compra a MSI?'
+                }
+                warningDetails={
+                    isSettled
+                        ? [
+                            'Estás a punto de borrar un plan totalmente pagado.',
+                            'Esto revertirá TODOS los pagos históricos.',
+                            'Tus saldos actuales dejarán de coincidir con la realidad de tu banco.',
+                            'Solo haz esto si TODA la operación fue un error.',
+                        ]
+                        : [
+                            'Esta acción eliminará la compra.',
+                            'Revertirá la deuda en tu tarjeta.',
+                            'Eliminará todas las transacciones de mensualidad generadas.',
+                        ]
+                }
+                requireConfirmation={isSettled}
+                isDeleting={deletePurchaseMutation.isPending}
+            />
         </div>
     );
 };

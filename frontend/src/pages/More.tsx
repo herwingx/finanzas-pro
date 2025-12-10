@@ -10,6 +10,7 @@ const More: React.FC = () => {
     { path: '/reports', icon: 'bar_chart', title: 'Reportes', description: 'Visualiza tus gastos e ingresos.' },
     { path: '/recurring', icon: 'update', title: 'Gastos Recurrentes', description: 'Gestiona tus gastos fijos.' },
     { path: '/installments', icon: 'credit_card', title: 'Meses Sin Intereses', description: 'Administra tus compras a MSI.' },
+    { path: '/trash', icon: 'delete', title: 'Papelera', description: 'Recupera transacciones eliminadas recientemente.' },
     { path: '/settings', icon: 'settings', title: 'Ajustes', description: 'Configura la apariencia y notificaciones.' },
   ];
 
@@ -19,13 +20,13 @@ const More: React.FC = () => {
       <header className="sticky top-0 z-10 flex items-center bg-app-bg/90 backdrop-blur-xl p-4 border-b border-app-border">
         <h1 className="font-bold text-lg text-center flex-1">Más Opciones</h1>
       </header>
-      
+
       <div className="p-4">
         <div className="space-y-3">
           {navItems.map((item) => (
-            <Link 
-              key={item.title} 
-              to={item.path} 
+            <Link
+              key={item.title}
+              to={item.path}
               className="group flex items-center gap-4 bg-app-card border border-app-border p-4 rounded-2xl hover:bg-app-elevated transition-colors duration-200"
             >
               <div className="size-12 rounded-xl flex items-center justify-center shrink-0 bg-app-elevated border border-app-border">

@@ -10,9 +10,11 @@ export interface Transaction {
   accountId: string;
   account?: Account;
   destinationAccountId?: string; // New field for transfers
+  destinationAccount?: Account;
   date: string;
   recurringTransactionId?: string;
   installmentPurchaseId?: string;
+  deletedAt?: string; // Soft delete timestamp
 }
 
 export interface Category {

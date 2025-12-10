@@ -16,9 +16,10 @@ router.use(authMiddleware);
 router.get('/', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
   try {
-    // Process any due recurring transactions and installments first
+    // Process any due recurring transactions first
     await processRecurringTransactions(userId);
-    await processInstallmentPurchases(userId);
+    // DISABLED: MSI payments are now fully manual via dedicated widget
+    // await processInstallmentPurchases(userId);
 
     const transactions = await prisma.transaction.findMany({
       where: { userId },

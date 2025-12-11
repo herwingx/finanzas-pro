@@ -14,6 +14,7 @@ import UpsertAccountPage from '../pages/Accounts/UpsertAccountPage';
 import InstallmentsPage from '../pages/InstallmentsPage';
 import UpsertInstallmentPage from '../pages/Installments/UpsertInstallmentPage';
 import TrashPage from '../pages/TrashPage';
+import FinancialAnalysis from '../pages/FinancialAnalysis';
 import BottomNav from '../components/BottomNav';
 
 const MainApp: React.FC = () => {
@@ -25,6 +26,7 @@ const MainApp: React.FC = () => {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/history" element={<History />} />
+          <Route path="/analysis" element={<FinancialAnalysis />} />
           <Route path="/new" element={<NewTransaction />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />

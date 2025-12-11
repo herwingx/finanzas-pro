@@ -11,6 +11,7 @@ export type TransactionInput = {
   categoryId?: string | null;
   destinationAccountId?: string | null;
   installmentPurchaseId?: string | null;
+  recurringTransactionId?: string | null;
 };
 
 /**
@@ -125,8 +126,9 @@ export async function updateAccountBalances(tx: any, data: TransactionInput) {
   } else { // 'income' or 'expense'
     // CRITICAL FIX: Prevent direct income to CREDIT accounts
     // This is confusing because it reduces debt but doesn't increase available funds
-    // Users should use transfers to pay credit cards instead
-    if (type === 'income' && sourceAccount.type === 'CREDIT') {
+    // Users should use transfers to pay credit cards instead.
+    // EXCEPTION: Allow if it is an MSI payment (installmentPurchaseId is present)
+    if (type === 'income' && sourceAccount.type === 'CREDIT' && !data.installmentPurchaseId) {
       throw new Error('No puedes registrar ingresos directamente en una tarjeta de crédito. Para pagar tu tarjeta, usa una Transferencia desde tu cuenta de efectivo/débito.');
     }
 
@@ -166,6 +168,8 @@ export async function updateAccountBalances(tx: any, data: TransactionInput) {
   }
 }
 
+import { addMonths } from 'date-fns';
+
 /**
  * Updates the MSI progress if the transaction is a payment.
  */
@@ -187,7 +191,7 @@ export async function updateInstallmentProgress(tx: any, data: TransactionInput)
           where: { id: installment.id },
           data: {
             paidAmount: { increment: amount },
-            paidInstallments: { increment: newInstallmentsPaid }
+            paidInstallments: { increment: newInstallmentsPaid },
           }
         });
       }
@@ -221,6 +225,7 @@ export async function createTransactionAndAdjustBalances(
       categoryId: data.type === 'transfer' ? null : data.categoryId,
       destinationAccountId: data.type === 'transfer' ? data.destinationAccountId : null,
       installmentPurchaseId: data.installmentPurchaseId,
+      recurringTransactionId: data.recurringTransactionId,
     },
     include: { category: true, account: true, destinationAccount: true },
   });

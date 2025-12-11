@@ -5,6 +5,7 @@ import useTheme from '../hooks/useTheme';
 import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
 import { toastInfo } from '../utils/toast';
+import { FinancialPlanningWidget } from '../components/FinancialPlanningWidget';
 
 const Dashboard: React.FC = () => {
   const [theme] = useTheme();
@@ -101,6 +102,11 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Financial Planning Widget */}
+      <div className="px-4 mt-6">
+        <FinancialPlanningWidget />
+      </div>
+
       {/* Spending Trend Chart */}
       {transactions && transactions.length > 0 && (
         <div className="px-4 mt-6">
@@ -153,10 +159,38 @@ const Dashboard: React.FC = () => {
           <Link to="/history" className="text-app-primary text-sm font-bold hover:bg-app-primary/10 px-3 py-1 rounded-lg">Ver Todo</Link>
         </div>
         <div className="space-y-3">
-          {transactions && transactions.slice(0, 5).map((tx) => {
-            if (tx.type === 'transfer') {
-              const sourceAccount = accounts?.find(a => a.id === tx.accountId)?.name;
-              const destAccount = accounts?.find(a => a.id === tx.destinationAccountId)?.name;
+          {transactions && transactions
+            .filter(tx => {
+              // Filter out MSI payment transactions (income/transfer with installmentPurchaseId)
+              const isMsiPayment = tx.installmentPurchaseId && (tx.type === 'income' || tx.type === 'transfer');
+              return !isMsiPayment;
+            })
+            .slice(0, 5)
+            .map((tx) => {
+              if (tx.type === 'transfer') {
+                const sourceAccount = accounts?.find(a => a.id === tx.accountId)?.name;
+                const destAccount = accounts?.find(a => a.id === tx.destinationAccountId)?.name;
+                return (
+                  <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
+                    if (tx.installmentPurchaseId && tx.type === 'expense') {
+                      e.preventDefault();
+                      toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
+                    }
+                  }} className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
+                    <div className="size-11 rounded-full flex items-center justify-center shrink-0 bg-app-tertiary">
+                      <span className="material-symbols-outlined text-xl text-app-muted">swap_horiz</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-app-text truncate text-sm">Transferencia</p>
+                      <span className="text-xs text-app-muted truncate">{sourceAccount} → {destAccount}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm text-app-text">{formatCurrency(tx.amount)}</p>
+                    </div>
+                  </Link>
+                )
+              }
+              const category = getCategoryInfo(tx.categoryId);
               return (
                 <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
                   if (tx.installmentPurchaseId && tx.type === 'expense') {
@@ -164,49 +198,28 @@ const Dashboard: React.FC = () => {
                     toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
                   }
                 }} className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
-                  <div className="size-11 rounded-full flex items-center justify-center shrink-0 bg-app-tertiary">
-                    <span className="material-symbols-outlined text-xl text-app-muted">swap_horiz</span>
+                  <div className="size-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
+                    <span className="material-symbols-outlined text-xl" style={{ color: category.color }}>{category.icon}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-app-text truncate text-sm">Transferencia</p>
-                    <span className="text-xs text-app-muted truncate">{sourceAccount} → {destAccount}</span>
+                    <p className="font-bold text-app-text truncate text-sm">{tx.description}</p>
+                    <div className="flex items-center gap-2">
+                      {tx.installmentPurchaseId && (
+                        <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">
+                          MSI
+                        </span>
+                      )}
+                      <span className="text-xs text-app-muted">{category.name}</span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-sm text-app-text">{formatCurrency(tx.amount)}</p>
+                    <p className={`font-bold text-sm ${tx.type === 'income' ? 'text-app-success' : 'text-app-text'}`}>
+                      {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}
+                    </p>
                   </div>
                 </Link>
               )
-            }
-            const category = getCategoryInfo(tx.categoryId);
-            return (
-              <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
-                if (tx.installmentPurchaseId && tx.type === 'expense') {
-                  e.preventDefault();
-                  toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
-                }
-              }} className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
-                <div className="size-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
-                  <span className="material-symbols-outlined text-xl" style={{ color: category.color }}>{category.icon}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-app-text truncate text-sm">{tx.description}</p>
-                  <div className="flex items-center gap-2">
-                    {tx.installmentPurchaseId && (
-                      <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">
-                        MSI
-                      </span>
-                    )}
-                    <span className="text-xs text-app-muted">{category.name}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold text-sm ${tx.type === 'income' ? 'text-app-success' : 'text-app-text'}`}>
-                    {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}
-                  </p>
-                </div>
-              </Link>
-            )
-          })}
+            })}
         </div>
       </div>
     </div>

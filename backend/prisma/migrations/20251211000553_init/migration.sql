@@ -33,12 +33,14 @@ CREATE TABLE "Transaction" (
     "date" TIMESTAMP(3) NOT NULL,
     "type" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "categoryId" TEXT NOT NULL,
+    "categoryId" TEXT,
     "accountId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "recurringTransactionId" TEXT,
     "installmentPurchaseId" TEXT,
+    "destination_account_id" TEXT,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "Transaction_pkey" PRIMARY KEY ("id")
 );
@@ -51,8 +53,11 @@ CREATE TABLE "InstallmentPurchase" (
     "installments" INTEGER NOT NULL,
     "monthlyPayment" DOUBLE PRECISION NOT NULL,
     "purchaseDate" TIMESTAMP(3) NOT NULL,
+    "paidInstallments" INTEGER NOT NULL DEFAULT 0,
+    "paidAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "accountId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "categoryId" TEXT NOT NULL,
 
     CONSTRAINT "InstallmentPurchase_pkey" PRIMARY KEY ("id")
 );
@@ -97,6 +102,7 @@ CREATE TABLE "RecurringTransaction" (
     "lastRun" TIMESTAMP(3),
     "userId" TEXT NOT NULL,
     "categoryId" TEXT NOT NULL,
+    "accountId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -116,7 +122,7 @@ ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId"
 ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -128,10 +134,16 @@ ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_recurringTransactionId_fke
 ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_installmentPurchaseId_fkey" FOREIGN KEY ("installmentPurchaseId") REFERENCES "InstallmentPurchase"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_destination_account_id_fkey" FOREIGN KEY ("destination_account_id") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "InstallmentPurchase" ADD CONSTRAINT "InstallmentPurchase_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "InstallmentPurchase" ADD CONSTRAINT "InstallmentPurchase_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InstallmentPurchase" ADD CONSTRAINT "InstallmentPurchase_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -144,3 +156,6 @@ ALTER TABLE "RecurringTransaction" ADD CONSTRAINT "RecurringTransaction_userId_f
 
 -- AddForeignKey
 ALTER TABLE "RecurringTransaction" ADD CONSTRAINT "RecurringTransaction_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RecurringTransaction" ADD CONSTRAINT "RecurringTransaction_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

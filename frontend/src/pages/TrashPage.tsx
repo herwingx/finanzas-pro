@@ -124,6 +124,7 @@ const TrashPage: React.FC = () => {
                 <div className="space-y-3">
                   {grouped[date].map((tx) => {
                     const isTransfer = tx.type === 'transfer';
+                    const isOrphanedMSI = tx.installmentPurchaseId && tx.type === 'expense'; // Initial MSI purchase (plan deleted)
                     const category = isTransfer
                       ? { icon: 'swap_horiz', color: '#64748b', name: 'Transferencia' } // Slate-500 for generic transfer
                       : getCategoryInfo(tx.categoryId);
@@ -136,11 +137,17 @@ const TrashPage: React.FC = () => {
                     return (
                       <SwipeableItem
                         key={tx.id}
-                        onSwipeRight={() => handleRestore(tx)}
+                        onSwipeRight={() => {
+                          if (isOrphanedMSI) {
+                            toastError('No se puede restaurar: El plan MSI fue eliminado. Crea uno nuevo desde "Meses Sin Intereses".');
+                            return;
+                          }
+                          handleRestore(tx);
+                        }}
                         rightAction={{
-                          icon: 'restore_from_trash',
-                          color: '#10b981',
-                          label: 'Restaurar',
+                          icon: isOrphanedMSI ? 'block' : 'restore_from_trash',
+                          color: isOrphanedMSI ? '#94a3b8' : '#10b981',
+                          label: isOrphanedMSI ? 'Bloqueado' : 'Restaurar',
                         }}
                         onSwipeLeft={() => handlePermanentDelete(tx)}
                         leftAction={{
@@ -175,8 +182,11 @@ const TrashPage: React.FC = () => {
                                   </span>
                                 )}
                                 {tx.installmentPurchaseId && (
-                                  <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">
-                                    MSI
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isOrphanedMSI
+                                      ? 'text-orange-600 bg-orange-100 dark:bg-orange-900/30'
+                                      : 'text-app-primary bg-app-primary/10'
+                                    }`}>
+                                    {isOrphanedMSI ? 'MSI ⚠️' : 'MSI'}
                                   </span>
                                 )}
                                 <p className="text-xs text-app-muted truncate">{subTitle}</p>

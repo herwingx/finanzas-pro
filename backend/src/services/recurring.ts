@@ -41,43 +41,18 @@ export const calculateNextDueDate = (currentDate: Date, frequency: string): Date
 };
 
 export const processRecurringTransactions = async (userId: string) => {
+  // AUTOMATION DISABLED: We moved to a "Manual Approval" model via the UI.
+  // The system no longer auto-creates transactions. The user must click "Pay" in the Financial Planning Widget.
+  // This allows for amount adjustments and strict control before money is deducted.
+
+  /* 
   const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999); // Final del día de hoy
+  endOfToday.setHours(23, 59, 59, 999); 
 
   const recurringTransactions = await prisma.recurringTransaction.findMany({
-    where: {
-      userId,
-      active: true,
-      nextDueDate: {
-        lte: endOfToday, // Menor o igual al final de hoy
-      },
-    },
+    // ... logic preserved in comments ...
   });
-
-  for (const rt of recurringTransactions) {
-    await prisma.$transaction(async (tx) => {
-      // 1. Create the transaction and adjust balances
-      await createTransactionAndAdjustBalances(tx, {
-        amount: rt.amount,
-        description: rt.description,
-        date: new Date(),
-        type: rt.type as 'income' | 'expense',
-        userId: rt.userId,
-        accountId: rt.accountId,
-        categoryId: rt.categoryId,
-      });
-
-      // 2. Calculate the next due date
-      const nextDate = calculateNextDueDate(rt.nextDueDate, rt.frequency);
-
-      // 3. Update the recurring transaction
-      await tx.recurringTransaction.update({
-        where: { id: rt.id },
-        data: {
-          lastRun: new Date(),
-          nextDueDate: nextDate,
-        },
-      });
-    });
-  }
+  ...
+  */
+  // No-op
 };

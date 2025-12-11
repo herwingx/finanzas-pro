@@ -121,7 +121,7 @@ const AccountsPage: React.FC = () => {
                         accounts.map(account => (
                             <SwipeableItem
                                 key={account.id}
-                                onSwipeRight={() => navigate(`/accounts/edit/${account.id}`)}
+                                onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`)}
                                 rightAction={{
                                     icon: 'edit',
                                     color: '#3b82f6',

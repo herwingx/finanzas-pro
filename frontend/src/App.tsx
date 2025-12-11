@@ -9,7 +9,12 @@ import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <ScrollToTop />
       <Toaster richColors position="top-center" />
       <Routes>

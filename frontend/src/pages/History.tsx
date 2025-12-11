@@ -18,10 +18,22 @@ const History: React.FC = () => {
   const restoreTransactionMutation = useRestoreTransaction();
 
   const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
+  const [showMsiPayments, setShowMsiPayments] = useState(false);
 
   const sortedTxs = useMemo(() => {
-    return transactions ? [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
-  }, [transactions]);
+    if (!transactions) return [];
+
+    // Filter out MSI payment transactions ONLY if toggle is OFF
+    // Always show initial MSI expense (marked with badge)
+    const filteredTxs = showMsiPayments
+      ? transactions // Show everything when toggle is ON
+      : transactions.filter(tx => {
+        const isMsiPayment = tx.installmentPurchaseId && (tx.type === 'income' || tx.type === 'transfer');
+        return !isMsiPayment; // Exclude MSI payments when toggle is OFF
+      });
+
+    return filteredTxs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, showMsiPayments]);
 
   const getCategoryInfo = (id: string | null) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#999', name: 'General' };
   const getAccountName = (id: string | null) => accounts?.find(a => a.id === id)?.name || 'Cuenta desconocida';
@@ -175,6 +187,28 @@ const History: React.FC = () => {
     <div className="pb-28 bg-app-bg min-h-screen text-app-text">
       <PageHeader title="Historial" />
 
+      {/* MSI Payments Toggle */}
+      <div className="px-4 pt-2 pb-4 border-b border-app-border">
+        <div className="flex items-center justify-between bg-app-card border border-app-border rounded-xl p-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-app-primary text-lg">credit_card</span>
+            <div>
+              <p className="text-sm font-semibold text-app-text">Pagos MSI</p>
+              <p className="text-xs text-app-muted">Mostrar mensualidades en historial</p>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showMsiPayments}
+              onChange={(e) => setShowMsiPayments(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
+          </label>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="px-4 py-6">
           <SkeletonTransactionList count={8} />
@@ -214,7 +248,10 @@ const History: React.FC = () => {
                                 <span className="material-symbols-outlined text-app-muted">swap_horiz</span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate">Transferencia</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold truncate">Transferencia</p>
+                                  {tx.installmentPurchaseId && <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded">💳 MSI</span>}
+                                </div>
                                 <p className="text-xs text-app-muted truncate">
                                   {getAccountName(tx.accountId)} → {getAccountName(tx.destinationAccountId)}
                                 </p>

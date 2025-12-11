@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Transaction, TransactionType, FrequencyType, InstallmentPurchase } from '../types';
 import {
   useCategories, useTransaction, useAddTransaction, useUpdateTransaction,
@@ -11,8 +11,11 @@ import { DatePicker } from '../components/DatePicker';
 
 const NewTransaction: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // Add location
   const [searchParams] = useSearchParams();
-  const initialType = (searchParams.get('type') as TransactionType) || 'expense';
+  const state = location.state as any; // Read state passed from navigation
+
+  const initialType = (state?.type || searchParams.get('type') as TransactionType) || 'expense';
   const editId = searchParams.get('editId');
 
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
@@ -28,11 +31,11 @@ const NewTransaction: React.FC = () => {
   const addInstallmentMutation = useAddInstallmentPurchase();
 
   const [type, setType] = useState<TransactionType>(initialType);
-  const [amount, setAmount] = useState(searchParams.get('amount') || '');
-  const [description, setDescription] = useState(searchParams.get('description') || '');
+  const [amount, setAmount] = useState(state?.amount?.toString() || searchParams.get('amount') || '');
+  const [description, setDescription] = useState(state?.description || searchParams.get('description') || '');
   const [categoryId, setCategoryId] = useState(searchParams.get('categoryId') || '');
   const [accountId, setAccountId] = useState(searchParams.get('accountId') || '');
-  const [destinationAccountId, setDestinationAccountId] = useState(searchParams.get('destinationAccountId') || '');
+  const [destinationAccountId, setDestinationAccountId] = useState(state?.destinationAccountId || searchParams.get('destinationAccountId') || '');
   const [date, setDate] = useState(new Date());
 
   const [isRecurring, setIsRecurring] = useState(false);
@@ -41,8 +44,8 @@ const NewTransaction: React.FC = () => {
   const [isInstallment, setIsInstallment] = useState(false);
   const [installments, setInstallments] = useState('');
 
-  const [isMsiPayment, setIsMsiPayment] = useState(false);
-  const [selectedInstallmentId, setSelectedInstallmentId] = useState(searchParams.get('installmentPurchaseId') || '');
+  const [isMsiPayment, setIsMsiPayment] = useState(!!(state?.installmentPurchaseId || searchParams.get('installmentPurchaseId'))); // Check state or params
+  const [selectedInstallmentId, setSelectedInstallmentId] = useState(state?.installmentPurchaseId || searchParams.get('installmentPurchaseId') || '');
 
   const mode = searchParams.get('mode'); // 'edit' or undefined (view)
   const [isViewingDetails, setIsViewingDetails] = useState(!!editId && mode !== 'edit');
@@ -101,8 +104,9 @@ const NewTransaction: React.FC = () => {
   }, [accountId, allAccounts]);
 
   // State for MSI payment linking in transfers
-  const [linkMsiPayment, setLinkMsiPayment] = useState(false);
-  const [selectedMsiForTransfer, setSelectedMsiForTransfer] = useState('');
+  const preSelectedMsiId = state?.installmentPurchaseId || searchParams.get('installmentPurchaseId');
+  const [linkMsiPayment, setLinkMsiPayment] = useState(!!preSelectedMsiId);
+  const [selectedMsiForTransfer, setSelectedMsiForTransfer] = useState(preSelectedMsiId || '');
 
   useEffect(() => {
     if (existingTransaction) {
@@ -160,6 +164,14 @@ const NewTransaction: React.FC = () => {
       }
     }
   }, [type, accountId, allAccounts]);
+
+  // Disable MSI toggle when switching away from credit card
+  useEffect(() => {
+    if (isInstallment && !selectedAccountIsCredit) {
+      setIsInstallment(false);
+      setInstallments('');
+    }
+  }, [selectedAccountIsCredit, isInstallment]);
 
   const availableCategories = useMemo(() => categories?.filter(c => c.type === type) || [], [categories, type]);
 
@@ -408,6 +420,12 @@ const NewTransaction: React.FC = () => {
   const handleDelete = async () => {
     if (!editId) return;
 
+    // Block deletion of initial MSI purchase (expense type)
+    if (existingTransaction?.installmentPurchaseId && existingTransaction.type === 'expense') {
+      toastError('No puedes eliminar la compra inicial de MSI desde aquí. Ve a "Meses Sin Intereses" para gestionar el plan completo.');
+      return;
+    }
+
     // Safety check for MSI payments with Sonner Toast
     if (existingTransaction?.installmentPurchaseId && (existingTransaction.type === 'income' || existingTransaction.type === 'transfer')) {
       toast.custom((t) => (
@@ -485,12 +503,12 @@ const NewTransaction: React.FC = () => {
           <div className="w-10"></div>
         </header>
 
-        <main className="flex-1 px-6 pt-8 space-y-6 overflow-y-auto">
+        <main className="flex-1 px-6 pt-8 pb-32 space-y-6 overflow-y-auto">
           {/* Main Card */}
           <div className="bg-app-card border border-app-border rounded-3xl p-6 shadow-sm flex flex-col items-center gap-4 animate-fade-in">
             <div className={`size-16 rounded-full flex items-center justify-center text-3xl shadow-inner ${isAdjustment ? 'bg-slate-100 text-slate-500' :
-                existingTransaction.type === 'expense' ? 'bg-red-100 text-red-500' :
-                  existingTransaction.type === 'income' ? 'bg-green-100 text-green-500' : 'bg-blue-100 text-blue-500'
+              existingTransaction.type === 'expense' ? 'bg-red-100 text-red-500' :
+                existingTransaction.type === 'income' ? 'bg-green-100 text-green-500' : 'bg-blue-100 text-blue-500'
               }`}>
               <span className="material-symbols-outlined text-3xl">
                 {isAdjustment ? 'tune' : existingTransaction.category?.icon || 'receipt'}
@@ -500,7 +518,7 @@ const NewTransaction: React.FC = () => {
             <div className="text-center">
               <p className="text-sm text-app-muted uppercase font-bold tracking-wider">{categoryName}</p>
               <h2 className={`text-4xl font-black mt-2 ${existingTransaction.type === 'expense' ? 'text-app-text' :
-                  existingTransaction.type === 'income' ? 'text-green-500' : 'text-blue-500'
+                existingTransaction.type === 'income' ? 'text-green-500' : 'text-blue-500'
                 }`}>
                 {existingTransaction.type === 'expense' ? '-' : '+'}${existingTransaction.amount.toFixed(2)}
               </h2>
@@ -547,7 +565,7 @@ const NewTransaction: React.FC = () => {
         <footer className="p-4 bg-app-bg border-t border-app-border flex gap-3">
           <button
             onClick={handleDelete}
-            className="flex-1 py-3.5 rounded-2xl font-bold bg-app-danger/10 text-app-danger hover:bg-app-danger/20 transition-all flex items-center justify-center gap-2"
+            className="btn-modern btn-danger-outline flex-1 py-3.5 rounded-2xl flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-sm">delete</span>
             Eliminar
@@ -665,8 +683,8 @@ const NewTransaction: React.FC = () => {
                   )}
                 </div>
 
-                {/* Credit Card Payment Section with MSI Linking */}
-                {isDestinationCredit && destinationAccount && (
+                {/* Credit Card Payment Section with MSI Linking - ONLY when creating new transfer */}
+                {!editId && isDestinationCredit && destinationAccount && (
                   <div className="space-y-3">
                     <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                       <div className="flex items-start gap-3">
@@ -763,56 +781,82 @@ const NewTransaction: React.FC = () => {
                     </div>
 
                     {/* MSI Payment Linking */}
+                    {/* MSI Payment Linking */}
                     {activeInstallmentsForDestination.length > 0 && (
-                      <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-purple-500">calendar_month</span>
-                            <label className="text-sm font-bold text-app-text">¿Es pago de MSI?</label>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={linkMsiPayment}
-                              onChange={(e) => {
-                                setLinkMsiPayment(e.target.checked);
-                                if (!e.target.checked) setSelectedMsiForTransfer('');
-                              }}
-                              className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                          </label>
-                        </div>
-                        {linkMsiPayment && (
-                          <div>
-                            <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Selecciona el plan MSI</label>
-                            <select
-                              value={selectedMsiForTransfer}
-                              onChange={e => {
-                                setSelectedMsiForTransfer(e.target.value);
-                                // Auto-fill suggested amount
-                                const plan = activeInstallmentsForDestination.find(p => p.id === e.target.value);
-                                if (plan) {
-                                  const remaining = plan.totalAmount - plan.paidAmount;
-                                  const suggested = Math.min(plan.monthlyPayment, remaining);
-                                  setAmount(suggested.toFixed(2));
-                                }
-                              }}
-                              className="w-full p-3 bg-app-bg rounded-xl border border-app-border"
-                              required={linkMsiPayment}
-                            >
-                              <option value="">-- Elige una opción --</option>
-                              {activeInstallmentsForDestination.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.description} - ${(p.totalAmount - p.paidAmount).toFixed(2)} restantes
-                                </option>
-                              ))}
-                            </select>
-                            <p className="text-xs text-app-muted mt-2 flex items-start gap-1">
-                              <span className="material-symbols-outlined text-sm">info</span>
-                              <span>Vincular este pago actualizará el progreso del plan MSI automáticamente.</span>
-                            </p>
-                          </div>
+                      <div className="p-4 bg-app-primary/10 border border-app-primary/30 rounded-xl">
+                        {preSelectedMsiId && selectedMsiForTransfer === preSelectedMsiId ? (
+                          /* Accessing pre-selected plan details safely */
+                          (() => {
+                            const plan = activeInstallmentsForDestination.find(p => p.id === preSelectedMsiId);
+                            return (
+                              <div className="flex items-center gap-3">
+                                <div className="size-10 rounded-full bg-app-primary text-white flex items-center justify-center shrink-0">
+                                  <span className="material-symbols-outlined">link</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-bold text-app-text">Vinculado a Plan MSI</p>
+                                  <p className="text-xs text-app-muted">
+                                    {plan?.description || 'Plan seleccionado'}
+                                  </p>
+                                </div>
+                                <span className="text-app-primary text-xs font-bold px-2 py-1 bg-white/50 rounded-lg">
+                                  AUTOMÁTICO
+                                </span>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-app-primary">calendar_month</span>
+                                <label className="text-sm font-bold text-app-text">¿Es pago de MSI?</label>
+                              </div>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={linkMsiPayment}
+                                  onChange={(e) => {
+                                    setLinkMsiPayment(e.target.checked);
+                                    if (!e.target.checked) setSelectedMsiForTransfer('');
+                                  }}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
+                              </label>
+                            </div>
+                            {linkMsiPayment && (
+                              <div>
+                                <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Selecciona el plan MSI</label>
+                                <select
+                                  value={selectedMsiForTransfer}
+                                  onChange={e => {
+                                    setSelectedMsiForTransfer(e.target.value);
+                                    // Auto-fill suggested amount
+                                    const plan = activeInstallmentsForDestination.find(p => p.id === e.target.value);
+                                    if (plan) {
+                                      const remaining = plan.totalAmount - plan.paidAmount;
+                                      const suggested = Math.min(plan.monthlyPayment, remaining);
+                                      setAmount(suggested.toFixed(2));
+                                    }
+                                  }}
+                                  className="w-full p-3 bg-app-bg rounded-xl border border-app-border"
+                                  required={linkMsiPayment}
+                                >
+                                  <option value="">-- Elige una opción --</option>
+                                  {activeInstallmentsForDestination.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.description} - ${(p.totalAmount - p.paidAmount).toFixed(2)} restantes
+                                    </option>
+                                  ))}
+                                </select>
+                                <p className="text-xs text-app-muted mt-2 flex items-start gap-1">
+                                  <span className="material-symbols-outlined text-sm">info</span>
+                                  <span>Vincular este pago actualizará el progreso del plan MSI automáticamente.</span>
+                                </p>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -902,13 +946,40 @@ const NewTransaction: React.FC = () => {
             {!editId && type === 'expense' && !isMsiPayment && (
               <div className="p-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">¿Compra a Meses Sin Intereses?</label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={isInstallment} onChange={() => setIsInstallment(!isInstallment)} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
+                  <div className="flex items-center gap-2">
+                    <label className={`text-sm font-medium ${!selectedAccountIsCredit ? 'text-app-muted opacity-60' : ''}`}>
+                      ¿Compra a Meses Sin Intereses?
+                    </label>
+                    {!selectedAccountIsCredit && (
+                      <span className="material-symbols-outlined text-app-muted text-sm" title="Solo disponible para tarjetas de crédito">
+                        info
+                      </span>
+                    )}
+                  </div>
+                  <label className={`relative inline-flex items-center ${selectedAccountIsCredit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                    <input
+                      type="checkbox"
+                      checked={isInstallment}
+                      onChange={() => {
+                        if (selectedAccountIsCredit) {
+                          setIsInstallment(!isInstallment);
+                        }
+                      }}
+                      disabled={!selectedAccountIsCredit}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary peer-disabled:opacity-50"></div>
                   </label>
                 </div>
-                {isInstallment && (
+                {!selectedAccountIsCredit && (
+                  <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                    <p className="text-xs text-app-muted flex items-start gap-2">
+                      <span className="material-symbols-outlined text-orange-500 text-sm">credit_card</span>
+                      <span>Para crear una compra a MSI, primero selecciona una <strong>tarjeta de crédito</strong>.</span>
+                    </p>
+                  </div>
+                )}
+                {isInstallment && selectedAccountIsCredit && (
                   <div className="mt-4">
                     <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Número de Meses</label>
                     <input type="number" value={installments} onChange={e => setInstallments(e.target.value)} className="w-full p-3 bg-app-bg rounded-xl border border-app-border" placeholder="Ej: 12" required />
@@ -946,7 +1017,7 @@ const NewTransaction: React.FC = () => {
             <div className="p-4"><DatePicker date={date} onDateChange={setDate} /></div>
           </div>
 
-          {editId && <div className="p-4"><button type="button" onClick={handleDelete} className="btn-modern w-full py-3 bg-app-danger/10 text-app-danger font-bold text-base hover:bg-app-danger hover:text-white transition-all shadow-none hover:shadow-lg">Eliminar Transacción</button></div>}
+          {editId && <div className="p-4"><button type="button" onClick={handleDelete} className="btn-modern btn-danger-outline w-full py-3 text-base">Eliminar Transacción</button></div>}
         </main>
 
         <footer className="fixed bottom-0 left-0 right-0 p-4 bg-app-bg/80 backdrop-blur-xl border-t border-app-border">

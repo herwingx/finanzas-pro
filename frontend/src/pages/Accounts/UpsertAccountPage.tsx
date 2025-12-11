@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { useAddAccount, useUpdateAccount, useAccounts, useDeleteAccount, useAddTransaction, useCategories, useAddCategory } from '../../hooks/useApi';
 import { AccountType } from '../../types';
@@ -8,7 +8,10 @@ import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../../
 const UpsertAccountPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const isEditMode = !!id;
+    const mode = searchParams.get('mode');
+    const [isViewingDetails, setIsViewingDetails] = useState(!!id && mode !== 'edit');
 
     const { data: accounts } = useAccounts();
     const existingAccount = accounts?.find(acc => acc.id === id);
@@ -127,6 +130,105 @@ const UpsertAccountPage: React.FC = () => {
             id: 'delete-account-confirm',
         });
     };
+
+    // Details View Mode
+    if (isViewingDetails && existingAccount) {
+        const getTypeLabel = (type: AccountType) => {
+            switch (type) {
+                case 'DEBIT': return 'Tarjeta de Débito';
+                case 'CREDIT': return 'Tarjeta de Crédito';
+                case 'CASH': return 'Efectivo';
+                default: return type;
+            }
+        };
+
+        const getTypeIcon = (type: AccountType) => {
+            switch (type) {
+                case 'DEBIT': return 'credit_card';
+                case 'CREDIT': return 'receipt_long';
+                case 'CASH': return 'payments';
+                default: return 'account_balance_wallet';
+            }
+        };
+
+        return (
+            <div className="flex flex-col h-screen bg-app-bg text-app-text">
+                <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
+                    <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
+                        <span className="material-symbols-outlined">arrow_back_ios_new</span>
+                    </button>
+                    <h1 className="text-lg font-bold">Detalle de Cuenta</h1>
+                    <div className="w-10"></div>
+                </header>
+
+                <main className="flex-1 px-6 pt-8 pb-32 space-y-6 overflow-y-auto">
+                    <div className="bg-app-card border border-app-border rounded-3xl p-6 shadow-sm flex flex-col items-center gap-4 animate-fade-in">
+                        <div className="size-16 rounded-full flex items-center justify-center text-3xl shadow-inner bg-app-primary/10">
+                            <span className="material-symbols-outlined text-3xl text-app-primary">
+                                {getTypeIcon(existingAccount.type)}
+                            </span>
+                        </div>
+
+                        <div className="text-center w-full">
+                            <p className="text-sm text-app-muted uppercase font-bold tracking-wider">{getTypeLabel(existingAccount.type)}</p>
+                            <h2 className="text-3xl font-black mt-2 text-app-text">{existingAccount.name}</h2>
+                            <p className={`text-4xl font-black mt-3 ${existingAccount.type === 'CREDIT' ? 'text-app-danger' : 'text-app-success'}`}>
+                                ${existingAccount.balance.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-app-muted mt-1">
+                                {existingAccount.type === 'CREDIT' ? 'Deuda actual' : 'Saldo disponible'}
+                            </p>
+                        </div>
+
+                        <div className="w-full h-px bg-app-border my-2"></div>
+
+                        <div className="w-full space-y-3">
+                            {existingAccount.type === 'CREDIT' && (
+                                <>
+                                    {existingAccount.creditLimit !== undefined && (
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-app-muted">Límite de Crédito</span>
+                                            <span className="font-medium text-app-text">${existingAccount.creditLimit.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {existingAccount.cutoffDay && (
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-app-muted">Día de Corte</span>
+                                            <span className="font-medium text-app-text">{existingAccount.cutoffDay}</span>
+                                        </div>
+                                    )}
+                                    {existingAccount.paymentDay && (
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-app-muted">Día de Pago</span>
+                                            <span className="font-medium text-app-text">{existingAccount.paymentDay}</span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </main>
+
+                <footer className="p-4 bg-app-bg border-t border-app-border flex gap-3">
+                    <button
+                        onClick={handleDelete}
+                        className="btn-modern btn-danger-outline flex-1 py-3.5 rounded-2xl flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                        Eliminar
+                    </button>
+
+                    <button
+                        onClick={() => setIsViewingDetails(false)}
+                        className="flex-[2] py-3.5 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-app-primary/20 bg-app-primary hover:bg-app-primary/90"
+                    >
+                        <span className="material-symbols-outlined text-sm">edit</span>
+                        Editar
+                    </button>
+                </footer>
+            </div>
+        );
+    }
 
     return (
         <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
@@ -251,7 +353,7 @@ const UpsertAccountPage: React.FC = () => {
                     <button
                         type="button"
                         onClick={handleDelete}
-                        className="w-full bg-app-danger text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-danger/90 transition-colors mt-3"
+                        className="btn-modern btn-danger w-full p-3 rounded-xl mt-3"
                         disabled={deleteAccountMutation.isPending}
                     >
                         {deleteAccountMutation.isPending ? 'Eliminando...' : 'Eliminar Cuenta'}

@@ -20,9 +20,12 @@ export const toastSuccess = (message: string, action?: ToastAction) => {
     } : undefined,
     duration: 3000,
     style: {
-      background: 'var(--color-success-bg)',
+      background: 'var(--color-bg-elevated)',
       border: '1px solid var(--color-success)',
       color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     },
   });
 };
@@ -34,9 +37,12 @@ export const toastError = (message: string, description?: string) => {
     description: description || 'Si el problema persiste, intenta recargar la página',
     duration: 5000,
     style: {
-      background: 'var(--color-danger-bg)',
+      background: 'var(--color-bg-elevated)',
       border: '1px solid var(--color-danger)',
       color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     },
   });
 };
@@ -48,9 +54,12 @@ export const toastWarning = (message: string, description?: string) => {
     description,
     duration: 4000,
     style: {
-      background: 'var(--color-warning-bg)',
+      background: 'var(--color-bg-elevated)',
       border: '1px solid var(--color-warning)',
       color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     },
   });
 };
@@ -62,9 +71,12 @@ export const toastInfo = (message: string, description?: string) => {
     description,
     duration: 4000,
     style: {
-      background: 'var(--color-info-bg)',
+      background: 'var(--color-bg-elevated)',
       border: '1px solid var(--color-info)',
       color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     },
   });
 };
@@ -77,6 +89,9 @@ export const toastLoading = (message: string) => {
       background: 'var(--color-bg-elevated)',
       border: '1px solid var(--color-border)',
       color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     },
   });
 };
@@ -87,6 +102,14 @@ export const toastUpdateSuccess = (id: string | number, message: string) => {
     id,
     icon: '✅',
     duration: 3000,
+    style: {
+      background: 'var(--color-bg-elevated)',
+      border: '1px solid var(--color-success)',
+      color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    },
   });
 };
 
@@ -96,6 +119,14 @@ export const toastUpdateError = (id: string | number, message: string) => {
     id,
     icon: '❌',
     duration: 5000,
+    style: {
+      background: 'var(--color-bg-elevated)',
+      border: '1px solid var(--color-danger)',
+      color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    },
   });
 };
 
@@ -116,6 +147,9 @@ export const toastPromise = <T,>(
       background: 'var(--color-bg-elevated)',
       border: '1px solid var(--color-border)',
       color: 'var(--color-text-primary)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     },
   });
 };

@@ -15,24 +15,24 @@
 :root {
   /* 🎨 LIGHT MODE - Clean, Airy, Premium */
 
-  /* Core Brand Colors - Vibrant but Professional */
-  --color-primary: hsl(245, 100%, 60%);
-  /* Electric Indigo */
-  --color-primary-light: hsl(245, 100%, 70%);
-  --color-primary-dark: hsl(245, 95%, 50%);
-  --color-primary-glow: hsla(245, 100%, 60%, 0.15);
+  /* Core Brand Colors - Professional & Modern */
+  --color-primary: hsl(198, 93%, 48%);
+  /* Oceanic Blue - Professional & Trustworthy */
+  --color-primary-light: hsl(198, 93%, 58%);
+  --color-primary-dark: hsl(198, 93%, 38%);
+  --color-primary-glow: hsla(198, 93%, 48%, 0.15);
 
-  /* Secondary: Cyan-Blue (Trust & Technology) */
-  --color-secondary: hsl(200, 100%, 50%);
-  /* Bright Cyan */
-  --color-secondary-light: hsl(200, 100%, 60%);
-  --color-secondary-glow: hsla(200, 100%, 50%, 0.15);
+  /* Secondary: Deep Teal (Sophistication & Growth) */
+  --color-secondary: hsl(174, 72%, 45%);
+  /* Teal Green */
+  --color-secondary-light: hsl(174, 72%, 55%);
+  --color-secondary-glow: hsla(174, 72%, 45%, 0.15);
 
-  /* Accent: Purple (Premium & Energy) */
-  --color-accent: hsl(280, 100%, 65%);
-  /* Vivid Purple */
-  --color-accent-light: hsl(280, 100%, 75%);
-  --color-accent-glow: hsla(280, 100%, 65%, 0.15);
+  /* Accent: Royal Blue (Premium & Energy) */
+  --color-accent: hsl(215, 85%, 55%);
+  /* Royal Blue */
+  --color-accent-light: hsl(215, 85%, 65%);
+  --color-accent-glow: hsla(215, 85%, 55%, 0.15);
 
   /* Semantic Colors - High Contrast */
   --color-success: hsl(142, 76%, 45%);
@@ -98,21 +98,21 @@
   /* 🌙 DARK MODE - Deep, Rich, Futuristic */
 
   /* Core Brand Colors - Slightly Brighter for Dark BG */
-  --color-primary: hsl(245, 100%, 65%);
-  /* Brighter Electric Indigo */
-  --color-primary-light: hsl(245, 100%, 75%);
-  --color-primary-dark: hsl(245, 95%, 55%);
-  --color-primary-glow: hsla(245, 100%, 65%, 0.25);
+  --color-primary: hsl(198, 93%, 55%);
+  /* Brighter Oceanic Blue */
+  --color-primary-light: hsl(198, 93%, 65%);
+  --color-primary-dark: hsl(198, 93%, 45%);
+  --color-primary-glow: hsla(198, 93%, 55%, 0.25);
 
-  --color-secondary: hsl(200, 100%, 55%);
-  /* Brighter Cyan */
-  --color-secondary-light: hsl(200, 100%, 65%);
-  --color-secondary-glow: hsla(200, 100%, 55%, 0.25);
+  --color-secondary: hsl(174, 72%, 52%);
+  /* Brighter Teal */
+  --color-secondary-light: hsl(174, 72%, 62%);
+  --color-secondary-glow: hsla(174, 72%, 52%, 0.25);
 
-  --color-accent: hsl(280, 100%, 70%);
-  /* Brighter Purple */
-  --color-accent-light: hsl(280, 100%, 80%);
-  --color-accent-glow: hsla(280, 100%, 70%, 0.25);
+  --color-accent: hsl(215, 85%, 62%);
+  /* Brighter Royal Blue */
+  --color-accent-light: hsl(215, 85%, 72%);
+  --color-accent-glow: hsla(215, 85%, 62%, 0.25);
 
   /* Semantic Colors - Optimized for Dark */
   --color-success: hsl(142, 76%, 50%);
@@ -178,18 +178,18 @@
 
 .light {
   /* Light Mode Variables (same as :root for explicit class) */
-  --color-primary: hsl(245, 100%, 60%);
-  --color-primary-light: hsl(245, 100%, 70%);
-  --color-primary-dark: hsl(245, 95%, 50%);
-  --color-primary-glow: hsla(245, 100%, 60%, 0.15);
+  --color-primary: hsl(198, 93%, 48%);
+  --color-primary-light: hsl(198, 93%, 58%);
+  --color-primary-dark: hsl(198, 93%, 38%);
+  --color-primary-glow: hsla(198, 93%, 48%, 0.15);
 
-  --color-secondary: hsl(200, 100%, 50%);
-  --color-secondary-light: hsl(200, 100%, 60%);
-  --color-secondary-glow: hsla(200, 100%, 50%, 0.15);
+  --color-secondary: hsl(174, 72%, 45%);
+  --color-secondary-light: hsl(174, 72%, 55%);
+  --color-secondary-glow: hsla(174, 72%, 45%, 0.15);
 
-  --color-accent: hsl(280, 100%, 65%);
-  --color-accent-light: hsl(280, 100%, 75%);
-  --color-accent-glow: hsla(280, 100%, 65%, 0.15);
+  --color-accent: hsl(215, 85%, 55%);
+  --color-accent-light: hsl(215, 85%, 65%);
+  --color-accent-glow: hsla(215, 85%, 55%, 0.15);
 
   --color-success: hsl(142, 76%, 45%);
   --color-success-light: hsl(142, 76%, 55%);
@@ -237,8 +237,8 @@
 /* Fallback for system preference */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --color-primary: hsl(252, 90%, 68%);
-    --color-primary-light: hsl(252, 90%, 78%);
+    --color-primary: hsl(198, 93%, 55%);
+    --color-primary-light: hsl(198, 93%, 65%);
     --color-bg-primary: hsl(220, 25%, 7%);
     --color-bg-secondary: hsl(220, 22%, 10%);
     --color-bg-elevated: hsl(220, 20%, 14%);
@@ -554,6 +554,57 @@ body {
 .btn-ghost:hover {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
+}
+
+/* Danger/Delete Button Styles - Clear and Professional */
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+  border: 1px solid var(--color-danger);
+  box-shadow: 0 2px 8px var(--color-danger-bg);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-light);
+  border-color: var(--color-danger-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-danger-bg);
+}
+
+.btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px var(--color-danger-bg);
+}
+
+/* Danger Outline Button - Subtle but visible */
+.btn-danger-outline {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  font-weight: 600;
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-danger-bg);
+}
+
+.btn-danger-outline:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Disabled state for all buttons */
+.btn-modern:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* ==========================================================================

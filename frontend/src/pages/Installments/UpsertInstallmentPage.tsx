@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { DeleteConfirmationSheet } from '../../components/DeleteConfirmationSheet';
 import { useInstallmentPurchases, useUpdateInstallmentPurchase, useDeleteInstallmentPurchase, useAccounts, useCategories } from '../../hooks/useApi';
@@ -9,7 +9,10 @@ import { DatePicker } from '../../components/DatePicker';
 const UpsertInstallmentPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const isEditMode = !!id;
+    const mode = searchParams.get('mode');
+    const [isViewingDetails, setIsViewingDetails] = useState(!!id && mode !== 'edit');
 
     const { data: allPurchases, isLoading: isLoadingPurchases, isError } = useInstallmentPurchases();
     const { data: accounts, isLoading: isLoadingAccounts, isError: isErrorAccounts } = useAccounts();
@@ -122,6 +125,229 @@ const UpsertInstallmentPage: React.FC = () => {
 
     if (isError || isErrorAccounts || isErrorCategories) {
         return <div className="p-8 text-center text-app-danger">Error cargando datos. Por favor recarga.</div>;
+    }
+
+    // Details View Mode
+    if (isViewingDetails && existingPurchase) {
+        const paidAmount = existingPurchase.paidAmount;
+        const remainingAmount = existingPurchase.totalAmount - paidAmount;
+        const progressPercentage = (paidAmount / existingPurchase.totalAmount) * 100;
+        const isSettledView = (existingPurchase.totalAmount - existingPurchase.paidAmount) <= 0.05;
+
+        // Get all payment transactions for this installment
+        const paymentTransactions = (existingPurchase.generatedTransactions || [])
+            .filter(tx => tx.type === 'income' || tx.type === 'transfer')
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        // Calculate next payment info
+        const nextPaymentNumber = existingPurchase.paidInstallments + 1;
+        const suggestedAmount = Math.min(existingPurchase.monthlyPayment, remainingAmount);
+
+        return (
+            <div className="flex flex-col h-screen bg-app-bg text-app-text">
+                <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
+                    <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
+                        <span className="material-symbols-outlined">arrow_back_ios_new</span>
+                    </button>
+                    <h1 className="text-lg font-bold">Plan MSI</h1>
+                    <div className="w-10"></div>
+                </header>
+
+                <main className="flex-1 px-4 pt-4 pb-32 space-y-4 overflow-y-auto">
+                    {/* Summary Card */}
+                    <div className="bg-app-card border border-app-border rounded-2xl p-5 shadow-sm animate-fade-in">
+                        <div className="flex items-start gap-4 mb-4">
+                            <div className="size-14 rounded-full flex items-center justify-center shadow-inner bg-blue-100 dark:bg-blue-900/30 shrink-0">
+                                <span className="material-symbols-outlined text-2xl text-blue-600 dark:text-blue-400">
+                                    credit_card
+                                </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs text-app-muted uppercase font-bold tracking-wider mb-1">
+                                    {isSettledView ? '✓ LIQUIDADO' : 'ACTIVO'}
+                                </p>
+                                <h2 className="text-xl font-bold text-app-text truncate">{existingPurchase.description}</h2>
+                                <p className="text-xs text-app-muted mt-0.5">{existingPurchase.account?.name}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div className="bg-app-elevated rounded-xl p-3">
+                                <p className="text-xs text-app-muted mb-1">Monto Total</p>
+                                <p className="text-lg font-bold text-app-text">${existingPurchase.totalAmount.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-app-elevated rounded-xl p-3">
+                                <p className="text-xs text-app-muted mb-1">Mensualidad</p>
+                                <p className="text-lg font-bold text-blue-600">${existingPurchase.monthlyPayment.toFixed(2)}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="flex justify-between text-xs text-app-muted mb-1.5">
+                                <span>Pagado: ${paidAmount.toFixed(2)}</span>
+                                <span>Restante: ${remainingAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="w-full bg-app-elevated rounded-full h-2.5">
+                                <div
+                                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-500"
+                                    style={{ width: `${progressPercentage}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-center text-xs text-app-muted mt-1.5 font-medium">
+                                {existingPurchase.paidInstallments} de {existingPurchase.installments} pagos realizados
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Register Payment Button */}
+                    {!isSettledView && remainingAmount > 0.01 && (
+                        <button
+                            onClick={() => navigate(`/new?type=transfer&destinationAccountId=${existingPurchase.accountId}&amount=${suggestedAmount.toFixed(2)}&description=Pago mensualidad ${encodeURIComponent(existingPurchase.description)}&installmentPurchaseId=${existingPurchase.id}`)}
+                            className="w-full bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold py-4 rounded-2xl shadow-lg shadow-app-primary/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                        >
+                            <span className="material-symbols-outlined">payments</span>
+                            Registrar Pago (${suggestedAmount.toFixed(2)})
+                        </button>
+                    )}
+
+                    {/* Payment Timeline */}
+                    <div className="bg-app-card border border-app-border rounded-2xl p-5 shadow-sm">
+                        <h3 className="text-sm font-bold text-app-text mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">receipt_long</span>
+                            Timeline de Pagos
+                        </h3>
+
+                        <div className="space-y-3">
+                            {Array.from({ length: existingPurchase.installments }).map((_, index) => {
+                                const paymentNumber = index + 1;
+                                const payment = paymentTransactions[index];
+                                const isPaid = !!payment;
+                                const isCurrent = paymentNumber === nextPaymentNumber && !isSettledView;
+
+                                // Calculate expected date
+                                const expectedDate = new Date(existingPurchase.purchaseDate);
+                                expectedDate.setMonth(expectedDate.getMonth() + paymentNumber);
+
+                                return (
+                                    <div
+                                        key={index}
+                                        className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isCurrent
+                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500'
+                                            : isPaid
+                                                ? 'bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800'
+                                                : 'bg-app-elevated border border-app-border'
+                                            }`}
+                                    >
+                                        <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${isPaid
+                                            ? 'bg-green-500 text-white'
+                                            : isCurrent
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-app-muted/20 text-app-muted'
+                                            }`}>
+                                            {isPaid ? (
+                                                <span className="material-symbols-outlined text-lg">check</span>
+                                            ) : (
+                                                <span className="font-bold text-sm">{paymentNumber}</span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm font-bold ${isPaid ? 'text-green-700 dark:text-green-400' : isCurrent ? 'text-blue-700 dark:text-blue-400' : 'text-app-muted'}`}>
+                                                {isPaid ? `✓ Pago ${paymentNumber} realizado` : isCurrent ? `→ Próximo pago` : `Pago ${paymentNumber} pendiente`}
+                                            </p>
+                                            <p className="text-xs text-app-muted">
+                                                {isPaid
+                                                    ? new Date(payment.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                    : `Vence: ${expectedDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}`
+                                                }
+                                            </p>
+                                        </div>
+
+                                        <p className={`font-bold text-sm ${isPaid ? 'text-green-700 dark:text-green-400' : 'text-app-muted'}`}>
+                                            ${payment ? payment.amount.toFixed(2) : existingPurchase.monthlyPayment.toFixed(2)}
+                                        </p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Payment History */}
+                    {paymentTransactions.length > 0 && (
+                        <div className="bg-app-card border border-app-border rounded-2xl p-5 shadow-sm">
+                            <h3 className="text-sm font-bold text-app-text mb-4 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-lg">history</span>
+                                Historial de Pagos ({paymentTransactions.length})
+                            </h3>
+
+                            <div className="space-y-2">
+                                {paymentTransactions.map((payment, index) => (
+                                    <div
+                                        key={payment.id}
+                                        className="flex items-center justify-between p-3 bg-app-elevated rounded-xl"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-sm text-green-600 dark:text-green-400">check_circle</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-app-text">Pago #{index + 1}</p>
+                                                <p className="text-xs text-app-muted">
+                                                    {new Date(payment.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <p className="font-bold text-sm text-green-600 dark:text-green-400">
+                                            ${payment.amount.toFixed(2)}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Settled Notice */}
+                    {isSettledView && (
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800 text-sm text-green-700 dark:text-green-300 flex gap-3 items-start">
+                            <span className="material-symbols-outlined shrink-0">celebration</span>
+                            <p>
+                                <strong>¡Plan completado!</strong><br />
+                                Este plan está totalmente liquidado y forma parte de tu historial financiero.
+                            </p>
+                        </div>
+                    )}
+                </main>
+
+                <footer className="p-4 bg-app-bg border-t border-app-border space-y-2">
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => {
+                                if (isSettledView) {
+                                    toastInfo('Los planes liquidados no se pueden editar');
+                                    return;
+                                }
+                                setIsViewingDetails(false);
+                            }}
+                            className={`flex-1 py-3.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 ${isSettledView
+                                ? 'bg-app-elevated text-app-muted cursor-not-allowed'
+                                : 'bg-app-primary text-white hover:bg-app-primary/90 shadow-lg shadow-app-primary/20'
+                                }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">{isSettledView ? 'lock' : 'edit'}</span>
+                            {isSettledView ? 'Bloqueado' : 'Editar Plan'}
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={() => setShowDeleteConfirmation(true)}
+                        className="btn-modern btn-danger-outline w-full py-3 rounded-2xl flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                        Eliminar Plan Completo
+                    </button>
+                </footer>
+            </div>
+        );
     }
 
     return (
@@ -240,7 +466,7 @@ const UpsertInstallmentPage: React.FC = () => {
                     <button
                         type="button"
                         onClick={handleDelete}
-                        className="btn-modern bg-app-danger/10 text-app-danger w-full font-bold p-3 rounded-xl shadow-none hover:bg-app-danger hover:text-white transition-all mt-3"
+                        className="btn-modern btn-danger w-full p-3 rounded-xl mt-3"
                         disabled={deletePurchaseMutation.isPending}
                     >
                         {deletePurchaseMutation.isPending ? 'Eliminando...' : 'Eliminar Compra a MSI'}

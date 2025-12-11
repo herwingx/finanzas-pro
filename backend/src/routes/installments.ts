@@ -14,9 +14,41 @@ router.get('/', async (req: AuthRequest, res) => {
     try {
         const purchases = await prisma.installmentPurchase.findMany({
             where: { userId },
-            include: { account: true, generatedTransactions: true },
+            include: {
+                account: true,
+                generatedTransactions: {
+                    where: { deletedAt: null },
+                    orderBy: { date: 'asc' }
+                }
+            },
             orderBy: { purchaseDate: 'desc' },
         });
+
+        // Self-healing: Check consistency for ALL items
+        // This fixes any desync caused by previous errors
+        for (const purchase of purchases) {
+            const actualPayments = purchase.generatedTransactions.filter(
+                (tx: any) => (tx.type === 'income' || tx.type === 'transfer') && !tx.deletedAt
+            );
+
+            const totalPaidReal = actualPayments.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+            const paidInstallmentsReal = Math.floor((totalPaidReal + 0.01) / purchase.monthlyPayment);
+
+            if (Math.abs(totalPaidReal - purchase.paidAmount) > 0.05 || paidInstallmentsReal !== purchase.paidInstallments) {
+                console.log(`Auto-Correcting MSI ${purchase.description}: Paid ${purchase.paidAmount}->${totalPaidReal}, Inst ${purchase.paidInstallments}->${paidInstallmentsReal}`);
+                await prisma.installmentPurchase.update({
+                    where: { id: purchase.id },
+                    data: {
+                        paidAmount: totalPaidReal,
+                        paidInstallments: paidInstallmentsReal
+                    }
+                });
+                // Update the local object to return correct data immediately
+                purchase.paidAmount = totalPaidReal;
+                purchase.paidInstallments = paidInstallmentsReal;
+            }
+        }
+
         res.json(purchases);
     } catch (error) {
         console.error("Failed to retrieve installment purchases:", error);
@@ -102,45 +134,50 @@ router.get('/:id', async (req: AuthRequest, res) => {
     const { id } = req.params;
 
     try {
-        const purchase = await prisma.installmentPurchase.findFirst({
+        // Initial fetch with filtering
+        let purchase = await prisma.installmentPurchase.findFirst({
             where: { id, userId },
-            include: { account: true, generatedTransactions: true },
+            include: {
+                account: true,
+                generatedTransactions: {
+                    where: { deletedAt: null },
+                    orderBy: { date: 'asc' }
+                }
+            },
         });
 
         if (!purchase) {
             res.status(404).json({ message: 'Installment purchase not found.' });
-            return; // Ensure we return void
+            return;
         }
 
         // --- Self-Healing Logic: Ensure consistency ---
-        // Sum all actual payments related to this plan
-        const actualPayments = await prisma.transaction.findMany({
-            where: {
-                installmentPurchaseId: id,
-                OR: [{ type: 'income' }, { type: 'transfer' }]
-            }
-        });
+        // Sum all actual payments related to this plan (using the already filtered list)
+        const actualPayments = purchase.generatedTransactions.filter(
+            (tx: any) => (tx.type === 'income' || tx.type === 'transfer')
+        );
 
         const totalPaidReal = actualPayments.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
-
-        // Calculate correct installments count (using a small epsilon for float safety)
         const paidInstallmentsReal = Math.floor((totalPaidReal + 0.01) / purchase.monthlyPayment);
 
         // If DB state differs from Reality, Auto-Correct it.
         if (Math.abs(totalPaidReal - purchase.paidAmount) > 0.01 || paidInstallmentsReal !== purchase.paidInstallments) {
             console.log(`Self-Healing MSI ${id}: Correcting paidAmount ${purchase.paidAmount} -> ${totalPaidReal}, paidInstallments ${purchase.paidInstallments} -> ${paidInstallmentsReal}`);
 
-            const correctedPurchase = await prisma.installmentPurchase.update({
+            purchase = await prisma.installmentPurchase.update({
                 where: { id },
                 data: {
                     paidAmount: totalPaidReal,
                     paidInstallments: paidInstallmentsReal
                 },
-                include: { account: true, generatedTransactions: true }
+                include: {
+                    account: true,
+                    generatedTransactions: {
+                        where: { deletedAt: null },
+                        orderBy: { date: 'asc' }
+                    }
+                }
             });
-
-            res.json(correctedPurchase);
-            return;
         }
 
         res.json(purchase);
@@ -306,7 +343,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                         // Revert Source
                         console.log(`[DELETE MSI] Reverting TRANSFER source account ${account.id}.`);
                         if (account.type === 'CREDIT') {
-                             console.log(`[DELETE MSI] Reverting TRANSFER on CREDIT source ${account.id}. Decrementing balance by ${amount}.`);
+                            console.log(`[DELETE MSI] Reverting TRANSFER on CREDIT source ${account.id}. Decrementing balance by ${amount}.`);
                             await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
                         } else {
                             console.log(`[DELETE MSI] Reverting TRANSFER on DEBIT/CASH source ${account.id}. Incrementing balance by ${amount}.`);
@@ -327,13 +364,13 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                     }
                 }
             }
-			
-			// Delete all generated transactions for this installment purchase
+
+            // Delete all generated transactions for this installment purchase
             await tx.transaction.deleteMany({
                 where: { installmentPurchaseId: id },
             });
-			
-			// Delete the installment purchase itself
+
+            // Delete the installment purchase itself
             await tx.installmentPurchase.delete({
                 where: { id },
             });
@@ -375,14 +412,29 @@ router.post('/:id/pay', async (req: AuthRequest, res) => {
                 throw new Error(`El monto del pago (${paymentAmount.toFixed(2)}) excede el saldo restante de la compra (${remainingAmount.toFixed(2)}).`);
             }
 
-            // This is a payment towards the credit card, so it's an "income" for the CREDIT account
+            // Determine transaction type based on source account
+            // If source account (req.body.accountId) is different from plan account (purchase.accountId), it's a TRANSFER.
+            const sourceAccountId = accountId; // From request body
+            const targetAccountId = purchase.accountId; // The credit card
+
+            let transactionType = 'income';
+            let finalAccountId = targetAccountId;
+            let finalDestinationId = undefined;
+
+            if (sourceAccountId && sourceAccountId !== targetAccountId) {
+                transactionType = 'transfer';
+                finalAccountId = sourceAccountId;
+                finalDestinationId = targetAccountId;
+            }
+
             const newTransaction = await createTransactionAndAdjustBalances(tx, {
                 amount: paymentAmount,
                 description: description || `Pago a MSI: ${purchase.description}`,
                 date: new Date(date),
-                type: 'income', // Payment to a credit card reduces its balance (debt)
+                type: transactionType as any,
                 userId,
-                accountId: purchase.accountId, // The payment is made TO the credit account
+                accountId: finalAccountId,
+                destinationAccountId: finalDestinationId,
                 categoryId: purchase.categoryId, // Associate with the same category for consistency
                 installmentPurchaseId,
             });

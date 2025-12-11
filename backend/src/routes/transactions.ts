@@ -2,6 +2,7 @@ import express from 'express';
 import prisma from '../services/database';
 import { Prisma } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { addDays, addMonths, addWeeks, addYears, subMonths } from 'date-fns';
 
 import { createTransactionAndAdjustBalances, updateAccountBalances } from '../services/transactions';
 import { processRecurringTransactions } from '../services/recurring';
@@ -116,7 +117,7 @@ router.post('/:id/restore', async (req: AuthRequest, res) => {
         throw new Error('Deleted transaction not found or you do not have permission to restore it.');
       }
 
-      const { account, destinationAccount, amount, type, installmentPurchaseId, accountId, destinationAccountId } = transaction;
+      const { account, destinationAccount, amount, type, installmentPurchaseId, accountId, destinationAccountId, recurringTransactionId, date } = transaction;
 
       // 1. Validate Account Integrity before restoring
       // If the transaction refers to an account (accountId is present) but the account relation is null,
@@ -128,6 +129,15 @@ router.post('/:id/restore', async (req: AuthRequest, res) => {
       // For transfers, validation destination too
       if (type === 'transfer' && destinationAccountId && !destinationAccount) {
         throw new Error('No se puede restaurar: La cuenta destino ya no existe.');
+      }
+
+      // Block restoration of initial MSI purchases (expense type with installmentPurchaseId)
+      // When MSI is deleted, the entire InstallmentPurchase is removed. Cannot restore without it.
+      if (installmentPurchaseId && type === 'expense') {
+        const msiPlanExists = await tx.installmentPurchase.findUnique({ where: { id: installmentPurchaseId } });
+        if (!msiPlanExists) {
+          throw new Error('No se puede restaurar: El plan MSI asociado fue eliminado. Debes crear uno nuevo desde "Meses Sin Intereses".');
+        }
       }
 
       // Re-apply balances (reverse the deletion reversion)
@@ -172,6 +182,41 @@ router.post('/:id/restore', async (req: AuthRequest, res) => {
               paidAmount: { increment: amount },
               paidInstallments: { increment: installmentsPaidC },
             },
+          });
+        }
+      }
+
+      // Handle Recurring Transaction Restoration (Re-advance the date)
+      // If we restore a payment, we must "push" the recurring rule forward again, 
+      // as if we just paid it.
+      if (recurringTransactionId) {
+        const recurring = await tx.recurringTransaction.findUnique({ where: { id: recurringTransactionId } });
+        if (recurring) {
+          // We need to calculate the version of the date that comes AFTER this transaction.
+          // Since we don't have the sophisticated calculation logic here easily, 
+          // we can try to rely on the transaction date + frequency.
+
+          // Simple naive recalculation for now:
+          // 1. Take transaction date (which is the due date we just paid)
+          // 2. Add frequency
+
+          let nextDate = new Date(date);
+          const freq = recurring.frequency;
+
+          if (freq === 'DAILY') nextDate = addDays(nextDate, 1);
+          else if (freq === 'WEEKLY') nextDate = addWeeks(nextDate, 1);
+          else if (freq === 'BIWEEKLY') nextDate = addWeeks(nextDate, 2);
+          else if (freq === 'MONTHLY') nextDate = addMonths(nextDate, 1);
+          else if (freq === 'YEARLY') nextDate = addYears(nextDate, 1);
+          // lowercase compat
+          else if (freq === 'daily') nextDate = addDays(nextDate, 1);
+          else if (freq === 'weekly') nextDate = addWeeks(nextDate, 1);
+          else if (freq === 'biweekly') nextDate = addWeeks(nextDate, 2);
+          else if (freq === 'monthly') nextDate = addMonths(nextDate, 1);
+
+          await tx.recurringTransaction.update({
+            where: { id: recurringTransactionId },
+            data: { nextDueDate: nextDate }
           });
         }
       }
@@ -357,12 +402,31 @@ router.delete('/:id', async (req: AuthRequest, res) => {
         throw new Error('Transaction not found or you do not have permission to delete it.');
       }
 
-      const { account, destinationAccount, amount, type, installmentPurchaseId } = transaction;
+      const { account, destinationAccount, amount, type, installmentPurchaseId, recurringTransactionId, date } = transaction;
+
+      // 1b. Handle Recurring Transaction Reversion
+      // If this transaction came from a recurring rule, we should reset the recurring rule's 
+      // nextDueDate to this transaction's date, so it shows up as "Due" again.
+      if (recurringTransactionId && !transaction.deletedAt) { // Only if we are deleting an active transaction
+        // Check if recurring transaction still exists
+        const recurringExists = await tx.recurringTransaction.findUnique({ where: { id: recurringTransactionId } });
+        if (recurringExists) {
+          // Reset nextDueDate to match the transaction date we are deleting.
+          // This effectively "undoes" the payment in the recurring schedule.
+          await tx.recurringTransaction.update({
+            where: { id: recurringTransactionId },
+            data: { nextDueDate: date }
+          });
+        }
+      }
+
+
 
       // 2. Revert balances logic (ONLY if transaction is active/not already soft-deleted)
       if (!transaction.deletedAt) {
         if (account) {
           if (type === 'income') {
+            // ... logic continues ...
             if (account.type === 'CREDIT') {
               await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
             } else {

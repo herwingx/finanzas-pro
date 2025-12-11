@@ -14,10 +14,36 @@ const InstallmentsPage: React.FC = () => {
     const deleteMutation = useDeleteInstallmentPurchase();
 
     const handleDelete = (purchase: any) => {
+        const isSettled = (purchase.totalAmount - purchase.paidAmount) <= 0.05;
+
         toast.custom((t) => (
             <div className="bg-app-card border border-app-border rounded-xl p-4 flex flex-col gap-3 shadow-lg max-w-sm w-full font-sans">
-                <p className="text-app-text font-bold text-sm">¿Eliminar plan MSI "{purchase.description}"?</p>
-                <p className="text-app-muted text-xs">Se eliminarán todas las transacciones y pagos asociados. Esta acción no se puede deshacer.</p>
+                <div className="flex items-start gap-3">
+                    <div className="size-10 rounded-full bg-app-danger/10 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-app-danger">warning</span>
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-app-text font-bold text-sm mb-1">
+                            {isSettled ? '⚠️ ELIMINAR PLAN LIQUIDADO' : '¿Eliminar plan MSI completo?'}
+                        </p>
+                        <p className="text-app-muted text-xs mb-2">"{purchase.description}"</p>
+                    </div>
+                </div>
+
+                <div className="bg-app-elevated rounded-lg p-3 space-y-1">
+                    <p className="text-xs font-bold text-app-danger mb-1">Se eliminarán:</p>
+                    <ul className="text-xs text-app-muted space-y-0.5 ml-4 list-disc">
+                        <li>El plan MSI completo</li>
+                        <li>Todos los pagos registrados ({purchase.paidInstallments} pagos)</li>
+                        <li>Todas las transacciones asociadas</li>
+                    </ul>
+                    {isSettled && (
+                        <p className="text-xs text-app-danger font-medium mt-2">
+                            ⚠️ Esto afectará tu historial contable
+                        </p>
+                    )}
+                </div>
+
                 <div className="flex gap-2 justify-end">
                     <button
                         onClick={() => toast.dismiss(t)}
@@ -37,7 +63,7 @@ const InstallmentsPage: React.FC = () => {
                         }}
                         className="px-4 py-2 text-sm font-medium rounded-lg bg-app-danger text-white hover:bg-app-danger/90 transition-colors"
                     >
-                        Eliminar
+                        Eliminar Todo
                     </button>
                 </div>
             </div>
@@ -110,7 +136,7 @@ const InstallmentsPage: React.FC = () => {
                         return (
                             <SwipeableItem
                                 key={purchase.id}
-                                onSwipeRight={() => navigate(`/installments/edit/${purchase.id}`)}
+                                onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`)}
                                 rightAction={{
                                     icon: 'edit',
                                     color: '#3b82f6',

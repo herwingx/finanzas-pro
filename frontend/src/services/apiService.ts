@@ -322,3 +322,73 @@ export const restoreTransaction = async (id: string): Promise<void> => {
         throw new Error(errorData.message || 'Failed to restore transaction');
     }
 };
+
+// Financial Planning
+export interface FinancialPeriodSummary {
+    periodStart: string;
+    periodEnd: string;
+    periodType: 'quincenal' | 'mensual' | 'semanal';
+    currentBalance: number;
+    currentDebt: number;
+    currentMSIDebt: number;
+    expectedIncome: any[];
+    totalExpectedIncome: number;
+    expectedExpenses: any[];
+    msiPaymentsDue: any[];
+    totalExpectedExpenses: number;
+    totalMSIPayments: number;
+    totalCommitments: number;
+    projectedBalance: number;
+    netWorth: number;
+    disposableIncome: number;
+    budgetAnalysis?: {
+        needs: { projected: number; ideal: number };
+        wants: { projected: number; ideal: number };
+        savings: { projected: number; ideal: number };
+    };
+    isSufficient: boolean;
+    shortfall?: number;
+    warnings: string[];
+}
+
+export const getFinancialPeriodSummary = async (periodType: 'quincenal' | 'mensual' | 'semanal' = 'quincenal'): Promise<FinancialPeriodSummary> => {
+    const response = await fetch(`${API_URL}/financial-planning/summary?period=${periodType}`, {
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to fetch financial period summary');
+    return response.json();
+};
+
+export const getUpcomingCommitments = async (days: number = 7): Promise<any> => {
+    const response = await fetch(`${API_URL}/financial-planning/upcoming?days=${days}`, {
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to fetch upcoming commitments');
+    return response.json();
+};
+
+// Manual Recurring Actions
+export const payRecurringTransaction = async (id: string, data?: { amount?: number; date?: string }): Promise<any> => {
+    const response = await fetch(`${API_URL}/recurring/${id}/pay`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: data ? JSON.stringify(data) : undefined,
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to pay recurring transaction' }));
+        throw new Error(errorData.message);
+    }
+    return response.json();
+};
+
+export const skipRecurringTransaction = async (id: string): Promise<any> => {
+    const response = await fetch(`${API_URL}/recurring/${id}/skip`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to skip recurring transaction' }));
+        throw new Error(errorData.message);
+    }
+    return response.json();
+};

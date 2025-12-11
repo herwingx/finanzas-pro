@@ -16,6 +16,7 @@ export const useAddInstallmentPurchase = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['installments'] });
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -39,6 +40,7 @@ export const useUpdateInstallmentPurchase = () => {
             queryClient.invalidateQueries({ queryKey: ['installments'] });
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
             queryClient.invalidateQueries({ queryKey: ['installment', variables.id] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -50,6 +52,7 @@ export const useDeleteInstallmentPurchase = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['installments'] });
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -62,9 +65,11 @@ export const usePayInstallment = () => {
             queryClient.invalidateQueries({ queryKey: ['installments'] });
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
+
 
 export const useAccounts = () => {
     return useQuery<Account[], Error>({
@@ -79,6 +84,7 @@ export const useAddAccount = () => {
         mutationFn: (account: Omit<Account, 'id' | 'userId' | 'transactions'>) => apiService.addAccount(account),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -90,6 +96,7 @@ export const useUpdateAccount = () => {
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
             queryClient.invalidateQueries({ queryKey: ['account', variables.id] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -100,6 +107,7 @@ export const useDeleteAccount = () => {
         mutationFn: (id: string) => apiService.deleteAccount(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -129,6 +137,7 @@ export const useAddTransaction = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -140,6 +149,7 @@ export const useUpdateTransaction = () => {
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['transaction', variables.id] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -150,6 +160,9 @@ export const useDeleteTransaction = () => {
         mutationFn: (id: string) => apiService.deleteTransaction(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+            queryClient.invalidateQueries({ queryKey: ['installments'] }); // Refresh MSI progress
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });     // Refresh balances
         },
     });
 };
@@ -222,6 +235,7 @@ export const useAddRecurringTransaction = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['recurring'] });
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -232,6 +246,7 @@ export const useUpdateRecurringTransaction = () => {
         mutationFn: ({ id, transaction }: { id: string; transaction: Partial<Omit<RecurringTransaction, 'id'>> }) => apiService.updateRecurringTransaction(id, transaction),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['recurring'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -242,6 +257,31 @@ export const useDeleteRecurringTransaction = () => {
         mutationFn: (id: string) => apiService.deleteRecurringTransaction(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['recurring'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};
+
+export const usePayRecurringTransaction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data?: { amount?: number; date?: string } }) => apiService.payRecurringTransaction(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['recurring'] });
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        },
+    });
+};
+
+export const useSkipRecurringTransaction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => apiService.skipRecurringTransaction(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['recurring'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };
@@ -264,6 +304,7 @@ export const useRestoreTransaction = () => {
             queryClient.invalidateQueries({ queryKey: ['deletedTransactions'] });
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
             queryClient.invalidateQueries({ queryKey: ['installments'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
     });
 };

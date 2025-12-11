@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           name: 'Finanzas Pro',
           short_name: 'FinanzasPro',
@@ -28,7 +28,8 @@ export default defineConfig(({ mode }) => {
           background_color: '#ffffff',
           display: 'standalone',
           orientation: 'portrait',
-          start_url: '.',
+          start_url: '/',
+          scope: '/',
           icons: [
             {
               src: 'pwa-192x192.png',
@@ -50,6 +51,9 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}']
+        },
+        devOptions: {
+          enabled: true
         }
       })
     ],

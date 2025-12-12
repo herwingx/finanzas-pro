@@ -44,7 +44,7 @@ function Calendar({
           "flex items-center justify-center"
         ),
         selected:
-          "bg-app-primary text-white font-bold hover:bg-app-primary hover:text-white focus:bg-app-primary focus:text-white shadow-md scale-105",
+          "bg-app-primary text-white font-bold hover:bg-app-primary hover:text-white focus:bg-app-primary focus:text-white shadow-glow-sm shadow-app-primary/50 scale-105",
         today: cn(
           "bg-app-elevated text-app-text font-bold",
           "ring-2 ring-app-primary/30"

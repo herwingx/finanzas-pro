@@ -184,7 +184,13 @@ const History: React.FC = () => {
   const deletionImpact = itemToDelete ? getDeletionImpact(itemToDelete) : null;
 
   return (
-    <div className="pb-28 bg-app-bg min-h-screen text-app-text">
+    <div className="pb-28 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+      {/* Ambient Background Glow */}
+      <div className="fixed inset-0 pointer-events-none -z-10">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
+      </div>
+
       <PageHeader title="Historial" />
 
       {/* MSI Payments Toggle */}
@@ -230,14 +236,14 @@ const History: React.FC = () => {
                           onSwipeRight={() => navigate(`/new?editId=${tx.id}&mode=edit`)}
                           rightAction={{
                             icon: 'edit',
-                            color: '#3b82f6', // Azul moderno
+                            color: 'var(--color-primary)', // Azul moderno
                             label: 'Editar',
                           }}
 
                           onSwipeLeft={() => handleDeleteClick(tx)}
                           leftAction={{
                             icon: 'delete',
-                            color: '#ef4444',
+                            color: 'var(--color-danger)',
                             label: 'Eliminar',
                           }}
                           className="rounded-2xl"
@@ -284,13 +290,13 @@ const History: React.FC = () => {
                         }}
                         rightAction={{
                           icon: (isAdjustment || isInitialMsi) ? 'lock' : 'edit',
-                          color: (isAdjustment || isInitialMsi) ? '#94a3b8' : '#3b82f6', // Grey for locked, Blue for edit
+                          color: (isAdjustment || isInitialMsi) ? 'var(--color-text-tertiary)' : 'var(--color-primary)', // Grey for locked, Blue for edit
                           label: (isAdjustment || isInitialMsi) ? 'Bloqueado' : 'Editar',
                         }}
                         onSwipeLeft={() => handleDeleteClick(tx)}
                         leftAction={{
                           icon: 'delete',
-                          color: '#ef4444',
+                          color: 'var(--color-danger)',
                           label: 'Eliminar',
                         }}
                         className="rounded-2xl"

@@ -645,39 +645,49 @@ const NewTransaction: React.FC = () => {
               <div className="p-4 space-y-4">
                 <div>
                   <label htmlFor="fromAccount" className="block text-xs text-app-muted font-bold mb-3 uppercase">Cuenta de Origen</label>
-                  <select
-                    id="fromAccount"
-                    value={accountId}
-                    onChange={(e) => setAccountId(e.target.value)}
-                    className="w-full p-3 bg-app-bg rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
-                    required
-                  >
-                    {isLoadingAccounts ? <option value="" disabled>Cargando cuentas...</option> :
-                      debitCashAccounts.map(account => (
-                        <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
-                      ))
-                    }
-                  </select>
+                  <div className="relative">
+                    <select
+                      id="fromAccount"
+                      value={accountId}
+                      onChange={(e) => setAccountId(e.target.value)}
+                      className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all"
+                      required
+                    >
+                      {isLoadingAccounts ? <option value="" disabled>Cargando cuentas...</option> :
+                        debitCashAccounts.map(account => (
+                          <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
+                        ))
+                      }
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
+                      <span className="material-symbols-outlined">expand_more</span>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="toAccount" className="block text-xs text-app-muted font-bold mb-3 uppercase">Cuenta de Destino</label>
-                  <select
-                    id="toAccount"
-                    value={destinationAccountId}
-                    onChange={(e) => setDestinationAccountId(e.target.value)}
-                    className="w-full p-3 bg-app-bg rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
-                    required
-                  >
-                    {isLoadingAccounts ? <option value="" disabled>Cargando cuentas...</option> :
-                      validDestinationAccounts.length > 0 ? (
-                        validDestinationAccounts.map(account => (
-                          <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
-                        ))
-                      ) : (
-                        <option value="" disabled>No hay cuentas de destino disponibles</option>
-                      )
-                    }
-                  </select>
+                  <div className="relative">
+                    <select
+                      id="toAccount"
+                      value={destinationAccountId}
+                      onChange={(e) => setDestinationAccountId(e.target.value)}
+                      className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all"
+                      required
+                    >
+                      {isLoadingAccounts ? <option value="" disabled>Cargando cuentas...</option> :
+                        validDestinationAccounts.length > 0 ? (
+                          validDestinationAccounts.map(account => (
+                            <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
+                          ))
+                        ) : (
+                          <option value="" disabled>No hay cuentas de destino disponibles</option>
+                        )
+                      }
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
+                      <span className="material-symbols-outlined">expand_more</span>
+                    </div>
+                  </div>
                   {validDestinationAccounts.length === 0 && (
                     <p className="mt-2 text-xs text-app-muted">No hay cuentas válidas para transferir. Las tarjetas de crédito sin deuda no se muestran.</p>
                   )}
@@ -828,28 +838,33 @@ const NewTransaction: React.FC = () => {
                             {linkMsiPayment && (
                               <div>
                                 <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Selecciona el plan MSI</label>
-                                <select
-                                  value={selectedMsiForTransfer}
-                                  onChange={e => {
-                                    setSelectedMsiForTransfer(e.target.value);
-                                    // Auto-fill suggested amount
-                                    const plan = activeInstallmentsForDestination.find(p => p.id === e.target.value);
-                                    if (plan) {
-                                      const remaining = plan.totalAmount - plan.paidAmount;
-                                      const suggested = Math.min(plan.monthlyPayment, remaining);
-                                      setAmount(suggested.toFixed(2));
-                                    }
-                                  }}
-                                  className="w-full p-3 bg-app-bg rounded-xl border border-app-border"
-                                  required={linkMsiPayment}
-                                >
-                                  <option value="">-- Elige una opción --</option>
-                                  {activeInstallmentsForDestination.map(p => (
-                                    <option key={p.id} value={p.id}>
-                                      {p.description} - ${(p.totalAmount - p.paidAmount).toFixed(2)} restantes
-                                    </option>
-                                  ))}
-                                </select>
+                                <div className="relative">
+                                  <select
+                                    value={selectedMsiForTransfer}
+                                    onChange={e => {
+                                      setSelectedMsiForTransfer(e.target.value);
+                                      // Auto-fill suggested amount
+                                      const plan = activeInstallmentsForDestination.find(p => p.id === e.target.value);
+                                      if (plan) {
+                                        const remaining = plan.totalAmount - plan.paidAmount;
+                                        const suggested = Math.min(plan.monthlyPayment, remaining);
+                                        setAmount(suggested.toFixed(2));
+                                      }
+                                    }}
+                                    className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all"
+                                    required={linkMsiPayment}
+                                  >
+                                    <option value="">-- Elige una opción --</option>
+                                    {activeInstallmentsForDestination.map(p => (
+                                      <option key={p.id} value={p.id}>
+                                        {p.description} - ${(p.totalAmount - p.paidAmount).toFixed(2)} restantes
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
+                                    <span className="material-symbols-outlined">expand_more</span>
+                                  </div>
+                                </div>
                                 <p className="text-xs text-app-muted mt-2 flex items-start gap-1">
                                   <span className="material-symbols-outlined text-sm">info</span>
                                   <span>Vincular este pago actualizará el progreso del plan MSI automáticamente.</span>
@@ -866,20 +881,25 @@ const NewTransaction: React.FC = () => {
             ) : (
               <div className="p-4">
                 <label htmlFor="account" className="block text-xs text-app-muted font-bold mb-3 uppercase">Cuenta</label>
-                <select
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full p-3 bg-app-bg rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
-                  required
-                >
-                  {isLoadingAccounts ? <option disabled>Cargando cuentas...</option> :
-                    // For INCOME: Only show DEBIT/CASH accounts (can't deposit income directly to credit cards)
-                    // For EXPENSE: Show all accounts
-                    (type === 'income' ? debitCashAccounts : allAccounts).map(account => (
-                      <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
-                    ))
-                  }
-                </select>
+                <div className="relative">
+                  <select
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all"
+                    required
+                  >
+                    {isLoadingAccounts ? <option disabled>Cargando cuentas...</option> :
+                      // For INCOME: Only show DEBIT/CASH accounts (can't deposit income directly to credit cards)
+                      // For EXPENSE: Show all accounts
+                      (type === 'income' ? debitCashAccounts : allAccounts).map(account => (
+                        <option key={account.id} value={account.id}>{formatAccountOption(account)}</option>
+                      ))
+                    }
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </div>
+                </div>
                 {type === 'income' && creditAccounts.length > 0 && (
                   <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                     <p className="text-xs text-app-muted flex items-start gap-2">
@@ -924,16 +944,21 @@ const NewTransaction: React.FC = () => {
                 {isMsiPayment && (
                   <div className="mt-4">
                     <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Selecciona la compra a pagar</label>
-                    <select value={selectedInstallmentId} onChange={e => setSelectedInstallmentId(e.target.value)} className="w-full p-3 bg-app-bg rounded-xl border border-app-border" required>
-                      <option value="">-- Elige una opción --</option>
-                      {isLoadingInstallments ? <option disabled>Cargando compras...</option> :
-                        activeInstallmentsForAccount.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.description} (${(p.totalAmount - p.paidAmount).toFixed(2)} restantes)
-                          </option>
-                        ))
-                      }
-                    </select>
+                    <div className="relative">
+                      <select value={selectedInstallmentId} onChange={e => setSelectedInstallmentId(e.target.value)} className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all" required>
+                        <option value="">-- Elige una opción --</option>
+                        {isLoadingInstallments ? <option disabled>Cargando compras...</option> :
+                          activeInstallmentsForAccount.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.description} (${(p.totalAmount - p.paidAmount).toFixed(2)} restantes)
+                            </option>
+                          ))
+                        }
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
+                        <span className="material-symbols-outlined">expand_more</span>
+                      </div>
+                    </div>
                     {activeInstallmentsForAccount.length === 0 && !isLoadingInstallments && (
                       <p className="text-xs text-app-muted mt-2">No hay compras a MSI activas para esta cuenta.</p>
                     )}
@@ -1001,13 +1026,18 @@ const NewTransaction: React.FC = () => {
                 {isRecurring && (
                   <div className="mt-4">
                     <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Frecuencia</label>
-                    <select value={frequency} onChange={e => setFrequency(e.target.value as FrequencyType)} className="w-full p-3 bg-app-bg rounded-xl border border-app-border">
-                      <option value="daily">Diaria</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="biweekly">Quincenal</option>
-                      <option value="monthly">Mensual</option>
-                      <option value="yearly">Anual</option>
-                    </select>
+                    <div className="relative">
+                      <select value={frequency} onChange={e => setFrequency(e.target.value as FrequencyType)} className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all">
+                        <option value="daily">Diaria</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="biweekly">Quincenal</option>
+                        <option value="monthly">Mensual</option>
+                        <option value="yearly">Anual</option>
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
+                        <span className="material-symbols-outlined">expand_more</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

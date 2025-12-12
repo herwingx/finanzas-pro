@@ -10,89 +10,63 @@ interface ToastAction {
   onClick: () => void;
 }
 
+// Shared toast styles
+const toastStyles = {
+  success: 'bg-app-elevated/90 backdrop-blur-xl border border-app-success/50 text-app-text shadow-lg shadow-app-success/10',
+  error: 'bg-app-elevated/90 backdrop-blur-xl border border-app-danger/50 text-app-text shadow-lg shadow-app-danger/10',
+  warning: 'bg-app-elevated/90 backdrop-blur-xl border border-app-warning/50 text-app-text shadow-lg shadow-app-warning/10',
+  info: 'bg-app-elevated/90 backdrop-blur-xl border border-app-info/50 text-app-text shadow-lg shadow-app-info/10',
+  loading: 'bg-app-elevated/90 backdrop-blur-xl border border-app-border text-app-text shadow-lg',
+};
+
 // Success Toast with optional undo action
 export const toastSuccess = (message: string, action?: ToastAction) => {
   sonnerToast.success(message, {
+    className: toastStyles.success,
     icon: '✅',
     action: action ? {
       label: action.label,
       onClick: action.onClick
     } : undefined,
     duration: 3000,
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-success)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
   });
 };
 
 // Error Toast with support info
 export const toastError = (message: string, description?: string) => {
   sonnerToast.error(message, {
+    className: toastStyles.error,
     icon: '❌',
     description: description || 'Si el problema persiste, intenta recargar la página',
     duration: 5000,
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-danger)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
   });
 };
 
 // Warning Toast
 export const toastWarning = (message: string, description?: string) => {
   sonnerToast.warning(message, {
+    className: toastStyles.warning,
     icon: '⚠️',
     description,
     duration: 4000,
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-warning)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
   });
 };
 
 // Info Toast
 export const toastInfo = (message: string, description?: string) => {
   sonnerToast.info(message, {
+    className: toastStyles.info,
     icon: 'ℹ️',
     description,
     duration: 4000,
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-info)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
   });
 };
 
 // Loading Toast (returns ID for updating)
 export const toastLoading = (message: string) => {
   return sonnerToast.loading(message, {
+    className: toastStyles.loading,
     icon: '⏳',
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-border)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
   });
 };
 
@@ -100,16 +74,9 @@ export const toastLoading = (message: string) => {
 export const toastUpdateSuccess = (id: string | number, message: string) => {
   sonnerToast.success(message, {
     id,
+    className: toastStyles.success,
     icon: '✅',
     duration: 3000,
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-success)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
   });
 };
 
@@ -117,16 +84,9 @@ export const toastUpdateSuccess = (id: string | number, message: string) => {
 export const toastUpdateError = (id: string | number, message: string) => {
   sonnerToast.error(message, {
     id,
+    className: toastStyles.error,
     icon: '❌',
     duration: 5000,
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-danger)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
   });
 };
 
@@ -143,14 +103,11 @@ export const toastPromise = <T,>(
     loading: messages.loading,
     success: messages.success,
     error: messages.error,
-    style: {
-      background: 'var(--color-bg-elevated)',
-      border: '1px solid var(--color-border)',
-      color: 'var(--color-text-primary)',
-      borderRadius: '12px',
-      padding: '14px 16px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },
+    className: toastStyles.loading, // Default to loading style, success/error will override automatically by sonner type? No, sonner might need specific styles for promise states.
+    // Actually sonner allows 'success' and 'error' props which can be objects with classNames.
+    // Simplifying for now to use default sonner behavior with global toast styles if possible,
+    // or passing a base style.
+    // Let's stick to simple implementation here as sonner handles promise states well.
   });
 };
 

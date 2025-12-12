@@ -150,7 +150,12 @@ const Categories: React.FC = () => {
     );
 
     return (
-        <div className="pb-24 bg-app-bg min-h-screen text-app-text">
+        <div className="pb-24 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+            </div>
             <PageHeader title="Categorías" />
             <div className="p-4 max-w-lg mx-auto space-y-6">
                 <div className="flex justify-end">
@@ -170,12 +175,17 @@ const Categories: React.FC = () => {
                     <div className="bg-app-card rounded-2xl p-6 max-w-sm w-full shadow-lg border border-app-border">
                         <h3 className="text-lg font-bold mb-2">Reasignar y Eliminar</h3>
                         <p className="text-sm text-app-muted mb-6">"{reassigningDelete.name}" tiene transacciones. Mueve sus transacciones a otra categoría para poder eliminarla.</p>
-                        <select value={reassignTargetId} onChange={(e) => setReassignTargetId(e.target.value)} className="w-full p-3 bg-app-elevated rounded-xl border border-app-border text-sm mb-6">
-                            <option value="">Selecciona una categoría...</option>
-                            {categories?.filter(c => c.id !== reassigningDelete.id && c.type === reassigningDelete.type).map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
+                        <div className="relative mb-6">
+                            <select value={reassignTargetId} onChange={(e) => setReassignTargetId(e.target.value)} className="w-full p-4 pl-4 pr-10 bg-app-elevated border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all text-sm">
+                                <option value="">Selecciona una categoría...</option>
+                                {categories?.filter(c => c.id !== reassigningDelete.id && c.type === reassigningDelete.type).map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
+                                <span className="material-symbols-outlined">expand_more</span>
+                            </div>
+                        </div>
                         <div className="flex justify-end gap-3">
                             <button onClick={() => setReassigningDelete(null)} className="btn-modern btn-ghost px-4 py-2 font-semibold text-sm">Cancelar</button>
                             <button onClick={handleReassignAndDelete} disabled={!reassignTargetId || deleteCategoryMutation.isPending} className="btn-modern bg-app-danger text-white hover:bg-app-danger/90 px-4 py-2 font-semibold text-sm disabled:opacity-50 border-none shadow-md">{deleteCategoryMutation.isPending ? 'Eliminando...' : 'Reasignar y Eliminar'}</button>

@@ -57,11 +57,11 @@ const SwipeableExpenseRow = ({
     <div className="relative overflow-hidden mb-2 select-none touch-pan-y group">
       {/* Background Action Layer (Visible when swiping right) */}
       <div
-        className="absolute inset-0 bg-green-500 rounded-xl flex items-center justify-start pl-4"
+        className="absolute inset-0 bg-app-success rounded-xl flex items-center justify-start pl-4"
         style={{ opacity: offsetX > 0 ? 1 : 0 }}
       >
         <div
-          className="text-white font-bold flex items-center gap-2"
+          className="text-app-text-inverted font-bold flex items-center gap-2"
           style={{ transform: `translateX(${progress * 10}px)` }}
         >
           <span className="material-symbols-outlined">check</span>
@@ -81,7 +81,7 @@ const SwipeableExpenseRow = ({
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+          <div className="p-2 rounded-full bg-app-danger/10 text-app-danger">
             <span className="material-symbols-outlined text-lg">payments</span>
           </div>
           <div>
@@ -99,7 +99,7 @@ const SwipeableExpenseRow = ({
           {/* Desktop Hover Button (Always useful as fallback) */}
           <button
             onClick={(e) => { e.stopPropagation(); onPay(); }}
-            className="hidden md:flex absolute right-2 opacity-0 group-hover:opacity-100 transition-all p-2 bg-green-500 text-white rounded-lg shadow-lg hover:scale-105"
+            className="hidden md:flex absolute right-2 opacity-0 group-hover:opacity-100 transition-all p-2 bg-app-success text-app-text-inverted rounded-lg shadow-lg hover:scale-105"
             title="Registrar Pago"
           >
             <span className="material-symbols-outlined text-sm">check</span>
@@ -146,7 +146,7 @@ export const FinancialPlanningWidget: React.FC = () => {
       },
       cancel: {
         label: 'Cancelar',
-        onClick: () => {},
+        onClick: () => { },
       },
       duration: 5000,
     });
@@ -218,13 +218,13 @@ export const FinancialPlanningWidget: React.FC = () => {
 
       {/* Stats Summary Grid */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex flex-col items-center justify-center text-center">
-          <span className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Ingresos</span>
-          <span className="text-lg font-bold text-green-700 dark:text-green-300">{formatCurrency(summary.totalExpectedIncome)}</span>
+        <div className="bg-app-success/10 border border-app-success/20 rounded-xl p-3 flex flex-col items-center justify-center text-center backdrop-blur-sm">
+          <span className="text-xs text-app-success font-bold mb-1 uppercase tracking-wider">Ingresos</span>
+          <span className="text-lg font-bold text-app-success shadow-app-success/20 drop-shadow-sm">{formatCurrency(summary.totalExpectedIncome)}</span>
         </div>
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex flex-col items-center justify-center text-center">
-          <span className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">Gastos</span>
-          <span className="text-lg font-bold text-red-700 dark:text-red-300">{formatCurrency(summary.totalCommitments)}</span>
+        <div className="bg-app-danger/10 border border-app-danger/20 rounded-xl p-3 flex flex-col items-center justify-center text-center backdrop-blur-sm">
+          <span className="text-xs text-app-danger font-bold mb-1 uppercase tracking-wider">Gastos</span>
+          <span className="text-lg font-bold text-app-danger shadow-app-danger/20 drop-shadow-sm">{formatCurrency(summary.totalCommitments)}</span>
         </div>
       </div>
 
@@ -247,18 +247,18 @@ export const FinancialPlanningWidget: React.FC = () => {
 
           {summary.msiPaymentsDue.map((msi: any) => (
             <div key={msi.id} className="relative group mb-2 cursor-pointer" onClick={() => handlePayMSI(msi)}>
-              <div className="relative bg-app-elevated p-3 rounded-xl flex items-center justify-between border border-transparent hover:border-purple-500/20 transition-all duration-300 shadow-sm hover:shadow-md">
+              <div className="relative bg-app-elevated p-3 rounded-xl flex items-center justify-between border border-transparent hover:border-app-secondary/30 transition-all duration-300 shadow-sm hover:shadow-glow-sm">
                 {/* Decorative gradient for premium feel */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent opacity-50 rounded-xl pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-r from-app-secondary/10 to-transparent opacity-50 rounded-xl pointer-events-none" />
 
                 <div className="relative flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/10 group-hover:scale-105 transition-transform">
+                  <div className="p-2.5 rounded-2xl bg-app-secondary/10 text-app-secondary ring-1 ring-app-secondary/20 group-hover:scale-105 transition-transform">
                     <span className="material-symbols-outlined text-lg">credit_card</span>
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-sm font-bold text-app-text leading-none">{msi.description}</p>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-bold shadow-sm shadow-purple-500/20 tracking-wider">MSI</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-app-secondary text-app-text-inverted font-bold shadow-sm shadow-app-secondary/20 tracking-wider">MSI</span>
                     </div>
                     <p className="text-xs text-app-muted flex items-center gap-1">
                       <span>{formatDate(msi.dueDate)}</span>
@@ -267,7 +267,7 @@ export const FinancialPlanningWidget: React.FC = () => {
                 </div>
                 <div className="relative flex flex-col items-end">
                   <span className="font-bold text-app-text">{formatCurrency(msi.amount)}</span>
-                  <span className="text-[10px] text-purple-600/70 dark:text-purple-400/70 font-medium group-hover:text-purple-600 transition-colors">Tocar para Pagar</span>
+                  <span className="text-[10px] text-app-secondary/80 font-medium group-hover:text-app-secondary transition-colors">Tocar para Pagar</span>
                 </div>
               </div>
             </div>
@@ -287,15 +287,15 @@ export const FinancialPlanningWidget: React.FC = () => {
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-app-muted uppercase tracking-wide">Disponible Final</span>
           <span className={`text-xl font-bold ${summary.isSufficient
-            ? 'text-green-600 dark:text-green-400'
-            : 'text-red-600 dark:text-red-400'
+            ? 'text-app-success'
+            : 'text-app-danger'
             }`}>
             {formatCurrency(summary.disposableIncome)}
           </span>
         </div>
 
         {!summary.isSufficient && (
-          <p className="text-xs text-red-500 mt-2 flex items-center gap-1 bg-red-500/10 p-2 rounded-lg">
+          <p className="text-xs text-app-danger mt-2 flex items-center gap-1 bg-app-danger/10 p-2 rounded-lg font-medium border border-app-danger/20">
             <span className="material-symbols-outlined text-sm">warning</span>
             Faltan {formatCurrency(Math.abs(summary.shortfall))} para cubrir todo.
           </p>
@@ -305,9 +305,9 @@ export const FinancialPlanningWidget: React.FC = () => {
       {/* 50/30/20 Mini-Bar */}
       {summary.budgetAnalysis && summary.totalExpectedIncome > 0 && (
         <div className="flex h-1.5 rounded-full overflow-hidden bg-app-border w-full">
-          <div className="bg-blue-500" style={{ width: `${Math.min((summary.budgetAnalysis.needs.projected / summary.totalExpectedIncome) * 100, 100)}%` }}></div>
-          <div className="bg-purple-500" style={{ width: `${Math.min((summary.budgetAnalysis.wants.projected / summary.totalExpectedIncome) * 100, 100)}%` }}></div>
-          <div className="bg-green-500" style={{ width: `${Math.min((summary.budgetAnalysis.savings.projected / summary.totalExpectedIncome) * 100, 100)}%` }}></div>
+          <div className="bg-app-info" style={{ width: `${Math.min((summary.budgetAnalysis.needs.projected / summary.totalExpectedIncome) * 100, 100)}%` }}></div>
+          <div className="bg-app-secondary" style={{ width: `${Math.min((summary.budgetAnalysis.wants.projected / summary.totalExpectedIncome) * 100, 100)}%` }}></div>
+          <div className="bg-app-success" style={{ width: `${Math.min((summary.budgetAnalysis.savings.projected / summary.totalExpectedIncome) * 100, 100)}%` }}></div>
         </div>
       )}
 

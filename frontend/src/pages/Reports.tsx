@@ -39,10 +39,10 @@ const Reports: React.FC = () => {
 
         const totalExpenses = needs + wants + savings + unclassified;
         const chartData = [
-            { name: 'Necesidades', value: needs, color: '#ef4444', ideal: 50 },
-            { name: 'Deseos', value: wants, color: '#f59e0b', ideal: 30 },
-            { name: 'Ahorros', value: savings, color: '#10b981', ideal: 20 },
-            { name: 'Sin clasificar', value: unclassified, color: '#6b7280', ideal: 0 },
+            { name: 'Necesidades', value: needs, color: '#F50F56', ideal: 50 }, // --color-danger (Neon Red)
+            { name: 'Deseos', value: wants, color: '#FFD166', ideal: 30 }, // --color-warning variant (Neon Yellow/Orange)
+            { name: 'Ahorros', value: savings, color: '#06D6A0', ideal: 20 }, // --color-success (Neon Mint)
+            { name: 'Sin clasificar', value: unclassified, color: '#64748B', ideal: 0 }, // Slate-500
         ].filter(item => item.value > 0);
 
         return {
@@ -54,7 +54,12 @@ const Reports: React.FC = () => {
     const isLoading = isLoadingTransactions || isLoadingCategories || isLoadingProfile;
 
     return (
-        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+            </div>
             {/* Header */}
             <header className="sticky top-0 z-20 flex items-center bg-app-bg/80 backdrop-blur-xl px-4 py-3 border-b border-app-border">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated transition-colors">

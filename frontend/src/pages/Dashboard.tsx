@@ -80,25 +80,61 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+      {/* Ambient Background Glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
+      </div>
+
       <div className="flex items-center p-4 sticky top-0 bg-app-bg/80 backdrop-blur-xl z-20 border-b border-app-border transition-all">
-        <Link to="/profile" className="size-10 rounded-full bg-gradient-to-br from-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-app-primary/20 overflow-hidden shrink-0 ring-2 ring-app-bg">
-          {profile?.avatar ? <img src={profile.avatar} alt="User Avatar" className="w-full h-full object-cover" /> : <span>{userInitials}</span>}
+        <Link to="/profile" className="size-12 rounded-2xl bg-gradient-to-br from-app-primary via-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-app-primary/20 overflow-hidden shrink-0 ring-2 ring-app-bg transition-transform hover:scale-105 active:scale-95">
+          {profile?.avatar ? <img src={profile.avatar} alt="User Avatar" className="w-full h-full object-cover" /> : <span className="text-lg">{userInitials}</span>}
         </Link>
         <div className="flex-1 px-4">
-          <p className="text-xs text-app-muted font-medium">Hola,</p>
-          <h1 className="text-sm font-bold tracking-tight truncate">{profile?.name}</h1>
+          <p className="text-xs text-app-muted font-bold uppercase tracking-wider mb-0.5">Bienvenido,</p>
+          <h1 className="text-xl font-bold tracking-tight truncate bg-clip-text text-transparent bg-gradient-to-r from-app-text-primary to-app-secondary">
+            {profile?.name}
+          </h1>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => toastInfo('Sin notificaciones nuevas')} className="p-2 rounded-xl hover:bg-app-elevated transition-colors text-app-muted hover:text-app-text relative">
+            <span className="material-symbols-outlined">notifications</span>
+            <span className="absolute top-2 right-2 size-2 bg-app-danger rounded-full border border-app-bg"></span>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 px-4 mt-4">
-        <div className="card-modern p-4 shadow-sm transition-premium">
-          <p className="text-app-muted text-xs font-bold uppercase tracking-wider mb-1">Dinero Disponible</p>
-          <h2 className="text-2xl font-bold text-app-success">{formatCurrency(availableFunds)}</h2>
+      <div className="grid grid-cols-2 gap-4 px-4 mt-6">
+        {/* Available Funds Card - Primary Glow */}
+        <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-5 transition-all duration-300 hover:shadow-glow-md hover:border-app-primary/30 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-app-primary/5 to-transparent opacity-100" />
+          <div className="absolute -right-6 -top-6 w-20 h-20 bg-app-primary/10 rounded-full blur-2xl group-hover:bg-app-primary/20 transition-colors" />
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-lg bg-app-primary/10 text-app-primary">
+                <span className="material-symbols-outlined text-sm">account_balance_wallet</span>
+              </div>
+              <p className="text-app-muted text-[10px] font-bold uppercase tracking-wider">Disponible</p>
+            </div>
+            <h2 className="text-2xl font-bold text-app-text tracking-tight">{formatCurrency(availableFunds)}</h2>
+          </div>
         </div>
 
-        <div className="card-modern p-4 shadow-sm transition-premium">
-          <p className="text-app-muted text-xs font-bold uppercase tracking-wider mb-1">Patrimonio Neto</p>
-          <h2 className="text-2xl font-bold text-app-text">{formatCurrency(netWorth)}</h2>
+        {/* Net Worth Card - Secondary Glow */}
+        <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-5 transition-all duration-300 hover:shadow-glow-md hover:border-app-secondary/30 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-app-secondary/5 to-transparent opacity-100" />
+          <div className="absolute -right-6 -top-6 w-20 h-20 bg-app-secondary/10 rounded-full blur-2xl group-hover:bg-app-secondary/20 transition-colors" />
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-lg bg-app-secondary/10 text-app-secondary">
+                <span className="material-symbols-outlined text-sm">trending_up</span>
+              </div>
+              <p className="text-app-muted text-[10px] font-bold uppercase tracking-wider">Patrimonio</p>
+            </div>
+            <h2 className="text-2xl font-bold text-app-text tracking-tight">{formatCurrency(netWorth)}</h2>
+          </div>
         </div>
       </div>
 
@@ -143,11 +179,20 @@ const Dashboard: React.FC = () => {
       )}
 
       <div className="px-4 mt-6">
-        <div className="card-modern p-5 shadow-premium">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <p className="text-app-muted text-[10px] font-bold uppercase tracking-wider mb-1">Gastos del Mes (no MSI)</p>
-              <span className="text-2xl font-bold text-app-text">{formatCurrency(monthSpend)}</span>
+        <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-5 transition-all duration-300 hover:shadow-glow-md hover:border-app-danger/30 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-app-danger/5 to-transparent opacity-100" />
+          <div className="absolute -right-6 -top-6 w-20 h-20 bg-app-danger/10 rounded-full blur-2xl group-hover:bg-app-danger/20 transition-colors" />
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-lg bg-app-danger/10 text-app-danger">
+                <span className="material-symbols-outlined text-sm">payments</span>
+              </div>
+              <p className="text-app-muted text-[10px] font-bold uppercase tracking-wider">Gastos del Mes (no MSI)</p>
+            </div>
+            <div className="flex justify-between items-end">
+              <h2 className="text-2xl font-bold text-app-text tracking-tight">{formatCurrency(monthSpend)}</h2>
+              {/* Optional: Add a mini sparkline or indicator here if needed later */}
             </div>
           </div>
         </div>

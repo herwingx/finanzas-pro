@@ -84,7 +84,12 @@ const Recurring: React.FC = () => {
     const getCategory = (id: string) => categories?.find(c => c.id === id);
 
     return (
-        <div className="pb-24 bg-app-bg min-h-screen text-app-text">
+        <div className="pb-24 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+            </div>
             <PageHeader title="Gastos Recurrentes" />
 
             <div className="p-4 max-w-lg mx-auto space-y-4">

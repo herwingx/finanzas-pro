@@ -87,22 +87,31 @@ const AccountsPage: React.FC = () => {
     const netWorth = totalAssets - totalDebt;
 
     return (
-        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="fixed inset-0 pointer-events-none -z-10">
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-danger/10 rounded-full blur-[100px]" />
+            </div>
+
             <PageHeader title="Mis Cuentas" showBackButton={false} />
 
             {/* Summary Cards */}
-            <div className="px-4 mt-4 space-y-4">
-                <div className="bg-app-card border border-app-border rounded-2xl p-4 shadow-sm flex items-center justify-between">
-                    <span className="text-sm font-medium text-app-text">Activos Totales:</span>
-                    <span className="text-lg font-bold text-app-success">{formatCurrency(totalAssets)}</span>
+            <div className="px-4 mt-6 space-y-4">
+                <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-4 shadow-sm flex items-center justify-between hover:shadow-glow-sm hover:border-app-success/30 transition-all">
+                    <div className="absolute inset-0 bg-gradient-to-r from-app-success/5 to-transparent opacity-100" />
+                    <span className="text-sm font-bold text-app-text-secondary uppercase tracking-wider relative z-10">Activos Totales</span>
+                    <span className="text-xl font-bold text-app-success relative z-10 drop-shadow-sm">{formatCurrency(totalAssets)}</span>
                 </div>
-                <div className="bg-app-card border border-app-border rounded-2xl p-4 shadow-sm flex items-center justify-between">
-                    <span className="text-sm font-medium text-app-text">Deuda Total:</span>
-                    <span className="text-lg font-bold text-app-danger">-{formatCurrency(totalDebt)}</span>
+                <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-4 shadow-sm flex items-center justify-between hover:shadow-glow-sm hover:border-app-danger/30 transition-all">
+                    <div className="absolute inset-0 bg-gradient-to-r from-app-danger/5 to-transparent opacity-100" />
+                    <span className="text-sm font-bold text-app-text-secondary uppercase tracking-wider relative z-10">Deuda Total</span>
+                    <span className="text-xl font-bold text-app-danger relative z-10 drop-shadow-sm">-{formatCurrency(totalDebt)}</span>
                 </div>
-                <div className="bg-app-card border border-app-border rounded-2xl p-4 shadow-sm flex items-center justify-between">
-                    <span className="text-sm font-medium text-app-text">Patrimonio Neto:</span>
-                    <span className="text-lg font-bold text-app-text">{formatCurrency(netWorth)}</span>
+                <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-4 shadow-sm flex items-center justify-between hover:shadow-glow-md hover:border-app-primary/30 transition-all">
+                    <div className="absolute inset-0 bg-gradient-to-r from-app-primary/5 to-transparent opacity-100" />
+                    <span className="text-sm font-bold text-app-text-secondary uppercase tracking-wider relative z-10">Patrimonio Neto</span>
+                    <span className="text-xl font-bold text-app-text relative z-10">{formatCurrency(netWorth)}</span>
                 </div>
             </div>
 
@@ -124,13 +133,13 @@ const AccountsPage: React.FC = () => {
                                 onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`)}
                                 rightAction={{
                                     icon: 'edit',
-                                    color: '#3b82f6',
+                                    color: '#1A53FF', // Neon Blue
                                     label: 'Editar',
                                 }}
                                 onSwipeLeft={() => handleDelete(account)}
                                 leftAction={{
                                     icon: 'delete',
-                                    color: '#ef4444',
+                                    color: '#F50F56', // Neon Red/Pink
                                     label: 'Eliminar',
                                 }}
                                 className="rounded-2xl"

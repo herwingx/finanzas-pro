@@ -61,14 +61,14 @@ const LoginPage: React.FC = () => {
                 <div className="bg-app-card border border-app-border rounded-3xl p-8 shadow-premium-xl card-gradient">
                     <h2 className="text-2xl font-bold text-app-text mb-6">Iniciar Sesión</h2>
 
-                    <form onSubmit={handleLogin} className="space-y-5">
+                    <form onSubmit={handleLogin} className="space-y-6">
                         {/* Email Input */}
-                        <div className="space-y-2">
-                            <label htmlFor="email" className="block text-sm font-semibold text-app-text">
+                        <div className="space-y-2 group">
+                            <label htmlFor="email" className="block text-sm font-bold text-app-text tracking-wide transition-colors group-focus-within:text-app-primary">
                                 Correo Electrónico
                             </label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-app-muted text-xl">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-app-muted text-xl transition-colors group-focus-within:text-app-primary">
                                     mail
                                 </span>
                                 <input
@@ -76,20 +76,20 @@ const LoginPage: React.FC = () => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3.5 bg-app-elevated border border-app-border rounded-xl text-app-text placeholder-app-muted focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary transition-all"
-                                    placeholder="tu@email.com"
+                                    className="w-full pl-12 pr-4 py-4 bg-app-bg/50 border border-app-border rounded-xl text-app-text placeholder-app-muted/50 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary focus:bg-app-elevated transition-all duration-300"
+                                    placeholder="ejemplo@email.com"
                                     required
                                 />
                             </div>
                         </div>
 
                         {/* Password Input */}
-                        <div className="space-y-2">
-                            <label htmlFor="password" className="block text-sm font-semibold text-app-text">
+                        <div className="space-y-2 group">
+                            <label htmlFor="password" className="block text-sm font-bold text-app-text tracking-wide transition-colors group-focus-within:text-app-primary">
                                 Contraseña
                             </label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-app-muted text-xl">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-app-muted text-xl transition-colors group-focus-within:text-app-primary">
                                     lock
                                 </span>
                                 <input
@@ -97,18 +97,29 @@ const LoginPage: React.FC = () => {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3.5 bg-app-elevated border border-app-border rounded-xl text-app-text placeholder-app-muted focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary transition-all"
+                                    className="w-full pl-12 pr-4 py-4 bg-app-bg/50 border border-app-border rounded-xl text-app-text placeholder-app-muted/50 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary focus:bg-app-elevated transition-all duration-300"
                                     placeholder="••••••••"
                                     required
                                 />
                             </div>
                         </div>
 
+                        {/* Forgot Password Link */}
+                        <div className="text-right">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/forgot-password')}
+                                className="text-sm text-app-primary hover:text-app-secondary font-bold transition-colors cursor-pointer"
+                            >
+                                ¿Olvidaste tu contraseña?
+                            </button>
+                        </div>
+
                         {/* Error Message */}
                         {error && (
-                            <div className="flex items-center gap-2 p-3 bg-app-danger/10 border border-app-danger/20 rounded-xl animate-scale-in">
-                                <span className="material-symbols-outlined text-app-danger text-sm">error</span>
-                                <p className="text-sm text-app-danger font-medium">{error}</p>
+                            <div className="flex items-center gap-3 p-4 bg-app-danger/10 border border-app-danger/20 rounded-xl animate-scale-in">
+                                <span className="material-symbols-outlined text-app-danger text-lg shrink-0">error</span>
+                                <p className="text-sm text-app-danger font-bold">{error}</p>
                             </div>
                         )}
 
@@ -116,7 +127,7 @@ const LoginPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold rounded-xl shadow-lg shadow-app-primary/25 hover:shadow-xl hover:shadow-app-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-gradient-to-r from-app-primary via-app-primary to-app-secondary text-white font-bold text-lg rounded-xl shadow-lg shadow-app-primary/25 hover:shadow-xl hover:shadow-app-primary/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>

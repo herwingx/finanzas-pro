@@ -85,7 +85,12 @@ const TrashPage: React.FC = () => {
   };
 
   return (
-    <div className="pb-28 bg-app-bg min-h-screen text-app-text">
+    <div className="pb-28 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+      {/* Ambient Background Glow */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+      </div>
       <PageHeader title="Papelera" showBackButton />
 
       {/* Info Banner */}
@@ -183,8 +188,8 @@ const TrashPage: React.FC = () => {
                                 )}
                                 {tx.installmentPurchaseId && (
                                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isOrphanedMSI
-                                      ? 'text-orange-600 bg-orange-100 dark:bg-orange-900/30'
-                                      : 'text-app-primary bg-app-primary/10'
+                                    ? 'text-orange-600 bg-orange-100 dark:bg-orange-900/30'
+                                    : 'text-app-primary bg-app-primary/10'
                                     }`}>
                                     {isOrphanedMSI ? 'MSI ⚠️' : 'MSI'}
                                   </span>

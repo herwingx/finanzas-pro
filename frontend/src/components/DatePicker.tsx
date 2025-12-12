@@ -33,12 +33,14 @@ export function DatePicker({ date, onDateChange }: DatePickerProps) {
         <button
           type="button"
           className={cn(
-            "flex h-12 w-full items-center justify-between rounded-xl border border-app-border bg-app-bg px-4 py-2 text-left text-base font-medium text-app-text ring-offset-background hover:bg-app-elevated focus:outline-none focus:ring-2 focus:ring-app-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+            "flex h-14 w-full items-center justify-between rounded-xl border border-app-border bg-app-bg/50 px-4 py-2 text-left text-base font-bold text-app-text ring-offset-background hover:bg-app-elevated/80 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary focus:bg-app-elevated disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300",
           )}
         >
-          <span className="material-symbols-outlined text-app-muted mr-3">calendar_today</span>
-          {date ? format(date, "d 'de' MMMM, yyyy", { locale: es }) : <span>Selecciona una fecha</span>}
-          <span className={cn("material-symbols-outlined text-app-muted ml-auto transition-transform", open && "rotate-180")}>expand_more</span>
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-app-muted">calendar_today</span>
+            {date ? format(date, "d 'de' MMMM, yyyy", { locale: es }) : <span className="text-app-muted/50 font-normal">Selecciona una fecha</span>}
+          </div>
+          <span className={cn("material-symbols-outlined text-app-muted transition-transform duration-300", open && "rotate-180 text-app-primary")}>expand_more</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="center">

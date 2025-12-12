@@ -8,13 +8,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  currency  String   @default("USD")
-  avatar    String?  // Base64 string or URL
-  createdAt DateTime @default(now())
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  password           String
+  name               String
+  currency           String    @default("USD")
+  avatar             String?   // Base64 string or URL
+  resetToken         String?   // Token for password reset
+  resetTokenExpiry   DateTime? // Expiry time for reset token
+  createdAt          DateTime  @default(now())
 
   transactions          Transaction[]
   categories            Category[]

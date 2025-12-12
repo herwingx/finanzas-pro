@@ -21,8 +21,8 @@ const MainApp: React.FC = () => {
   const location = useLocation();
   const showBottomNav = !['/new'].includes(location.pathname);
   return (
-    <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
-      <main className="pb-16">
+    <div className="bg-app-bg text-app-text min-h-screen">
+      <main className="pb-20 min-h-screen">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/history" element={<History />} />

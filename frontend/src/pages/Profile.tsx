@@ -68,7 +68,12 @@ const Profile: React.FC = () => {
   if (isError) return <div className="p-8 text-center text-app-danger">Error al cargar el perfil.</div>;
 
   return (
-    <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+    <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+      {/* Ambient Background Glow */}
+      <div className="fixed inset-0 pointer-events-none -z-10">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
+      </div>
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center bg-app-bg/80 backdrop-blur-xl p-4 border-b border-app-border">
         <button onClick={() => navigate(-1)} className="text-app-text p-2 -ml-2 hover:bg-app-elevated rounded-full transition-colors">
@@ -90,7 +95,7 @@ const Profile: React.FC = () => {
         {/* Profile Card */}
         <div className="flex flex-col items-center">
           <div className="relative group">
-            <div className="size-24 rounded-full bg-gradient-to-br from-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-4xl shadow-lg shadow-app-primary/30 ring-4 ring-app-bg overflow-hidden">
+            <div className="size-24 rounded-full bg-gradient-to-br from-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-4xl shadow-lg shadow-app-primary/30 ring-4 ring-app-bg group-hover:ring-app-primary/30 transition-all duration-500 relative z-10">
               {(isEditing ? editData.avatar : profile?.avatar) ?
                 <img src={isEditing ? editData.avatar : profile?.avatar} alt="Avatar" className="w-full h-full object-cover" /> :
                 <span>{userInitials}</span>
@@ -130,16 +135,21 @@ const Profile: React.FC = () => {
                 <p className="text-app-muted text-xs">Moneda predeterminada para reportes.</p>
               </div>
               {isEditing ? (
-                <select
-                  value={editData.currency}
-                  onChange={e => setEditData({ ...editData, currency: e.target.value as any })}
-                  className="bg-app-elevated border border-app-border rounded-lg px-3 py-2 text-sm font-bold"
-                >
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                  <option value="MXN">MXN</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={editData.currency}
+                    onChange={e => setEditData({ ...editData, currency: e.target.value as any })}
+                    className="appearance-none bg-app-elevated border border-app-border rounded-lg pl-3 pr-8 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-app-primary"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="MXN">MXN</option>
+                  </select>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted flex items-center">
+                    <span className="material-symbols-outlined text-lg">expand_more</span>
+                  </div>
+                </div>
               ) : (
                 <span className="font-bold text-app-primary bg-app-primary/10 px-3 py-1 rounded-lg text-sm">{profile?.currency}</span>
               )}

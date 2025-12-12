@@ -9,171 +9,155 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   1. Modern Futuristic Design System - Perfect Contrast
-   Inspired by: GitHub Dark, Vercel, Linear, Arc Browser
+   1. Cyber-Premium Design System - "Future Fintech"
    ========================================================================== */
 :root {
-  /* 🎨 LIGHT MODE - Clean, Airy, Premium */
+  /* 🎨 LIGHT MODE - Clean, High-End Tech */
 
-  /* Core Brand Colors - Professional & Modern */
-  --color-primary: hsl(198, 93%, 48%);
-  /* Oceanic Blue - Professional & Trustworthy */
-  --color-primary-light: hsl(198, 93%, 58%);
-  --color-primary-dark: hsl(198, 93%, 38%);
-  --color-primary-glow: hsla(198, 93%, 48%, 0.15);
+  /* Brand Colors - Electric & Vivid */
+  --color-primary: hsl(225, 100%, 55%);
+  /* Electric Blue */
+  --color-primary-light: hsl(225, 100%, 65%);
+  --color-primary-dark: hsl(225, 100%, 45%);
+  --color-primary-glow: hsla(225, 100%, 55%, 0.25);
 
-  /* Secondary: Deep Teal (Sophistication & Growth) */
-  --color-secondary: hsl(174, 72%, 45%);
-  /* Teal Green */
-  --color-secondary-light: hsl(174, 72%, 55%);
-  --color-secondary-glow: hsla(174, 72%, 45%, 0.15);
+  --color-secondary: hsl(280, 100%, 60%);
+  /* Neon Purple */
+  --color-secondary-light: hsl(280, 100%, 70%);
+  --color-secondary-glow: hsla(280, 100%, 60%, 0.25);
 
-  /* Accent: Royal Blue (Premium & Energy) */
-  --color-accent: hsl(215, 85%, 55%);
-  /* Royal Blue */
-  --color-accent-light: hsl(215, 85%, 65%);
-  --color-accent-glow: hsla(215, 85%, 55%, 0.15);
+  --color-accent: hsl(180, 100%, 45%);
+  /* Cyan */
+  --color-accent-light: hsl(180, 100%, 55%);
+  --color-accent-glow: hsla(180, 100%, 45%, 0.3);
 
-  /* Semantic Colors - High Contrast */
-  --color-success: hsl(142, 76%, 45%);
-  /* Emerald Green */
-  --color-success-light: hsl(142, 76%, 55%);
-  --color-success-bg: hsla(142, 76%, 45%, 0.1);
+  /* Status - Vibrant & Clear */
+  --color-success: hsl(150, 100%, 40%);
+  /* Emerald */
+  --color-success-light: hsl(150, 100%, 50%);
+  --color-success-bg: hsla(150, 100%, 40%, 0.1);
 
-  --color-danger: hsl(0, 84%, 60%);
-  /* Vibrant Red */
-  --color-danger-light: hsl(0, 84%, 70%);
-  --color-danger-bg: hsla(0, 84%, 60%, 0.1);
+  --color-danger: hsl(340, 90%, 55%);
+  /* Pink-Red */
+  --color-danger-light: hsl(340, 90%, 65%);
+  --color-danger-bg: hsla(340, 90%, 55%, 0.1);
 
-  --color-warning: hsl(38, 92%, 50%);
+  --color-warning: hsl(35, 100%, 55%);
   /* Amber */
-  --color-warning-light: hsl(38, 92%, 60%);
-  --color-warning-bg: hsla(38, 92%, 50%, 0.1);
+  --color-warning-light: hsl(35, 100%, 65%);
+  --color-warning-bg: hsla(35, 100%, 55%, 0.1);
 
-  --color-info: hsl(199, 89%, 48%);
-  /* Sky Blue */
-  --color-info-light: hsl(199, 89%, 58%);
-  --color-info-bg: hsla(199, 89%, 48%, 0.1);
+  --color-info: hsl(200, 100%, 50%);
+  /* Azure */
+  --color-info-light: hsl(200, 100%, 60%);
+  --color-info-bg: hsla(200, 100%, 50%, 0.1);
 
-  /* Light Mode Backgrounds - Ultra Clean */
-  --color-bg-primary: hsl(0, 0%, 100%);
-  /* Pure White */
-  --color-bg-secondary: hsl(240, 20%, 99%);
-  /* Off-White with hint of blue */
-  --color-bg-tertiary: hsl(240, 25%, 97%);
-  /* Subtle Gray-Blue */
+  /* Light Backgrounds - Crystal Clear */
+  --color-bg-primary: hsl(220, 30%, 98%);
+  --color-bg-secondary: hsl(0, 0%, 100%);
+  --color-bg-tertiary: hsl(220, 20%, 96%);
   --color-bg-elevated: hsl(0, 0%, 100%);
-  --color-bg-overlay: hsla(0, 0%, 100%, 0.8);
-  --color-bg-hover: hsl(240, 25%, 96%);
-  --color-bg-active: hsl(240, 25%, 94%);
+  --color-bg-overlay: hsla(220, 30%, 98%, 0.85);
+  --color-bg-hover: hsl(220, 20%, 95%);
+  --color-bg-active: hsl(220, 20%, 92%);
 
-  /* Light Mode Text - Perfect Contrast (WCAG AAA) */
-  --color-text-primary: hsl(240, 25%, 8%);
-  /* Almost Black with blue tint */
-  --color-text-secondary: hsl(240, 10%, 40%);
-  /* Medium Gray */
-  --color-text-tertiary: hsl(240, 8%, 60%);
-  /* Light Gray */
-  --color-text-quaternary: hsl(240, 5%, 75%);
-  /* Very Light Gray */
+  /* Light Text */
+  --color-text-primary: hsl(220, 40%, 10%);
+  --color-text-secondary: hsl(220, 20%, 40%);
+  --color-text-tertiary: hsl(220, 15%, 60%);
+  --color-text-quaternary: hsl(220, 10%, 80%);
   --color-text-inverted: hsl(0, 0%, 100%);
 
-  /* Light Mode Borders - Subtle & Modern */
-  --color-border: hsla(240, 20%, 0%, 0.08);
-  /* Semi-transparent black */
-  --color-border-light: hsla(240, 20%, 0%, 0.04);
-  --color-border-medium: hsla(240, 20%, 0%, 0.12);
-  --color-border-strong: hsla(240, 20%, 0%, 0.16);
+  /* Borders - Subtle */
+  --color-border: hsla(220, 30%, 10%, 0.08);
+  --color-border-light: hsla(220, 30%, 10%, 0.04);
+  --color-border-medium: hsla(220, 30%, 10%, 0.12);
+  --color-border-strong: hsla(220, 30%, 10%, 0.18);
 
-  /* Light Mode Shadows - Soft & Layered */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  /* Shadows - Colored & Diffused */
+  --shadow-xs: 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 10px 15px -3px rgba(30, 41, 59, 0.08), 0 4px 6px -2px rgba(30, 41, 59, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(30, 41, 59, 0.1), 0 10px 10px -5px rgba(30, 41, 59, 0.04);
+  --shadow-xl: 0 25px 50px -12px rgba(30, 41, 59, 0.25);
+  --shadow-2xl: 0 35px 60px -15px rgba(30, 41, 59, 0.3);
 }
 
 .dark {
-  /* 🌙 DARK MODE - Deep, Rich, Futuristic */
+  /* 🌙 DARK MODE - Deep Space / Cyberpunk */
 
-  /* Core Brand Colors - Slightly Brighter for Dark BG */
-  --color-primary: hsl(198, 93%, 55%);
-  /* Brighter Oceanic Blue */
-  --color-primary-light: hsl(198, 93%, 65%);
-  --color-primary-dark: hsl(198, 93%, 45%);
-  --color-primary-glow: hsla(198, 93%, 55%, 0.25);
+  /* Brand Colors - Neon & Glowing */
+  --color-primary: hsl(230, 100%, 65%);
+  /* Neon Blue */
+  --color-primary-light: hsl(230, 100%, 75%);
+  --color-primary-dark: hsl(230, 100%, 55%);
+  --color-primary-glow: hsla(230, 100%, 65%, 0.35);
 
-  --color-secondary: hsl(174, 72%, 52%);
-  /* Brighter Teal */
-  --color-secondary-light: hsl(174, 72%, 62%);
-  --color-secondary-glow: hsla(174, 72%, 52%, 0.25);
+  --color-secondary: hsl(270, 100%, 65%);
+  /* Electric Purple */
+  --color-secondary-light: hsl(270, 100%, 75%);
+  --color-secondary-glow: hsla(270, 100%, 65%, 0.35);
 
-  --color-accent: hsl(215, 85%, 62%);
-  /* Brighter Royal Blue */
-  --color-accent-light: hsl(215, 85%, 72%);
-  --color-accent-glow: hsla(215, 85%, 62%, 0.25);
+  --color-accent: hsl(170, 100%, 50%);
+  /* Cyber Cyan */
+  --color-accent-light: hsl(170, 100%, 60%);
+  --color-accent-glow: hsla(170, 100%, 50%, 0.35);
 
-  /* Semantic Colors - Optimized for Dark */
-  --color-success: hsl(142, 76%, 50%);
-  --color-success-light: hsl(142, 76%, 60%);
-  --color-success-bg: hsla(142, 76%, 50%, 0.15);
+  /* Status Colors on Dark */
+  --color-success: hsl(150, 100%, 45%);
+  --color-success-light: hsl(150, 100%, 55%);
+  --color-success-bg: hsla(150, 100%, 45%, 0.15);
 
-  --color-danger: hsl(0, 84%, 65%);
-  --color-danger-light: hsl(0, 84%, 75%);
-  --color-danger-bg: hsla(0, 84%, 65%, 0.15);
+  --color-danger: hsl(340, 95%, 60%);
+  --color-danger-light: hsl(340, 95%, 70%);
+  --color-danger-bg: hsla(340, 95%, 60%, 0.15);
 
-  --color-warning: hsl(38, 92%, 55%);
-  --color-warning-light: hsl(38, 92%, 65%);
-  --color-warning-bg: hsla(38, 92%, 55%, 0.15);
+  --color-warning: hsl(40, 100%, 55%);
+  --color-warning-light: hsl(40, 100%, 65%);
+  --color-warning-bg: hsla(40, 100%, 55%, 0.15);
 
-  --color-info: hsl(199, 89%, 53%);
-  --color-info-light: hsl(199, 89%, 63%);
-  --color-info-bg: hsla(199, 89%, 53%, 0.15);
+  --color-info: hsl(200, 100%, 55%);
+  --color-info-light: hsl(200, 100%, 65%);
+  --color-info-bg: hsla(200, 100%, 55%, 0.15);
 
-  /* Dark Mode Backgrounds - Deep Blue-Black (Like GitHub/Vercel) */
-  --color-bg-primary: hsl(240, 20%, 6%);
-  /* Deep Blue-Black */
-  --color-bg-secondary: hsl(240, 15%, 9%);
-  /* Slightly Lighter */
-  --color-bg-tertiary: hsl(240, 12%, 12%);
-  /* Medium Dark */
-  --color-bg-elevated: hsl(240, 15%, 11%);
-  /* Elevated Cards */
-  --color-bg-overlay: hsla(240, 20%, 6%, 0.95);
-  --color-bg-hover: hsl(240, 12%, 14%);
-  --color-bg-active: hsl(240, 12%, 16%);
+  /* Dark Backgrounds - Void Black */
+  --color-bg-primary: hsl(230, 25%, 6%);
+  /* Deepest Blue/Black */
+  --color-bg-secondary: hsl(230, 20%, 10%);
+  /* Subtle Contrast */
+  --color-bg-tertiary: hsl(230, 18%, 14%);
+  --color-bg-elevated: hsl(230, 20%, 12%);
+  --color-bg-overlay: hsla(230, 25%, 6%, 0.85);
+  /* Glass base */
 
-  /* Dark Mode Text - Perfect Contrast */
-  --color-text-primary: hsl(240, 20%, 98%);
-  /* Almost White */
-  --color-text-secondary: hsl(240, 10%, 70%);
-  /* Light Gray */
-  --color-text-tertiary: hsl(240, 5%, 50%);
-  /* Medium Gray */
-  --color-text-quaternary: hsl(240, 5%, 35%);
-  /* Dark Gray */
-  --color-text-inverted: hsl(240, 25%, 8%);
+  --color-bg-hover: hsla(230, 20%, 20%, 0.4);
+  --color-bg-active: hsla(230, 20%, 25%, 0.4);
 
-  /* Dark Mode Borders - Subtle Glow */
-  --color-border: hsla(240, 20%, 100%, 0.08);
-  /* Semi-transparent white */
-  --color-border-light: hsla(240, 20%, 100%, 0.04);
-  --color-border-medium: hsla(240, 20%, 100%, 0.12);
-  --color-border-strong: hsla(240, 20%, 100%, 0.16);
+  /* Dark Text */
+  --color-text-primary: hsl(230, 10%, 98%);
+  --color-text-secondary: hsl(230, 10%, 70%);
+  --color-text-tertiary: hsl(230, 8%, 50%);
+  --color-text-quaternary: hsl(230, 5%, 35%);
+  --color-text-inverted: hsl(230, 25%, 6%);
 
-  /* Dark Mode Shadows - With Glow */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.5), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+  /* Dark Borders - Glowing Edges */
+  --color-border: hsla(230, 30%, 60%, 0.12);
+  --color-border-light: hsla(230, 30%, 60%, 0.06);
+  --color-border-medium: hsla(230, 30%, 60%, 0.18);
+  --color-border-strong: hsla(230, 30%, 60%, 0.25);
 
-  /* Glow Shadows for Premium Elements */
-  --shadow-glow-sm: 0 0 10px hsla(245, 100%, 65%, 0.15);
-  --shadow-glow-md: 0 0 15px hsla(245, 100%, 65%, 0.2);
-  --shadow-glow-lg: 0 0 20px hsla(245, 100%, 65%, 0.25);
+  /* Dark Shadows - Neon Glows */
+  --shadow-xs: 0 0 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 16px -2px rgba(0, 0, 0, 0.6), 0 4px 8px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 24px -4px rgba(0, 0, 0, 0.7), 0 8px 12px -4px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
+  --shadow-2xl: 0 32px 64px -12px rgba(0, 0, 0, 0.9);
+
+  /* Special Glows */
+  --shadow-glow-sm: 0 0 15px hsla(230, 100%, 65%, 0.15);
+  --shadow-glow-md: 0 0 25px hsla(230, 100%, 65%, 0.2);
+  --shadow-glow-lg: 0 0 40px hsla(230, 100%, 65%, 0.3);
 }
 
 .light {
@@ -632,4 +616,45 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) var(--color-bg-primary);
+}
+
+/* ==========================================================================
+   6. Mobile Safe Area Support (iOS notch, home indicator)
+   ========================================================================== */
+
+/* Safe area padding utilities for iOS devices */
+.safe-area-pt {
+  padding-top: max(env(safe-area-inset-top), 0.5rem);
+}
+
+.safe-area-pb {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+.safe-area-pl {
+  padding-left: max(env(safe-area-inset-left), 0.5rem);
+}
+
+.safe-area-pr {
+  padding-right: max(env(safe-area-inset-right), 0.5rem);
+}
+
+/* Full bleed for mobile PWA */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Ensure content doesn't go behind browser UI */
+#root {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+html {
+  height: -webkit-fill-available;
 }

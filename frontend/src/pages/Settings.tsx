@@ -14,7 +14,12 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="pb-24 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+    <div className="pb-24 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+      {/* Ambient Background Glow */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+      </div>
       {/* Header */}
       <header className="sticky top-0 z-20 flex items-center bg-app-bg/80 backdrop-blur-xl px-4 py-3 border-b border-app-border">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated transition-colors text-app-text">

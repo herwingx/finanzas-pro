@@ -21,11 +21,12 @@ COPY package.json package-lock.json ./
 # Install ALL dependencies (including devDependencies for build)
 RUN npm install
 
-# Copy prisma schema first
+# Copy prisma schema and config
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Generate Prisma Client with dummy URL
+RUN DATABASE_URL="postgresql://dummy:5432/db" npx prisma generate
 
 # Copy source code
 COPY . .
@@ -46,11 +47,12 @@ COPY package.json package-lock.json ./
 # Install only production dependencies
 RUN npm install --production
 
-# Copy prisma schema
+# Copy prisma schema and config
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 
-# Generate Prisma Client in production
-RUN npx prisma generate
+# Generate Prisma Client with dummy URL
+RUN DATABASE_URL="postgresql://dummy:5432/db" npx prisma generate
 
 # Copy built application
 COPY --from=builder /usr/src/app/dist ./dist

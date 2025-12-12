@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../services/database';
 import { addDays, addWeeks, addMonths, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { AuthRequest } from '../middleware/auth';
 
-const prisma = new PrismaClient();
+
 
 // Calculate period dates based on type
 function calculatePeriod(type: 'quincenal' | 'mensual' | 'semanal') {

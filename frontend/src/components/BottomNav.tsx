@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 
 interface NavItemProps {
   to: string;
@@ -52,30 +52,53 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isActive }) => (
   </Link>
 );
 
-const FAB: React.FC = () => (
+interface QuickActionProps {
+  icon: string;
+  label: string;
+  color: string;
+  onClick: () => void;
+}
+
+const QuickAction: React.FC<QuickActionProps> = ({ icon, label, color, onClick }) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center gap-2 w-20 group"
+  >
+    <div
+      className="size-14 rounded-2xl flex items-center justify-center shadow-lg transition-all group-hover:scale-110 group-active:scale-95"
+      style={{ backgroundColor: color }}
+    >
+      <span className="material-symbols-outlined text-2xl text-white">{icon}</span>
+    </div>
+    <span className="text-[11px] font-medium text-app-text text-center">{label}</span>
+  </button>
+);
+
+const FAB: React.FC<{ onClick: () => void; isOpen: boolean }> = ({ onClick, isOpen }) => (
   <div className="w-1/5 flex justify-center items-start -mt-2">
-    <Link
-      to="/new"
+    <button
+      onClick={onClick}
       className="relative size-14 rounded-2xl bg-gradient-to-br from-app-primary via-app-primary to-app-secondary text-white flex items-center justify-center shadow-xl shadow-app-primary/40 hover:shadow-2xl hover:shadow-app-primary/50 hover:-translate-y-1 active:scale-95 transition-all duration-300 ease-out group"
     >
       {/* Animated ring */}
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-app-primary to-app-secondary opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
 
       {/* Icon with rotation effect */}
-      <span className="material-symbols-outlined text-3xl font-bold relative z-10 group-hover:rotate-90 transition-transform duration-300">
+      <span
+        className={`material-symbols-outlined text-3xl font-bold relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-45' : ''}`}
+      >
         add
       </span>
-
-      {/* Subtle pulse animation */}
-      <div className="absolute inset-0 rounded-2xl bg-white/20 animate-ping opacity-0 group-hover:opacity-30" />
-    </Link>
+    </button>
   </div>
 );
 
 const BottomNav: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     let ticking = false;
@@ -92,6 +115,7 @@ const BottomNav: React.FC = () => {
           // Hide navbar when scrolling down (but only after scrolling past 50px)
           else if (currentScrollY > 50 && currentScrollY > lastScrollY) {
             setIsVisible(false);
+            setIsMenuOpen(false);
           }
 
           setLastScrollY(currentScrollY);
@@ -106,13 +130,58 @@ const BottomNav: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  // Close menu when navigating
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
   const HIDDEN_PATHS = ['/new', '/profile', '/settings', '/categories', '/budgets'];
   if (HIDDEN_PATHS.some(path => location.pathname.startsWith(path))) return null;
+
+  const quickActions = [
+    { icon: 'shopping_bag', label: 'Gasto', color: '#ef4444', path: '/new?type=expense' },
+    { icon: 'attach_money', label: 'Ingreso', color: '#22c55e', path: '/new?type=income' },
+    { icon: 'sync_alt', label: 'Transferir', color: '#3b82f6', path: '/new?type=transfer' },
+    { icon: 'repeat', label: 'Recurrente', color: '#8b5cf6', path: '/recurring/new' },
+    { icon: 'credit_card', label: 'MSI', color: '#f59e0b', path: '/installments/new' },
+  ];
+
+  const handleQuickAction = (path: string) => {
+    setIsMenuOpen(false);
+    navigate(path);
+  };
 
   return (
     <>
       {/* Spacer to prevent content from hiding behind navbar */}
       <div className="h-16" />
+
+      {/* Quick Actions Menu Overlay */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
+
+      {/* Quick Actions Menu */}
+      <div className={`fixed bottom-20 left-0 right-0 z-50 transition-all duration-300 ease-out ${isMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'
+        }`}>
+        <div className="mx-4 p-4 bg-app-card rounded-2xl border border-app-border shadow-2xl">
+          <p className="text-xs font-bold text-app-muted uppercase mb-4 text-center">Acción Rápida</p>
+          <div className="flex justify-around">
+            {quickActions.map(action => (
+              <QuickAction
+                key={action.label}
+                icon={action.icon}
+                label={action.label}
+                color={action.color}
+                onClick={() => handleQuickAction(action.path)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Bottom Navigation Bar */}
       <nav
@@ -140,7 +209,7 @@ const BottomNav: React.FC = () => {
             label="Historial"
             isActive={location.pathname === '/history'}
           />
-          <FAB />
+          <FAB onClick={() => setIsMenuOpen(!isMenuOpen)} isOpen={isMenuOpen} />
           <NavItem
             to="/accounts"
             icon="account_balance_wallet"

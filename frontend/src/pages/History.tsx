@@ -18,26 +18,42 @@ const History: React.FC = () => {
   const restoreTransactionMutation = useRestoreTransaction();
 
   const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
-  const [showMsiPayments, setShowMsiPayments] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   const sortedTxs = useMemo(() => {
     if (!transactions) return [];
 
-    // Filter out MSI payment transactions ONLY if toggle is OFF
-    // Always show initial MSI expense (marked with badge)
-    const filteredTxs = showMsiPayments
-      ? transactions // Show everything when toggle is ON
-      : transactions.filter(tx => {
-        const isMsiPayment = tx.installmentPurchaseId && (tx.type === 'income' || tx.type === 'transfer');
-        return !isMsiPayment; // Exclude MSI payments when toggle is OFF
-      });
+    // Apply type filter only
+    const filteredTxs = filterType === 'all'
+      ? transactions
+      : transactions.filter(tx => tx.type === filterType);
 
     return filteredTxs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, showMsiPayments]);
+  }, [transactions, filterType]);
 
   const getCategoryInfo = (id: string | null) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#999', name: 'General' };
-  const getAccountName = (id: string | null) => accounts?.find(a => a.id === id)?.name || 'Cuenta desconocida';
+  const getAccountName = (id: string | null) => accounts?.find(a => a.id === id)?.name || 'Cuenta';
   const getAccount = (id: string | null) => accounts?.find(a => a.id === id);
+
+  // Get account type color
+  const getAccountColor = (id: string | null) => {
+    const account = getAccount(id);
+    if (!account) return '#64748b';
+    if (account.type === 'CREDIT') return '#f59e0b'; // amber
+    if (account.type === 'DEBIT') return '#3b82f6'; // blue
+    if (account.type === 'CASH') return '#22c55e'; // green
+    return '#64748b';
+  };
+
+  // Get account icon
+  const getAccountIcon = (id: string | null) => {
+    const account = getAccount(id);
+    if (!account) return 'account_balance';
+    if (account.type === 'CREDIT') return 'credit_card';
+    if (account.type === 'DEBIT') return 'account_balance';
+    if (account.type === 'CASH') return 'payments';
+    return 'account_balance_wallet';
+  };
 
   // Calculate warning level and details for deletion
   const getDeletionImpact = (tx: Transaction): {
@@ -179,6 +195,21 @@ const History: React.FC = () => {
     return groups;
   }, {} as Record<string, Transaction[]>);
 
+  // Calculate totals for the filter bar
+  const totals = useMemo(() => {
+    if (!transactions) return { income: 0, expense: 0, transfer: 0 };
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthTxs = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
+    return {
+      income: thisMonthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0),
+      expense: thisMonthTxs.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0),
+      transfer: thisMonthTxs.filter(tx => tx.type === 'transfer').reduce((sum, tx) => sum + tx.amount, 0),
+    };
+  }, [transactions]);
+
+  const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
+
   const isLoading = isLoadingTransactions || isLoadingCategories || isLoadingAccounts;
 
   const deletionImpact = itemToDelete ? getDeletionImpact(itemToDelete) : null;
@@ -193,25 +224,48 @@ const History: React.FC = () => {
 
       <PageHeader title="Historial" />
 
-      {/* MSI Payments Toggle */}
-      <div className="px-4 pt-2 pb-4 border-b border-app-border">
-        <div className="flex items-center justify-between bg-app-card border border-app-border rounded-xl p-3">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-app-primary text-lg">credit_card</span>
-            <div>
-              <p className="text-sm font-semibold text-app-text">Pagos MSI</p>
-              <p className="text-xs text-app-muted">Mostrar mensualidades en historial</p>
-            </div>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showMsiPayments}
-              onChange={(e) => setShowMsiPayments(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
-          </label>
+      {/* Filter Chips */}
+      <div className="px-4 pt-2 pb-4 border-b border-app-border sticky top-16 bg-app-bg/95 backdrop-blur-sm z-10">
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            onClick={() => setFilterType('all')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filterType === 'all'
+                ? 'bg-app-primary text-white shadow-lg shadow-app-primary/20'
+                : 'bg-app-elevated text-app-muted border border-app-border'
+              }`}
+          >
+            Todo
+          </button>
+          <button
+            onClick={() => setFilterType('income')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'income'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-app-elevated text-app-muted border border-app-border'
+              }`}
+          >
+            <span className="material-symbols-outlined text-sm">arrow_downward</span>
+            Ingresos
+          </button>
+          <button
+            onClick={() => setFilterType('expense')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'expense'
+                ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
+                : 'bg-app-elevated text-app-muted border border-app-border'
+              }`}
+          >
+            <span className="material-symbols-outlined text-sm">arrow_upward</span>
+            Gastos
+          </button>
+          <button
+            onClick={() => setFilterType('transfer')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'transfer'
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                : 'bg-app-elevated text-app-muted border border-app-border'
+              }`}
+          >
+            <span className="material-symbols-outlined text-sm">swap_horiz</span>
+            Transferencias
+          </button>
         </div>
       </div>
 
@@ -226,53 +280,15 @@ const History: React.FC = () => {
           ) : (
             Object.keys(grouped).map(date => (
               <div key={date}>
-                <h3 className="text-sm font-bold my-3 sticky top-16 bg-app-bg py-2 z-10">{date}</h3>
-                <div className="space-y-3">
+                <h3 className="text-sm font-bold my-3 sticky top-32 bg-app-bg/95 backdrop-blur-sm py-2 z-10 border-b border-app-border/50">{date}</h3>
+                <div className="space-y-2">
                   {grouped[date].map(tx => {
-                    if (tx.type === 'transfer') {
-                      return (
-                        <SwipeableItem
-                          key={tx.id}
-                          onSwipeRight={() => navigate(`/new?editId=${tx.id}&mode=edit`)}
-                          rightAction={{
-                            icon: 'edit',
-                            color: 'var(--color-primary)', // Azul moderno
-                            label: 'Editar',
-                          }}
-
-                          onSwipeLeft={() => handleDeleteClick(tx)}
-                          leftAction={{
-                            icon: 'delete',
-                            color: 'var(--color-danger)',
-                            label: 'Eliminar',
-                          }}
-                          className="rounded-2xl"
-                        >
-                          <div className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
-                            <div onClick={() => navigate(`/new?editId=${tx.id}`)} className="flex items-center gap-4 flex-1 cursor-pointer">
-                              <div className="size-10 rounded-full flex items-center justify-center shrink-0 bg-app-tertiary">
-                                <span className="material-symbols-outlined text-app-muted">swap_horiz</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-semibold truncate">Transferencia</p>
-                                  {tx.installmentPurchaseId && <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded">💳 MSI</span>}
-                                </div>
-                                <p className="text-xs text-app-muted truncate">
-                                  {getAccountName(tx.accountId)} → {getAccountName(tx.destinationAccountId)}
-                                </p>
-                              </div>
-                            </div>
-                            <p className="font-bold text-app-text">{tx.amount.toFixed(2)}</p>
-                            <button onClick={() => handleDeleteClick(tx)} className="hidden md:block p-2 text-app-muted hover:text-app-danger transition-colors"><span className="material-symbols-outlined">delete</span></button>
-                          </div>
-                        </SwipeableItem>
-                      );
-                    }
-
                     const category = getCategoryInfo(tx.categoryId);
                     const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
+                    const isMsiPayment = tx.installmentPurchaseId && (tx.type === 'income' || tx.type === 'transfer');
                     const isAdjustment = tx.description.includes('🔧') || tx.description.toLowerCase().includes('ajuste');
+                    const account = getAccount(tx.accountId);
+                    const destAccount = tx.destinationAccountId ? getAccount(tx.destinationAccountId) : null;
 
                     return (
                       <SwipeableItem
@@ -290,7 +306,7 @@ const History: React.FC = () => {
                         }}
                         rightAction={{
                           icon: (isAdjustment || isInitialMsi) ? 'lock' : 'edit',
-                          color: (isAdjustment || isInitialMsi) ? 'var(--color-text-tertiary)' : 'var(--color-primary)', // Grey for locked, Blue for edit
+                          color: (isAdjustment || isInitialMsi) ? 'var(--color-text-tertiary)' : 'var(--color-primary)',
                           label: (isAdjustment || isInitialMsi) ? 'Bloqueado' : 'Editar',
                         }}
                         onSwipeLeft={() => handleDeleteClick(tx)}
@@ -301,25 +317,104 @@ const History: React.FC = () => {
                         }}
                         className="rounded-2xl"
                       >
-                        <div className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
-                          <div onClick={() => {
-                            // Removing block for MSI - allow viewing details
-                            navigate(`/new?editId=${tx.id}`);
-                          }} className="flex items-center gap-4 flex-1 cursor-pointer">
-                            <div className="size-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
-                              <span className="material-symbols-outlined" style={{ color: category.color }}>{category.icon}</span>
+                        <div
+                          onClick={() => navigate(`/new?editId=${tx.id}`)}
+                          className="bg-app-card border border-app-border rounded-2xl p-3 transition-all hover:shadow-lg hover:border-app-primary/20 cursor-pointer"
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Icon */}
+                            <div
+                              className="size-11 rounded-xl flex items-center justify-center shrink-0"
+                              style={{
+                                backgroundColor: tx.type === 'transfer' ? '#64748b20' : `${category.color}20`
+                              }}
+                            >
+                              <span
+                                className="material-symbols-outlined text-xl"
+                                style={{ color: tx.type === 'transfer' ? '#64748b' : category.color }}
+                              >
+                                {tx.type === 'transfer' ? 'swap_horiz' : category.icon}
+                              </span>
                             </div>
+
+                            {/* Content */}
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold truncate">{tx.description}</p>
-                              <div className="flex items-center gap-2">
-                                {tx.recurringTransactionId && <span className="material-symbols-outlined text-xs text-app-muted" title="Recurrente">repeat</span>}
-                                {tx.installmentPurchaseId && <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">MSI</span>}
-                                <p className="text-xs text-app-muted truncate">{category.name}</p>
+                              {/* Title Row */}
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="font-semibold text-app-text truncate text-sm">
+                                  {tx.type === 'transfer' ? 'Transferencia' : tx.description}
+                                </p>
+                                {/* Badges */}
+                                {isMsiPayment && (
+                                  <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded">
+                                    MSI
+                                  </span>
+                                )}
+                                {isInitialMsi && (
+                                  <span className="text-[9px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">
+                                    Compra MSI
+                                  </span>
+                                )}
+                                {tx.recurringTransactionId && (
+                                  <span className="text-[9px] font-bold text-app-warning bg-app-warning/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                    <span className="material-symbols-outlined text-[10px]">repeat</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Transfer Description */}
+                              {tx.type === 'transfer' && tx.description && (
+                                <p className="text-xs text-app-muted truncate mb-1">{tx.description}</p>
+                              )}
+
+                              {/* Category & Account Info */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {tx.type !== 'transfer' && (
+                                  <span className="text-xs text-app-muted">{category.name}</span>
+                                )}
+
+                                {/* Account Badge */}
+                                <div
+                                  className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                  style={{
+                                    backgroundColor: `${getAccountColor(tx.accountId)}15`,
+                                    color: getAccountColor(tx.accountId)
+                                  }}
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">{getAccountIcon(tx.accountId)}</span>
+                                  <span className="truncate max-w-[80px]">{getAccountName(tx.accountId)}</span>
+                                </div>
+
+                                {/* Destination for transfers */}
+                                {tx.type === 'transfer' && destAccount && (
+                                  <>
+                                    <span className="material-symbols-outlined text-app-muted text-xs">arrow_forward</span>
+                                    <div
+                                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                      style={{
+                                        backgroundColor: `${getAccountColor(tx.destinationAccountId)}15`,
+                                        color: getAccountColor(tx.destinationAccountId)
+                                      }}
+                                    >
+                                      <span className="material-symbols-outlined text-[12px]">{getAccountIcon(tx.destinationAccountId)}</span>
+                                      <span className="truncate max-w-[80px]">{getAccountName(tx.destinationAccountId)}</span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
+
+                            {/* Amount */}
+                            <div className="text-right shrink-0">
+                              <p className={`font-bold text-base ${tx.type === 'income' ? 'text-emerald-500' :
+                                  tx.type === 'expense' ? 'text-red-500' :
+                                    'text-app-text'
+                                }`}>
+                                {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
+                                {formatCurrency(tx.amount)}
+                              </p>
+                            </div>
                           </div>
-                          <p className={`font-bold whitespace-nowrap ${tx.type === 'income' ? 'text-app-success' : ''}`}>{tx.type === 'expense' ? '-' : '+'}{tx.amount.toFixed(2)}</p>
-                          <button onClick={() => handleDeleteClick(tx)} className="hidden md:block p-2 text-app-muted hover:text-app-danger transition-colors"><span className="material-symbols-outlined">delete</span></button>
                         </div>
                       </SwipeableItem>
                     );

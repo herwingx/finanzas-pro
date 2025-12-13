@@ -392,3 +392,100 @@ export const skipRecurringTransaction = async (id: string): Promise<any> => {
     }
     return response.json();
 };
+
+// Credit Card Payments
+export interface CreditCardStatement {
+    accountId: string;
+    accountName: string;
+    creditLimit: number | null;
+    currentBalance: number;
+    billingCycle: {
+        startDate: string;
+        cutoffDate: string;
+        paymentDate: string;
+        isBeforeCutoff: boolean;
+        daysUntilCutoff: number;
+        daysUntilPayment: number;
+    };
+    msiCharges: Array<{
+        id: string;
+        description: string;
+        amount: number;
+        currentInstallment: number;
+        totalInstallments: number;
+        remainingAmount: number;
+        paidAmount: number;
+        categoryName: string;
+        categoryColor: string;
+        categoryIcon: string;
+    }>;
+    msiTotal: number;
+    msiCount: number;
+    regularCharges: Array<{
+        id: string;
+        description: string;
+        amount: number;
+        date: string;
+        categoryName: string;
+        categoryColor: string;
+        categoryIcon: string;
+    }>;
+    regularTotal: number;
+    regularCount: number;
+    totalDue: number;
+    totalPaid: number;
+    remainingDue: number;
+    isFullyPaid: boolean;
+    payments: Array<{
+        id: string;
+        amount: number;
+        date: string;
+        description: string;
+    }>;
+}
+
+export const getCreditCardStatement = async (accountId: string): Promise<CreditCardStatement> => {
+    const response = await fetch(`${API_URL}/credit-card/statement/${accountId}`, {
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to fetch credit card statement');
+    return response.json();
+};
+
+export const payFullStatement = async (accountId: string, sourceAccountId: string, date?: string): Promise<any> => {
+    const response = await fetch(`${API_URL}/credit-card/pay-statement/${accountId}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ sourceAccountId, date })
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to pay statement' }));
+        throw new Error(errorData.error || 'Failed to pay statement');
+    }
+    return response.json();
+};
+
+export const payMsiInstallment = async (installmentId: string, sourceAccountId: string, date?: string): Promise<any> => {
+    const response = await fetch(`${API_URL}/credit-card/pay-msi/${installmentId}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ sourceAccountId, date })
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to pay MSI installment' }));
+        throw new Error(errorData.error || 'Failed to pay MSI installment');
+    }
+    return response.json();
+};
+
+export const revertStatementPayment = async (transactionId: string): Promise<any> => {
+    const response = await fetch(`${API_URL}/credit-card/revert/${transactionId}`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to revert payment' }));
+        throw new Error(errorData.error || 'Failed to revert payment');
+    }
+    return response.json();
+};

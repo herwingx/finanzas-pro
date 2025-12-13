@@ -188,6 +188,14 @@ const InstallmentsPage: React.FC = () => {
                     })
                 )}
             </div>
+
+            {/* FAB to add new MSI */}
+            <button
+                onClick={() => navigate('/installments/new')}
+                className="fixed bottom-24 right-4 size-14 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-105 transition-transform z-40"
+            >
+                <span className="material-symbols-outlined text-2xl">add</span>
+            </button>
         </div>
     );
 };

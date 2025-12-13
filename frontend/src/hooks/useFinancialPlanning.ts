@@ -24,10 +24,17 @@ export interface FinancialPeriodSummary {
   // Expected expenses
   expectedExpenses: Array<{
     id: string;
+    uniqueId?: string;
     description: string;
     amount: number;
     dueDate: string;
     type: string;
+    isOverdue?: boolean;
+    category?: {
+      name: string;
+      color: string;
+      icon: string;
+    };
   }>;
 
   // MSI payments due
@@ -38,6 +45,14 @@ export interface FinancialPeriodSummary {
     dueDate: string;
     accountId: string;
     accountName: string;
+    isMsi: boolean;
+    msiTotal?: number;
+    paidAmount?: number;
+    category?: {
+      name: string;
+      color: string;
+      icon: string;
+    };
   }>;
 
   totalExpectedExpenses: number;

@@ -288,19 +288,39 @@ router.put('/:id', async (req: AuthRequest, res) => {
       }
 
       // --- Step 1: Revert original transaction's impact on account balances ---
+      // Must consider account type (CREDIT vs DEBIT/CASH)
       if (originalTx.type === 'income') {
-        await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { decrement: originalTx.amount } } });
+        if (originalTx.account!.type === 'CREDIT') {
+          // Income on CREDIT reduced debt, so increment to undo
+          await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } });
+        } else {
+          // Income on DEBIT/CASH added money, so decrement to undo
+          await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { decrement: originalTx.amount } } });
+        }
       } else if (originalTx.type === 'expense') {
-        await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } });
+        if (originalTx.account!.type === 'CREDIT') {
+          // Expense on CREDIT increased debt, so decrement to undo
+          await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { decrement: originalTx.amount } } });
+        } else {
+          // Expense on DEBIT/CASH removed money, so increment to undo
+          await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } });
+        }
       } else if (originalTx.type === 'transfer') {
-        await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } }); // Bring money back to source
+        // Revert source account
+        if (originalTx.account!.type === 'CREDIT') {
+          // Transfer FROM credit increased debt, so decrement to undo
+          await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { decrement: originalTx.amount } } });
+        } else {
+          // Transfer FROM debit/cash removed money, so increment to undo
+          await tx.account.update({ where: { id: originalTx.accountId }, data: { balance: { increment: originalTx.amount } } });
+        }
 
-        // Critical: Check destination account type for correct balance adjustment
+        // Revert destination account
         if (originalTx.destinationAccount!.type === 'CREDIT') {
-          // For credit cards: increment means INCREASE debt (undo the payment)
+          // Transfer TO credit reduced debt, so increment to undo
           await tx.account.update({ where: { id: originalTx.destinationAccountId }, data: { balance: { increment: originalTx.amount } } });
         } else {
-          // For debit/cash: decrement means remove money
+          // Transfer TO debit/cash added money, so decrement to undo
           await tx.account.update({ where: { id: originalTx.destinationAccountId }, data: { balance: { decrement: originalTx.amount } } });
         }
       }

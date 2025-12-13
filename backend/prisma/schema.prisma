@@ -7,65 +7,60 @@ datasource db {
 }
 
 model User {
-  id                 String    @id @default(uuid())
-  email              String    @unique
-  password           String
-  name               String
-  currency           String    @default("USD")
-  avatar             String?   // Base64 string or URL
-  resetToken         String?   // Token for password reset
-  resetTokenExpiry   DateTime? // Expiry time for reset token
-  createdAt          DateTime  @default(now())
-
-  transactions          Transaction[]
-  categories            Category[]
-  budgets               Budget[]
-  recurringTransactions RecurringTransaction[]
+  id                    String                 @id @default(uuid())
+  email                 String                 @unique
+  password              String
+  name                  String
+  currency              String                 @default("USD")
+  avatar                String?
+  createdAt             DateTime               @default(now())
+  resetToken            String?
+  resetTokenExpiry      DateTime?
   accounts              Account[]
+  budgets               Budget[]
+  categories            Category[]
   installmentPurchases  InstallmentPurchase[]
+  recurringTransactions RecurringTransaction[]
+  transactions          Transaction[]
 }
 
 model Account {
-  id                    String                @id @default(uuid())
-  name                  String
-  type                  String
-  balance               Float
-  creditLimit           Float?
-  cutoffDay             Int?
-  paymentDay            Int?
-  user                  User                  @relation(fields: [userId], references: [id])
-  userId                String
-  transactions          Transaction[]
-  installmentPurchases  InstallmentPurchase[]
-  recurringTransactions RecurringTransaction[]
-  destinationTransactions Transaction[] @relation("DestinationTransactions")
+  id                      String                 @id @default(uuid())
+  name                    String
+  type                    String
+  balance                 Float
+  creditLimit             Float?
+  cutoffDay               Int?
+  paymentDay              Int?
+  userId                  String
+  user                    User                   @relation(fields: [userId], references: [id])
+  installmentPurchases    InstallmentPurchase[]
+  recurringTransactions   RecurringTransaction[]
+  transactions            Transaction[]
+  destinationTransactions Transaction[]          @relation("DestinationTransactions")
 }
 
 model Transaction {
-  id                      String                @id @default(uuid())
-  amount                  Float
-  description             String
-  date                    DateTime
-  type                    String
-  userId                  String
-  user                    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categoryId              String?
-  category                Category?             @relation(fields: [categoryId], references: [id], name: "CategoryTransactions")
-  accountId               String?
-  account                 Account?              @relation(fields: [accountId], references: [id])
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-  recurringTransactionId  String?
-  recurringTransaction    RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull, name: "RecurringTransactions")
-  installmentPurchaseId   String?
-  installmentPurchase     InstallmentPurchase?  @relation("InstallmentTransactions", fields: [installmentPurchaseId], references: [id])
-
-  // Campos para transferencias
-  destinationAccountId    String?               @map("destination_account_id")
-  destinationAccount      Account?              @relation("DestinationTransactions", fields: [destinationAccountId], references: [id])
-  
-  // Soft delete
-  deletedAt               DateTime?
+  id                     String                @id @default(uuid())
+  amount                 Float
+  description            String
+  date                   DateTime
+  type                   String
+  userId                 String
+  categoryId             String?
+  accountId              String?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  recurringTransactionId String?
+  installmentPurchaseId  String?
+  destinationAccountId   String?               @map("destination_account_id")
+  deletedAt              DateTime?
+  account                Account?              @relation(fields: [accountId], references: [id])
+  category               Category?             @relation("CategoryTransactions", fields: [categoryId], references: [id])
+  destinationAccount     Account?              @relation("DestinationTransactions", fields: [destinationAccountId], references: [id])
+  installmentPurchase    InstallmentPurchase?  @relation("InstallmentTransactions", fields: [installmentPurchaseId], references: [id])
+  recurringTransaction   RecurringTransaction? @relation("RecurringTransactions", fields: [recurringTransactionId], references: [id])
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model InstallmentPurchase {
@@ -75,73 +70,62 @@ model InstallmentPurchase {
   installments          Int
   monthlyPayment        Float
   purchaseDate          DateTime
-
   paidInstallments      Int           @default(0)
   paidAmount            Float         @default(0)
-
-  account               Account       @relation(fields: [accountId], references: [id])
   accountId             String
-  user                  User          @relation(fields: [userId], references: [id])
   userId                String
-  generatedTransactions Transaction[] @relation("InstallmentTransactions")
   categoryId            String
+  account               Account       @relation(fields: [accountId], references: [id])
   category              Category      @relation(fields: [categoryId], references: [id])
+  user                  User          @relation(fields: [userId], references: [id])
+  generatedTransactions Transaction[] @relation("InstallmentTransactions")
 }
 
 model Category {
-  id         String  @id @default(uuid())
-  name       String
-  icon       String
-  color      String
-  type       String // "income" or "expense"
-  budgetType String? // "need", "want", "savings" (for 50/30/20 rule)
-  
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  transactions          Transaction[] @relation(name: "CategoryTransactions")
-  recurringTransactions RecurringTransaction[]
+  id                    String                 @id @default(uuid())
+  name                  String
+  icon                  String
+  color                 String
+  type                  String
+  budgetType            String?
+  userId                String
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   installmentPurchases  InstallmentPurchase[]
+  recurringTransactions RecurringTransaction[]
+  transactions          Transaction[]          @relation("CategoryTransactions")
 
   @@unique([name, userId])
 }
 
 model Budget {
-  id          String   @id @default(uuid())
-  name        String
-  amount      Float
-  startDate   DateTime
-  endDate     DateTime
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id        String   @id @default(uuid())
+  name      String
+  amount    Float
+  startDate DateTime
+  endDate   DateTime
+  userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RecurringTransaction {
-  id          String   @id @default(uuid())
-  amount      Float
-  description String
-  type        String   // "income" or "expense"
-  frequency   String   // "daily", "weekly", "biweekly", "monthly", "yearly", "biweekly_15_30"
-  startDate   DateTime
-  nextDueDate DateTime
-  active      Boolean  @default(true)
-  lastRun     DateTime?
-
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-
-  accountId   String
-  account     Account  @relation(fields: [accountId], references: [id])
-
-  transactions Transaction[] @relation(name: "RecurringTransactions")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(uuid())
+  amount       Float
+  description  String
+  type         String
+  frequency    String
+  startDate    DateTime
+  nextDueDate  DateTime
+  active       Boolean       @default(true)
+  lastRun      DateTime?
+  userId       String
+  categoryId   String
+  accountId    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  account      Account       @relation(fields: [accountId], references: [id])
+  category     Category      @relation(fields: [categoryId], references: [id])
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[] @relation("RecurringTransactions")
 }

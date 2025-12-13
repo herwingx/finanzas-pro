@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { DeleteConfirmationSheet } from '../../components/DeleteConfirmationSheet';
-import { useInstallmentPurchases, useUpdateInstallmentPurchase, useDeleteInstallmentPurchase, useAccounts, useCategories } from '../../hooks/useApi';
+import { useInstallmentPurchases, useAddInstallmentPurchase, useUpdateInstallmentPurchase, useDeleteInstallmentPurchase, useAccounts, useCategories } from '../../hooks/useApi';
 import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../../utils/toast';
 import { DatePicker } from '../../components/DatePicker';
+import { CategorySelector } from '../../components/CategorySelector';
 
 const UpsertInstallmentPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -28,6 +29,7 @@ const UpsertInstallmentPage: React.FC = () => {
     const [categoryId, setCategoryId] = useState('');
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
+    const addPurchaseMutation = useAddInstallmentPurchase();
     const updatePurchaseMutation = useUpdateInstallmentPurchase();
     const deletePurchaseMutation = useDeleteInstallmentPurchase();
 
@@ -87,11 +89,16 @@ const UpsertInstallmentPage: React.FC = () => {
         };
 
         try {
-            await updatePurchaseMutation.mutateAsync({ id: id!, purchase: purchaseData });
-            toastSuccess('Compra a MSI actualizada con éxito!');
+            if (isEditMode) {
+                await updatePurchaseMutation.mutateAsync({ id: id!, purchase: purchaseData });
+                toastSuccess('Compra a MSI actualizada con éxito!');
+            } else {
+                await addPurchaseMutation.mutateAsync(purchaseData);
+                toastSuccess('Compra a MSI creada con éxito!');
+            }
             navigate('/installments');
         } catch (error: any) {
-            toast.error(`Error al actualizar la compra a MSI: ${error.message || 'Desconocido'}`);
+            toast.error(`Error: ${error.message || 'Desconocido'}`);
             console.error(error);
         }
     };
@@ -430,35 +437,27 @@ const UpsertInstallmentPage: React.FC = () => {
                     </div>
 
                     <div>
-                        <label htmlFor="categoryId" className="block text-sm font-medium text-app-muted mb-2">Categoría de Gasto (para mensualidades)</label>
-                        <select
-                            id="categoryId"
-                            value={categoryId}
-                            onChange={(e) => setCategoryId(e.target.value)}
-                            className="w-full p-3 bg-app-card rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
-                            required
-                        >
-                            {isLoadingCategories ? (
-                                <option value="" disabled>Cargando categorías...</option>
-                            ) : availableCategories.length > 0 ? (
-                                availableCategories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))
-                            ) : (
-                                <option value="">No hay categorías de gasto disponibles</option>
-                            )}
-                        </select>
+                        <label className="block text-sm font-medium text-app-muted mb-3">Categoría de Gasto</label>
+                        <CategorySelector
+                            categories={availableCategories}
+                            selectedId={categoryId}
+                            onSelect={setCategoryId}
+                            isLoading={isLoadingCategories}
+                            emptyMessage="No hay categorías de gasto disponibles"
+                        />
                     </div>
 
                 </fieldset>
 
-                {!isSettled && (
+                {(!isSettled || !isEditMode) && (
                     <button
                         type="submit"
                         className="btn-modern btn-primary w-full text-white font-bold p-3 rounded-xl shadow-premium hover:bg-app-primary/90 transition-all active:scale-[0.98]"
-                        disabled={updatePurchaseMutation.isPending}
+                        disabled={addPurchaseMutation.isPending || updatePurchaseMutation.isPending}
                     >
-                        {updatePurchaseMutation.isPending ? 'Guardando...' : 'Actualizar Compra a MSI'}
+                        {(addPurchaseMutation.isPending || updatePurchaseMutation.isPending)
+                            ? 'Guardando...'
+                            : isEditMode ? 'Actualizar Compra a MSI' : 'Crear Compra a MSI'}
                     </button>
                 )}
 

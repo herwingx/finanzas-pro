@@ -318,3 +318,59 @@ export const usePermanentDeleteTransaction = () => {
         },
     });
 };
+
+// Credit Card Statement Hooks
+export const useCreditCardStatement = (accountId: string | null) => {
+    return useQuery({
+        queryKey: ['creditCardStatement', accountId],
+        queryFn: () => {
+            if (!accountId) throw new Error('No account ID');
+            return apiService.getCreditCardStatement(accountId);
+        },
+        enabled: !!accountId,
+    });
+};
+
+export const usePayFullStatement = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ accountId, sourceAccountId, date }: { accountId: string; sourceAccountId: string; date?: string }) =>
+            apiService.payFullStatement(accountId, sourceAccountId, date),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['creditCardStatement'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['installments'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};
+
+export const usePayMsiInstallment = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ installmentId, sourceAccountId, date }: { installmentId: string; sourceAccountId: string; date?: string }) =>
+            apiService.payMsiInstallment(installmentId, sourceAccountId, date),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['creditCardStatement'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['installments'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};
+
+export const useRevertStatementPayment = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (transactionId: string) => apiService.revertStatementPayment(transactionId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['creditCardStatement'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['installments'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};

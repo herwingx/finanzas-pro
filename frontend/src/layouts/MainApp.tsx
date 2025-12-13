@@ -8,6 +8,7 @@ import Profile from '../pages/Profile';
 import Reports from '../pages/Reports';
 import More from '../pages/More';
 import Recurring from '../pages/Recurring';
+import NewRecurringPage from '../pages/NewRecurringPage';
 import Categories from '../pages/Categories';
 import AccountsPage from '../pages/AccountsPage';
 import UpsertAccountPage from '../pages/Accounts/UpsertAccountPage';
@@ -33,11 +34,13 @@ const MainApp: React.FC = () => {
           <Route path="/reports" element={<Reports />} />
           <Route path="/more" element={<More />} />
           <Route path="/recurring" element={<Recurring />} />
+          <Route path="/recurring/new" element={<NewRecurringPage />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/accounts/new" element={<UpsertAccountPage />} />
           <Route path="/accounts/edit/:id" element={<UpsertAccountPage />} />
           <Route path="/installments" element={<InstallmentsPage />} />
+          <Route path="/installments/new" element={<UpsertInstallmentPage />} />
           <Route path="/installments/edit/:id" element={<UpsertInstallmentPage />} />
           <Route path="/trash" element={<TrashPage />} />
         </Routes>

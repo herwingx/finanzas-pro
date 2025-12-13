@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Transaction, TransactionType, FrequencyType, InstallmentPurchase } from '../types';
+import { Transaction, TransactionType, InstallmentPurchase } from '../types';
 import {
   useCategories, useTransaction, useAddTransaction, useUpdateTransaction,
-  useDeleteTransaction, useAddRecurringTransaction, useAccounts,
+  useDeleteTransaction, useAccounts,
   useAddInstallmentPurchase, useInstallmentPurchases, usePayInstallment
 } from '../hooks/useApi';
 import { toastSuccess, toastError, toastWarning, toastInfo, toastLoading, toastUpdateSuccess, toastUpdateError, toastCustom, toast, toastDismiss } from '../utils/toast';
 import { DatePicker } from '../components/DatePicker';
+import { CategorySelector } from '../components/CategorySelector';
 
 const NewTransaction: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +28,6 @@ const NewTransaction: React.FC = () => {
   const addTransactionMutation = useAddTransaction();
   const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
-  const addRecurringMutation = useAddRecurringTransaction();
   const addInstallmentMutation = useAddInstallmentPurchase();
 
   const [type, setType] = useState<TransactionType>(initialType);
@@ -38,8 +38,7 @@ const NewTransaction: React.FC = () => {
   const [destinationAccountId, setDestinationAccountId] = useState(state?.destinationAccountId || searchParams.get('destinationAccountId') || '');
   const [date, setDate] = useState(new Date());
 
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [frequency, setFrequency] = useState<FrequencyType>('monthly');
+  // Recurring transactions are now handled in /recurring page
 
   const [isInstallment, setIsInstallment] = useState(false);
   const [installments, setInstallments] = useState('');
@@ -72,16 +71,12 @@ const NewTransaction: React.FC = () => {
     [allAccounts, destinationAccountId]
   );
 
-  // Valid transfer destination accounts (excludes the source account + shows only credit with debt)
+  // Valid transfer destination accounts - only DEBIT/CASH (credit card payments handled from widget)
   const validDestinationAccounts = useMemo(() => {
-    if (!accountId) return allAccounts;
-    // For destination: show all except source, but filter credit cards to only those with debt
-    return allAccounts.filter(acc => {
-      if (acc.id === accountId) return false; // Can't transfer to same account
-      if (acc.type === 'CREDIT' && acc.balance <= 0) return false; // Don't show credit cards without debt
-      return true;
-    });
-  }, [allAccounts, accountId]);
+    if (!accountId) return debitCashAccounts;
+    // Only show DEBIT/CASH accounts, excluding source
+    return debitCashAccounts.filter(acc => acc.id !== accountId);
+  }, [debitCashAccounts, accountId]);
 
   const isDestinationCredit = destinationAccount?.type === 'CREDIT';
   const creditDebt = destinationAccount?.balance || 0;
@@ -260,7 +255,7 @@ const NewTransaction: React.FC = () => {
         });
         toastSuccess('Pago a MSI guardado');
       }
-      // PRIORITY 3: Create new transfer
+      // PRIORITY 3: Create new transfer (between DEBIT/CASH accounts only)
       else if (type === 'transfer') {
         if (!accountId || !destinationAccountId) {
           toastError('Selecciona ambas cuentas para la transferencia.');
@@ -271,75 +266,17 @@ const NewTransaction: React.FC = () => {
           return;
         }
 
-        // Check if this transfer should be linked to an MSI payment
-        const installmentPurchaseId = searchParams.get('installmentPurchaseId') ||
-          (linkMsiPayment && selectedMsiForTransfer && selectedMsiForTransfer !== '__LIQUIDATE_ALL__' ? selectedMsiForTransfer : undefined);
+        // Simple transfer between debit/cash accounts
+        await addTransactionMutation.mutateAsync({
+          amount: numAmount,
+          description: finalDescription || 'Transferencia entre cuentas',
+          date: date.toISOString(),
+          type: 'transfer',
+          accountId,
+          destinationAccountId,
+        } as Omit<Transaction, 'id'>);
 
-        // Special case: Liquidate ALL MSI plans
-        if (linkMsiPayment && selectedMsiForTransfer === '__LIQUIDATE_ALL__' && activeInstallmentsForDestination.length > 0) {
-          // Calculate total MSI debt
-          const totalMSIDebt = activeInstallmentsForDestination.reduce((sum, msi) =>
-            sum + (msi.totalAmount - msi.paidAmount), 0
-          );
-
-          // Distribute payment proportionally
-          let remainingAmount = numAmount;
-          const toastId = toastLoading('Distribuyendo pago entre planes MSI...');
-
-          try {
-            for (let i = 0; i < activeInstallmentsForDestination.length; i++) {
-              const msi = activeInstallmentsForDestination[i];
-              const msiDebt = msi.totalAmount - msi.paidAmount;
-
-              // Calculate proportional allocation
-              let allocation;
-              if (i === activeInstallmentsForDestination.length - 1) {
-                // Last one gets all remaining to avoid rounding errors
-                allocation = remainingAmount;
-              } else {
-                allocation = (msiDebt / totalMSIDebt) * numAmount;
-              }
-
-              // Cap at MSI debt
-              allocation = Math.min(allocation, msiDebt);
-
-              // Pay this MSI plan
-              if (allocation > 0) {
-                await payInstallmentMutation.mutateAsync({
-                  id: msi.id,
-                  payment: {
-                    amount: allocation,
-                    description: `Liquidación - ${msi.description}`,
-                    date: date.toISOString(),
-                    accountId: accountId,
-                  }
-                });
-              }
-
-              remainingAmount -= allocation;
-            }
-
-            toastUpdateSuccess(toastId, 'Deuda liquidada y planes MSI actualizados');
-          } catch (error: any) {
-            toastUpdateError(toastId, error.message || 'Error al distribuir pago');
-            throw error;
-          }
-        } else {
-          // Regular transfer (with or without single MSI link)
-          await addTransactionMutation.mutateAsync({
-            amount: numAmount,
-            description: finalDescription || (isDestinationCredit ? 'Pago a Tarjeta de Crédito' : 'Transferencia'),
-            date: date.toISOString(),
-            type: 'transfer',
-            accountId,
-            destinationAccountId,
-            installmentPurchaseId: installmentPurchaseId || undefined,
-          } as Omit<Transaction, 'id'>);
-
-          const successMsg = installmentPurchaseId ? 'Pago a MSI guardado' :
-            isDestinationCredit ? 'Pago a tarjeta guardado' : 'Transferencia guardada';
-          toast.success(successMsg);
-        }
+        toast.success('Transferencia guardada');
       }
       // PRIORITY 4: Create new MSI purchase
       else if (isInstallment) {
@@ -365,26 +302,7 @@ const NewTransaction: React.FC = () => {
         });
         toastSuccess('Compra a MSI guardada');
       }
-      // PRIORITY 5: Create recurring transaction
-      else if (isRecurring) {
-        if (!categoryId) {
-          toastError('Selecciona una categoría para la transacción recurrente.');
-          return;
-        }
-        await addRecurringMutation.mutateAsync({
-          amount: numAmount,
-          description: finalDescription || 'Gasto Recurrente',
-          categoryId,
-          accountId,
-          startDate: date.toISOString(),
-          type,
-          frequency,
-          active: true,
-          nextDueDate: date.toISOString(),
-        });
-        toastSuccess('Transacción recurrente guardada');
-      }
-      // PRIORITY 6: Create normal transaction
+      // PRIORITY 5: Create normal transaction (Recurring moved to /recurring page)
       else {
         if (!categoryId) {
           toastError('Selecciona una categoría para la transacción.');
@@ -466,7 +384,7 @@ const NewTransaction: React.FC = () => {
     executeDelete();
   };
 
-  const isFormDisabled = addTransactionMutation.isPending || updateTransactionMutation.isPending || addRecurringMutation.isPending || addInstallmentMutation.isPending || payInstallmentMutation.isPending;
+  const isFormDisabled = addTransactionMutation.isPending || updateTransactionMutation.isPending || addInstallmentMutation.isPending || payInstallmentMutation.isPending;
   const isCategoryRequired = type !== 'transfer' && !isMsiPayment;
 
   // 1. Loading State to prevent Flicker
@@ -900,14 +818,6 @@ const NewTransaction: React.FC = () => {
                     <span className="material-symbols-outlined">expand_more</span>
                   </div>
                 </div>
-                {type === 'income' && creditAccounts.length > 0 && (
-                  <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                    <p className="text-xs text-app-muted flex items-start gap-2">
-                      <span className="material-symbols-outlined text-blue-500 text-sm">info</span>
-                      <span>Para pagar tarjetas de crédito, usa <strong>Transferencia</strong> en lugar de Ingreso.</span>
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -915,133 +825,21 @@ const NewTransaction: React.FC = () => {
             {isCategoryRequired && (
               <div className="p-4">
                 <label className="block text-xs text-app-muted font-bold mb-3 uppercase">Categoría</label>
-                <div className="grid grid-cols-4 gap-3">
-                  {availableCategories.map(cat => (
-                    <button type="button" key={cat.id} onClick={() => setCategoryId(cat.id)} className={`flex flex-col items-center gap-2 p-2 rounded-xl transition-all border-2 ${categoryId === cat.id ? 'border-app-primary bg-app-primary/10' : 'border-transparent hover:bg-app-elevated'}`}>
-                      <div className="size-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}><span className="material-symbols-outlined text-xl">{cat.icon}</span></div>
-                      <span className="text-[10px] font-medium truncate w-full text-center">{cat.name}</span>
-                    </button>
-                  ))}
-                  {availableCategories.length === 0 && (
-                    <div className="col-span-4 text-center py-4 text-app-muted text-sm">
-                      No hay categorías de {type === 'income' ? 'ingreso' : 'gasto'}.
-                    </div>
-                  )}
-                </div>
+                <CategorySelector
+                  categories={availableCategories}
+                  selectedId={categoryId}
+                  onSelect={setCategoryId}
+                  isLoading={isLoadingCategories}
+                  emptyMessage={`No hay categorías de ${type === 'income' ? 'ingreso' : 'gasto'}`}
+                />
               </div>
             )}
 
-            {/* MSI Payment Toggle & Fields (Only for income on credit accounts, not edit mode) */}
-            {!editId && type === 'income' && selectedAccountIsCredit && (
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">¿Es un abono a Meses Sin Intereses?</label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={isMsiPayment} onChange={() => setIsMsiPayment(!isMsiPayment)} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
-                  </label>
-                </div>
-                {isMsiPayment && (
-                  <div className="mt-4">
-                    <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Selecciona la compra a pagar</label>
-                    <div className="relative">
-                      <select value={selectedInstallmentId} onChange={e => setSelectedInstallmentId(e.target.value)} className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all" required>
-                        <option value="">-- Elige una opción --</option>
-                        {isLoadingInstallments ? <option disabled>Cargando compras...</option> :
-                          activeInstallmentsForAccount.map(p => (
-                            <option key={p.id} value={p.id}>
-                              {p.description} (${(p.totalAmount - p.paidAmount).toFixed(2)} restantes)
-                            </option>
-                          ))
-                        }
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
-                        <span className="material-symbols-outlined">expand_more</span>
-                      </div>
-                    </div>
-                    {activeInstallmentsForAccount.length === 0 && !isLoadingInstallments && (
-                      <p className="text-xs text-app-muted mt-2">No hay compras a MSI activas para esta cuenta.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* MSI payments are now handled from the widget/installments page */}
 
-            {/* MSI Toggle & Fields (Only for expense, not edit mode) */}
-            {!editId && type === 'expense' && !isMsiPayment && (
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <label className={`text-sm font-medium ${!selectedAccountIsCredit ? 'text-app-muted opacity-60' : ''}`}>
-                      ¿Compra a Meses Sin Intereses?
-                    </label>
-                    {!selectedAccountIsCredit && (
-                      <span className="material-symbols-outlined text-app-muted text-sm" title="Solo disponible para tarjetas de crédito">
-                        info
-                      </span>
-                    )}
-                  </div>
-                  <label className={`relative inline-flex items-center ${selectedAccountIsCredit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
-                    <input
-                      type="checkbox"
-                      checked={isInstallment}
-                      onChange={() => {
-                        if (selectedAccountIsCredit) {
-                          setIsInstallment(!isInstallment);
-                        }
-                      }}
-                      disabled={!selectedAccountIsCredit}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary peer-disabled:opacity-50"></div>
-                  </label>
-                </div>
-                {!selectedAccountIsCredit && (
-                  <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
-                    <p className="text-xs text-app-muted flex items-start gap-2">
-                      <span className="material-symbols-outlined text-orange-500 text-sm">credit_card</span>
-                      <span>Para crear una compra a MSI, primero selecciona una <strong>tarjeta de crédito</strong>.</span>
-                    </p>
-                  </div>
-                )}
-                {isInstallment && selectedAccountIsCredit && (
-                  <div className="mt-4">
-                    <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Número de Meses</label>
-                    <input type="number" value={installments} onChange={e => setInstallments(e.target.value)} className="w-full p-3 bg-app-bg rounded-xl border border-app-border" placeholder="Ej: 12" required />
-                  </div>
-                )}
-              </div>
-            )}
+            {/* MSI purchases are now managed in the dedicated /installments page */}
 
-            {/* Recurring Toggle & Frequency (Only for income/expense, not edit mode, not MSI) */}
-            {!editId && !isInstallment && type !== 'transfer' && (
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Hacer recurrente</label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={isRecurring} onChange={() => setIsRecurring(!isRecurring)} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
-                  </label>
-                </div>
-                {isRecurring && (
-                  <div className="mt-4">
-                    <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Frecuencia</label>
-                    <div className="relative">
-                      <select value={frequency} onChange={e => setFrequency(e.target.value as FrequencyType)} className="w-full p-4 pl-4 pr-10 bg-app-bg border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all">
-                        <option value="daily">Diaria</option>
-                        <option value="weekly">Semanal</option>
-                        <option value="biweekly">Quincenal</option>
-                        <option value="monthly">Mensual</option>
-                        <option value="yearly">Anual</option>
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
-                        <span className="material-symbols-outlined">expand_more</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Recurring transactions are now managed in the dedicated /recurring page */}
 
             <div className="p-4"><input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción (Opcional)" className="w-full bg-transparent focus:outline-none" /></div>
             <div className="p-4"><DatePicker date={date} onDateChange={setDate} /></div>

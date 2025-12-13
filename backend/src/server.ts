@@ -9,6 +9,7 @@ import recurringRoutes from './routes/recurring';
 import accountsRoutes from './routes/accounts';
 import installmentsRoutes from './routes/installments';
 import financialPlanningRoutes from './routes/financialPlanningRoutes';
+import creditCardPaymentsRoutes from './routes/creditCardPayments';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/recurring', recurringRoutes);
 app.use('/api/accounts', accountsRoutes);
 app.use('/api/installments', installmentsRoutes);
 app.use('/api/financial-planning', financialPlanningRoutes);
+app.use('/api/credit-card', creditCardPaymentsRoutes);
 
 const PORT = process.env.PORT || 4000;
 

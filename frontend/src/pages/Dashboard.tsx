@@ -16,9 +16,26 @@ const Dashboard: React.FC = () => {
     return profile?.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
   }, [profile?.name]);
 
+  // Dynamic greeting based on time of day
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return { text: 'Buenos días', emoji: '☀️' };
+    if (hour >= 12 && hour < 19) return { text: 'Buenas tardes', emoji: '🌤️' };
+    return { text: 'Buenas noches', emoji: '🌙' };
+  }, []);
+
+  // Current date formatted
+  const currentDate = useMemo(() => {
+    return new Date().toLocaleDateString('es-MX', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+  }, []);
+
   const formatCurrency = useMemo(() => (value: number) => {
     const locales: Record<string, string> = { 'USD': 'en-US', 'EUR': 'de-DE', 'GBP': 'en-GB', 'MXN': 'es-MX' };
-    return new Intl.NumberFormat(locales[profile?.currency || 'USD'] || 'es-MX', { style: 'currency', currency: profile?.currency || 'USD' }).format(value);
+    return new Intl.NumberFormat(locales[profile?.currency || 'USD'] || 'es-MX', { style: 'currency', currency: profile?.currency || 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
   }, [profile?.currency]);
 
   const { netWorth, availableFunds } = useMemo(() => {
@@ -33,6 +50,26 @@ const Dashboard: React.FC = () => {
 
     return { netWorth, availableFunds };
   }, [accounts]);
+
+  // Calculate current month income and expenses
+  const { totalIncome, totalExpenses } = useMemo(() => {
+    if (!transactions) return { totalIncome: 0, totalExpenses: 0 };
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const monthTransactions = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
+
+    const totalIncome = monthTransactions
+      .filter(tx => tx.type === 'income')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    const totalExpenses = monthTransactions
+      .filter(tx => tx.type === 'expense')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    return { totalIncome, totalExpenses };
+  }, [transactions]);
 
   const getCategoryInfo = (id: string) => {
     if (!categories) return { name: 'General', icon: 'receipt_long', color: '#999' };
@@ -50,62 +87,82 @@ const Dashboard: React.FC = () => {
 
 
   return (
-    <div className="animate-fade-in bg-app-bg text-app-text font-sans">
-      {/* Ambient Background Glow */}
+    <div className="bg-app-bg text-app-text font-sans pb-20">
+      {/* Ambient Background Glow - Enhanced */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[50%] bg-gradient-to-b from-app-primary/15 to-transparent rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[60%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
       </div>
 
-      <div className="h-14 flex items-center px-4 sticky top-0 bg-app-bg/95 backdrop-blur-xl z-20 border-b border-app-border/50">
-        <Link to="/profile" className="size-11 rounded-xl bg-app-primary flex items-center justify-center text-white font-bold text-sm shadow-md shadow-app-primary/20 overflow-hidden shrink-0 transition-transform hover:scale-105 active:scale-95">
-          {profile?.avatar ? <img src={profile.avatar} alt="User Avatar" className="w-full h-full object-cover" /> : <span className="text-base">{userInitials}</span>}
+      {/* Header */}
+      <div className="h-16 flex items-center px-4 sticky top-0 bg-app-bg/80 backdrop-blur-xl z-20 border-b border-app-border/30">
+        <Link to="/profile" className="size-12 rounded-2xl bg-gradient-to-br from-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-app-primary/30 overflow-hidden shrink-0 transition-transform hover:scale-105 active:scale-95">
+          {profile?.avatar ? <img src={profile.avatar} alt="User Avatar" className="w-full h-full object-cover" /> : <span className="text-lg">{userInitials}</span>}
         </Link>
         <div className="flex-1 px-3 min-w-0">
-          <p className="text-[10px] text-app-muted font-bold uppercase tracking-wider">Bienvenido,</p>
-          <h1 className="text-lg font-bold tracking-tight truncate text-app-text">
-            {profile?.name}
+          <p className="text-xs text-app-muted capitalize">{currentDate}</p>
+          <h1 className="text-base font-bold tracking-tight truncate text-app-text flex items-center gap-1.5">
+            <span>{greeting.emoji}</span>
+            <span>{greeting.text}, {profile?.name?.split(' ')[0]}</span>
           </h1>
         </div>
         <div className="flex gap-2">
           <button onClick={() => toastInfo('Sin notificaciones nuevas')} className="p-2 rounded-xl hover:bg-app-elevated transition-colors text-app-muted hover:text-app-text relative">
             <span className="material-symbols-outlined">notifications</span>
-            <span className="absolute top-2 right-2 size-2 bg-app-danger rounded-full border border-app-bg"></span>
+            <span className="absolute top-2 right-2 size-2 bg-app-danger rounded-full border-2 border-app-bg"></span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 px-4 mt-6">
-        {/* Available Funds Card - Primary Glow */}
-        <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-5 transition-all duration-300 hover:shadow-glow-md hover:border-app-primary/30 hover:-translate-y-1">
-          <div className="absolute inset-0 bg-gradient-to-br from-app-primary/5 to-transparent opacity-100" />
-          <div className="absolute -right-6 -top-6 w-20 h-20 bg-app-primary/10 rounded-full blur-2xl group-hover:bg-app-primary/20 transition-colors" />
+      {/* Main Balance Hero Card */}
+      <div className="px-4 mt-4">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-app-primary via-app-primary to-app-secondary p-6 shadow-2xl shadow-app-primary/30">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-xl translate-y-1/2 -translate-x-1/2" />
+          <div className="absolute top-4 right-4 opacity-20">
+            <span className="material-symbols-outlined text-6xl text-white">account_balance_wallet</span>
+          </div>
 
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-app-primary/10 text-app-primary">
-                <span className="material-symbols-outlined text-sm">account_balance_wallet</span>
+            <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Balance Disponible</p>
+            <h2 className="text-4xl font-black text-white tracking-tight mb-4">
+              {formatCurrency(availableFunds)}
+            </h2>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1.5 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-white/70 text-sm">trending_up</span>
+                <span className="text-white/80 text-xs font-bold">Patrimonio: {formatCurrency(netWorth)}</span>
               </div>
-              <p className="text-app-muted text-[10px] font-bold uppercase tracking-wider">Disponible</p>
+              <Link to="/accounts" className="flex items-center gap-1 text-white/70 hover:text-white text-xs font-bold transition-colors">
+                <span>Ver cuentas</span>
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </Link>
             </div>
-            <h2 className="text-2xl font-bold text-app-text tracking-tight">{formatCurrency(availableFunds)}</h2>
           </div>
         </div>
+      </div>
 
-        {/* Net Worth Card - Secondary Glow */}
-        <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-5 transition-all duration-300 hover:shadow-glow-md hover:border-app-secondary/30 hover:-translate-y-1">
-          <div className="absolute inset-0 bg-gradient-to-br from-app-secondary/5 to-transparent opacity-100" />
-          <div className="absolute -right-6 -top-6 w-20 h-20 bg-app-secondary/10 rounded-full blur-2xl group-hover:bg-app-secondary/20 transition-colors" />
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-app-secondary/10 text-app-secondary">
-                <span className="material-symbols-outlined text-sm">trending_up</span>
-              </div>
-              <p className="text-app-muted text-[10px] font-bold uppercase tracking-wider">Patrimonio</p>
+      {/* Quick Stats Row */}
+      <div className="px-4 mt-4 flex gap-3">
+        <div className="flex-1 bg-app-card border border-app-border rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 rounded-lg bg-app-income-bg">
+              <span className="material-symbols-outlined text-app-income text-xs">arrow_upward</span>
             </div>
-            <h2 className="text-2xl font-bold text-app-text tracking-tight">{formatCurrency(netWorth)}</h2>
+            <p className="text-[9px] text-app-muted font-bold uppercase">Ingresos</p>
           </div>
+          <p className="text-lg font-bold text-app-income">{formatCurrency(totalIncome)}</p>
+        </div>
+        <div className="flex-1 bg-app-card border border-app-border rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 rounded-lg bg-app-expense-bg">
+              <span className="material-symbols-outlined text-app-expense text-xs">arrow_downward</span>
+            </div>
+            <p className="text-[9px] text-app-muted font-bold uppercase">Gastos</p>
+          </div>
+          <p className="text-lg font-bold text-app-expense">-{formatCurrency(totalExpenses)}</p>
         </div>
       </div>
 
@@ -117,25 +174,26 @@ const Dashboard: React.FC = () => {
       {/* Spending Trend Chart */}
       {transactions && transactions.length > 0 && (
         <div className="px-4 mt-6">
-          <div className="card-modern p-5 shadow-premium transition-premium">
-            <h3 className="text-sm font-bold text-app-text mb-4 flex items-center gap-2">
-              <span className="text-lg">📊</span>
-              Tendencia de Gastos
-            </h3>
-            <SpendingTrendChart transactions={transactions} />
-          </div>
+          <SpendingTrendChart transactions={transactions} />
         </div>
       )}
 
-      {/* Removed: "Próximos Pagos a MSI" - Now handled by FinancialPlanningWidget */}
-      {/* Removed: "Gastos del Mes (no MSI)" - Now shown in FinancialPlanningWidget's summary */}
-
-      <div className="px-4 mt-10">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-app-text">Recientes</h3>
-          <Link to="/history" className="text-app-primary text-sm font-bold hover:bg-app-primary/10 px-3 py-1 rounded-lg">Ver Todo</Link>
+      {/* Recent Transactions */}
+      <div className="px-4 mt-6">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-app-primary/10">
+              <span className="material-symbols-outlined text-app-primary text-lg">receipt_long</span>
+            </div>
+            <h3 className="text-sm font-bold text-app-text">Transacciones Recientes</h3>
+          </div>
+          <Link to="/history" className="text-app-primary text-xs font-bold hover:bg-app-primary/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+            Ver todo
+            <span className="material-symbols-outlined text-sm">chevron_right</span>
+          </Link>
         </div>
-        <div className="space-y-3">
+
+        <div className="bg-app-card border border-app-border rounded-2xl overflow-hidden divide-y divide-app-border">
           {transactions && transactions
             .filter(tx => {
               // Filter out MSI payment transactions (income/transfer with installmentPurchaseId)
@@ -153,15 +211,15 @@ const Dashboard: React.FC = () => {
                       e.preventDefault();
                       toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
                     }
-                  }} className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
-                    <div className="size-11 rounded-full flex items-center justify-center shrink-0 bg-app-tertiary">
-                      <span className="material-symbols-outlined text-xl text-app-muted">swap_horiz</span>
+                  }} className="flex items-center gap-3 p-3 hover:bg-app-elevated/50 transition-colors">
+                    <div className="size-10 rounded-xl flex items-center justify-center shrink-0 bg-app-transfer-bg">
+                      <span className="material-symbols-outlined text-lg text-app-transfer">swap_horiz</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-app-text truncate text-sm">Transferencia</p>
-                      <span className="text-xs text-app-muted truncate">{sourceAccount} → {destAccount}</span>
+                      <span className="text-[11px] text-app-muted truncate">{sourceAccount} → {destAccount}</span>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <p className="font-bold text-sm text-app-text">{formatCurrency(tx.amount)}</p>
                     </div>
                   </Link>
@@ -174,29 +232,36 @@ const Dashboard: React.FC = () => {
                     e.preventDefault();
                     toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
                   }
-                }} className="card-modern flex items-center gap-4 p-3 transition-premium hover:shadow-md">
-                  <div className="size-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}20` }}>
-                    <span className="material-symbols-outlined text-xl" style={{ color: category.color }}>{category.icon}</span>
+                }} className="flex items-center gap-3 p-3 hover:bg-app-elevated/50 transition-colors">
+                  <div className="size-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}15` }}>
+                    <span className="material-symbols-outlined text-lg" style={{ color: category.color }}>{category.icon}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-app-text truncate text-sm">{tx.description}</p>
                     <div className="flex items-center gap-2">
                       {tx.installmentPurchaseId && (
-                        <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">
+                        <span className="text-[9px] font-bold text-app-msi bg-app-msi-bg px-1.5 py-0.5 rounded">
                           MSI
                         </span>
                       )}
-                      <span className="text-xs text-app-muted">{category.name}</span>
+                      <span className="text-[11px] text-app-muted">{category.name}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-bold text-sm ${tx.type === 'income' ? 'text-app-success' : 'text-app-text'}`}>
+                  <div className="text-right shrink-0">
+                    <p className={`font-bold text-sm ${tx.type === 'income' ? 'text-app-income' : 'text-app-text'}`}>
                       {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}
                     </p>
                   </div>
                 </Link>
               )
             })}
+
+          {(!transactions || transactions.length === 0) && (
+            <div className="p-8 text-center text-app-muted">
+              <span className="material-symbols-outlined text-3xl mb-2 opacity-30">receipt_long</span>
+              <p className="text-sm">Sin transacciones recientes</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -53,15 +53,6 @@ const AccountsPage: React.FC = () => {
         return new Intl.NumberFormat(locales[profile?.currency || 'USD'] || 'es-MX', { style: 'currency', currency: profile?.currency || 'USD' }).format(value);
     }, [profile?.currency]);
 
-    const getAccountIcon = (type: AccountType) => {
-        switch (type) {
-            case 'DEBIT': return 'credit_card';
-            case 'CREDIT': return 'receipt_long';
-            case 'CASH': return 'payments';
-            default: return 'account_balance_wallet';
-        }
-    };
-
     if (isLoading) {
         return (
             <div className="pb-28 animate-fade-in bg-app-bg text-app-text font-sans">
@@ -86,6 +77,35 @@ const AccountsPage: React.FC = () => {
         .reduce((sum, acc) => sum + acc.balance, 0) || 0; // Credit balances are stored as positive debt
     const netWorth = totalAssets - totalDebt;
 
+    const getAccountStyle = (type: AccountType) => {
+        switch (type) {
+            case 'CREDIT': return {
+                icon: 'credit_card',
+                bgClass: 'bg-app-credit-bg',
+                textClass: 'text-app-credit',
+                label: 'Tarjeta de Crédito'
+            };
+            case 'DEBIT': return {
+                icon: 'account_balance',
+                bgClass: 'bg-app-debit-bg',
+                textClass: 'text-app-debit',
+                label: 'Tarjeta de Débito'
+            };
+            case 'CASH': return {
+                icon: 'payments',
+                bgClass: 'bg-app-cash-bg',
+                textClass: 'text-app-cash',
+                label: 'Efectivo'
+            };
+            default: return {
+                icon: 'account_balance_wallet',
+                bgClass: 'bg-app-primary/10',
+                textClass: 'text-app-primary',
+                label: 'Cuenta'
+            };
+        }
+    };
+
     return (
         <div className="bg-app-bg text-app-text font-sans relative overflow-hidden">
             {/* Ambient Background Glow */}
@@ -97,78 +117,107 @@ const AccountsPage: React.FC = () => {
             <PageHeader title="Mis Cuentas" showBackButton={false} />
 
             {/* Summary Cards */}
-            <div className="px-4 mt-6 space-y-4">
-                <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-4 shadow-sm flex items-center justify-between hover:shadow-glow-sm hover:border-app-success/30 transition-all">
-                    <div className="absolute inset-0 bg-gradient-to-r from-app-success/5 to-transparent opacity-100" />
-                    <span className="text-sm font-bold text-app-text-secondary uppercase tracking-wider relative z-10">Activos Totales</span>
-                    <span className="text-xl font-bold text-app-success relative z-10 drop-shadow-sm">{formatCurrency(totalAssets)}</span>
-                </div>
-                <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-4 shadow-sm flex items-center justify-between hover:shadow-glow-sm hover:border-app-danger/30 transition-all">
-                    <div className="absolute inset-0 bg-gradient-to-r from-app-danger/5 to-transparent opacity-100" />
-                    <span className="text-sm font-bold text-app-text-secondary uppercase tracking-wider relative z-10">Deuda Total</span>
-                    <span className="text-xl font-bold text-app-danger relative z-10 drop-shadow-sm">-{formatCurrency(totalDebt)}</span>
-                </div>
-                <div className="relative group overflow-hidden rounded-2xl bg-app-elevated border border-app-border p-4 shadow-sm flex items-center justify-between hover:shadow-glow-md hover:border-app-primary/30 transition-all">
-                    <div className="absolute inset-0 bg-gradient-to-r from-app-primary/5 to-transparent opacity-100" />
-                    <span className="text-sm font-bold text-app-text-secondary uppercase tracking-wider relative z-10">Patrimonio Neto</span>
-                    <span className="text-xl font-bold text-app-text relative z-10">{formatCurrency(netWorth)}</span>
+            <div className="px-4 mt-6 space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-app-card border border-app-border rounded-2xl p-3 text-center">
+                        <p className="text-[10px] text-app-muted font-bold uppercase tracking-wide">Activos</p>
+                        <p className="text-base font-bold text-app-success mt-1">{formatCurrency(totalAssets)}</p>
+                    </div>
+                    <div className="bg-app-card border border-app-border rounded-2xl p-3 text-center">
+                        <p className="text-[10px] text-app-muted font-bold uppercase tracking-wide">Deuda</p>
+                        <p className="text-base font-bold text-app-danger mt-1">-{formatCurrency(totalDebt)}</p>
+                    </div>
+                    <div className={`bg-app-card border rounded-2xl p-3 text-center ${netWorth >= 0 ? 'border-app-success/30' : 'border-app-danger/30'}`}>
+                        <p className="text-[10px] text-app-muted font-bold uppercase tracking-wide">Neto</p>
+                        <p className={`text-base font-bold mt-1 ${netWorth >= 0 ? 'text-app-success' : 'text-app-danger'}`}>
+                            {formatCurrency(netWorth)}
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {/* Accounts List */}
-            <div className="px-4 mt-6">
+            <div className="px-4 mt-6 pb-20">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold text-app-text">Cuentas</h2>
-                    <Link to="/accounts/new" className="btn-modern btn-primary text-white text-sm font-bold px-4 py-2 rounded-xl shadow-premium hover:bg-app-primary/90 flex items-center gap-1 transition-transform active:scale-[0.98]">
-                        <span className="material-symbols-outlined text-base">add</span>
-                        Nueva Cuenta
+                    <h2 className="text-sm font-bold text-app-muted uppercase tracking-wider">Mis Cuentas</h2>
+                    <Link to="/accounts/new" className="text-xs font-bold text-app-primary hover:text-app-primary/80 flex items-center gap-1 transition-colors">
+                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                        Nueva
                     </Link>
                 </div>
 
                 <div className="space-y-3">
                     {accounts && accounts.length > 0 ? (
-                        accounts.map(account => (
-                            <SwipeableItem
-                                key={account.id}
-                                onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`)}
-                                rightAction={{
-                                    icon: 'edit',
-                                    color: '#1A53FF', // Neon Blue
-                                    label: 'Editar',
-                                }}
-                                onSwipeLeft={() => handleDelete(account)}
-                                leftAction={{
-                                    icon: 'delete',
-                                    color: '#F50F56', // Neon Red/Pink
-                                    label: 'Eliminar',
-                                }}
-                                className="rounded-2xl"
-                            >
-                                <div
-                                    onClick={() => navigate(`/accounts/edit/${account.id}`)}
-                                    className="card-modern group flex items-center gap-4 bg-app-card border border-app-border p-3 rounded-2xl hover:shadow-md transition-premium cursor-pointer"
+                        accounts.map(account => {
+                            const style = getAccountStyle(account.type);
+                            const usagePercent = account.type === 'CREDIT' && account.creditLimit
+                                ? (account.balance / account.creditLimit) * 100
+                                : null;
+
+                            return (
+                                <SwipeableItem
+                                    key={account.id}
+                                    onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`)}
+                                    rightAction={{
+                                        icon: 'edit',
+                                        color: '#1A53FF',
+                                        label: 'Editar',
+                                    }}
+                                    onSwipeLeft={() => handleDelete(account)}
+                                    leftAction={{
+                                        icon: 'delete',
+                                        color: '#F50F56',
+                                        label: 'Eliminar',
+                                    }}
+                                    className="rounded-2xl"
                                 >
-                                    <div className="size-11 rounded-full flex items-center justify-center shrink-0 bg-app-primary/10">
-                                        <span className="material-symbols-outlined text-xl text-app-primary">{getAccountIcon(account.type)}</span>
+                                    <div
+                                        onClick={() => navigate(`/accounts/edit/${account.id}`)}
+                                        className="group flex items-center gap-3 bg-app-card border border-app-border p-4 rounded-2xl hover:border-app-primary/30 transition-all cursor-pointer"
+                                    >
+                                        <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${style.bgClass}`}>
+                                            <span className={`material-symbols-outlined text-xl ${style.textClass}`}>{style.icon}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-app-text truncate">{account.name}</p>
+                                            <p className="text-xs text-app-muted">{style.label}</p>
+                                            {usagePercent !== null && (
+                                                <div className="mt-2">
+                                                    <div className="h-1.5 bg-app-elevated rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all ${usagePercent > 80 ? 'bg-app-danger' :
+                                                                usagePercent > 50 ? 'bg-amber-500' : 'bg-app-success'
+                                                                }`}
+                                                            style={{ width: `${Math.min(usagePercent, 100)}%` }}
+                                                        />
+                                                    </div>
+                                                    <p className="text-[10px] text-app-muted mt-1">
+                                                        {usagePercent.toFixed(0)}% utilizado
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className={`font-bold ${account.type === 'CREDIT' ? 'text-app-credit' : style.textClass}`}>
+                                                {account.type === 'CREDIT' ? '-' : ''}{formatCurrency(account.balance)}
+                                            </p>
+                                            {account.type === 'CREDIT' && account.creditLimit !== undefined && (
+                                                <p className="text-[10px] text-app-muted mt-0.5">
+                                                    de {formatCurrency(account.creditLimit)}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-app-text truncate text-sm">{account.name}</p>
-                                        <span className="text-xs text-app-muted">{account.type === 'CREDIT' ? 'Tarjeta de Crédito' : account.type === 'DEBIT' ? 'Tarjeta de Débito' : 'Efectivo'}</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className={`font-bold text-sm ${account.type === 'CREDIT' ? 'text-app-danger' : 'text-app-success'}`}>{formatCurrency(account.balance)}</p>
-                                        {account.type === 'CREDIT' && account.creditLimit !== undefined && (
-                                            <span className="text-xs text-app-muted">Límite: {formatCurrency(account.creditLimit)}</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </SwipeableItem>
-                        ))
+                                </SwipeableItem>
+                            );
+                        })
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-app-muted bg-app-card/50 rounded-2xl border-dashed border-app-border">
-                            <span className="material-symbols-outlined text-4xl mb-2 opacity-50">account_balance_wallet</span>
-                            <p className="text-sm font-medium">No has creado cuentas aún.</p>
-                            <Link to="/accounts/new" className="mt-2 text-app-primary text-sm font-bold hover:underline">Crea tu primera cuenta</Link>
+                        <div className="flex flex-col items-center justify-center py-16 text-app-muted bg-app-card/50 rounded-2xl border border-dashed border-app-border">
+                            <span className="material-symbols-outlined text-5xl mb-3 opacity-30">account_balance_wallet</span>
+                            <p className="text-sm font-medium">No has creado cuentas aún</p>
+                            <Link to="/accounts/new" className="mt-3 px-4 py-2 bg-app-primary text-white text-sm font-bold rounded-xl hover:bg-app-primary/90 transition-colors">
+                                Crear primera cuenta
+                            </Link>
                         </div>
                     )}
                 </div>

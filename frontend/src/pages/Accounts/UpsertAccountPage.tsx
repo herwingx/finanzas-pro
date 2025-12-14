@@ -152,7 +152,7 @@ const UpsertAccountPage: React.FC = () => {
         };
 
         return (
-            <div className="flex flex-col h-screen bg-app-bg text-app-text">
+            <div className="flex flex-col min-h-full bg-app-bg text-app-text">
                 <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
                     <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
                         <span className="material-symbols-outlined">arrow_back_ios_new</span>
@@ -231,7 +231,7 @@ const UpsertAccountPage: React.FC = () => {
     }
 
     return (
-        <div className="pb-10 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans flex flex-col">
+        <div className="pb-20 bg-app-bg text-app-text font-sans flex flex-col">
             <PageHeader title={isEditMode ? 'Editar Cuenta' : 'Nueva Cuenta'} showBackButton={true} />
 
             <main className="flex-1 px-5 py-6 w-full max-w-lg mx-auto">
@@ -388,7 +388,7 @@ const UpsertAccountPage: React.FC = () => {
                 </form>
 
                 {/* Safe area spacer */}
-                <div className="h-10" />
+                <div className="h-20" />
             </main>
 
             {/* Balance Adjustment Modal */}

@@ -125,7 +125,7 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Account Settings */}
-        <section className="animate-slide-up" style={{ animationDelay: '0.05s' }}>
+        <section>
           <h2 className="text-sm font-bold text-app-muted uppercase tracking-wider mb-3">Cuenta</h2>
           <div className="bg-app-card rounded-2xl border border-app-border p-4 shadow-sm">
             <div className="flex justify-between items-center">
@@ -157,7 +157,7 @@ const Profile: React.FC = () => {
         </section>
 
         {/* Logout Section */}
-        <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        <section>
           <h2 className="text-sm font-bold text-app-muted uppercase tracking-wider mb-3">Sesión</h2>
           <div className="bg-app-card rounded-2xl border border-app-border p-4 shadow-sm">
             <p className="text-app-muted text-xs mb-4">

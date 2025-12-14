@@ -112,14 +112,14 @@ const NewRecurringPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-app-bg">
+      <div className="flex items-center justify-center min-min-h-full bg-app-bg">
         <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-app-bg text-app-text">
+    <div className="flex flex-col min-min-h-full bg-app-bg text-app-text">
       <PageHeader title="Nuevo Recurrente" showBackButton />
 
       <main className="flex-1 px-5 py-6 w-full max-w-lg mx-auto">

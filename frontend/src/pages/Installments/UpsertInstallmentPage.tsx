@@ -124,7 +124,7 @@ const UpsertInstallmentPage: React.FC = () => {
 
     if (isLoadingPurchases || isLoadingAccounts || isLoadingCategories) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-app-bg">
+            <div className="flex items-center justify-center min-min-h-full bg-app-bg">
                 <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
             </div>
         );
@@ -151,7 +151,7 @@ const UpsertInstallmentPage: React.FC = () => {
         const suggestedAmount = Math.min(existingPurchase.monthlyPayment, remainingAmount);
 
         return (
-            <div className="flex flex-col h-screen bg-app-bg text-app-text">
+            <div className="flex flex-col min-h-full bg-app-bg text-app-text">
                 <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
                     <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
                         <span className="material-symbols-outlined">arrow_back_ios_new</span>
@@ -358,7 +358,7 @@ const UpsertInstallmentPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-app-bg text-app-text">
+        <div className="min-min-h-full bg-app-bg text-app-text">
             <PageHeader title={isEditMode ? 'Editar Compra a MSI' : 'Nueva Compra a MSI'} showBackButton={true} />
 
             <main className="px-5 py-6 pb-10">

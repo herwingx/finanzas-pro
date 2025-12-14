@@ -391,7 +391,7 @@ const NewTransaction: React.FC = () => {
   // 1. Loading State to prevent Flicker
   if (editId && isLoadingExisting) {
     return (
-      <div className="flex flex-col h-screen bg-app-bg">
+      <div className="flex flex-col min-h-full bg-app-bg">
         <header className="p-4 bg-app-bg border-b border-app-border">
           <div className="h-6 w-32 bg-app-elevated animate-pulse rounded"></div>
         </header>
@@ -413,7 +413,7 @@ const NewTransaction: React.FC = () => {
     const destAccountName = existingTransaction.destinationAccount?.name;
 
     return (
-      <div className="flex flex-col h-screen bg-app-bg text-app-text">
+      <div className="flex flex-col min-h-full bg-app-bg text-app-text">
         <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
           <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
             <span className="material-symbols-outlined">arrow_back_ios_new</span>
@@ -518,7 +518,7 @@ const NewTransaction: React.FC = () => {
   const typeWasPreselected = !!(state?.type || searchParams.get('type'));
 
   return (
-    <div className="flex flex-col h-screen bg-app-bg text-app-text">
+    <div className="flex flex-col min-h-full bg-app-bg text-app-text">
       <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
         <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated"><span className="material-symbols-outlined">arrow_back_ios_new</span></button>
         <h1 className="text-lg font-bold">
@@ -527,13 +527,13 @@ const NewTransaction: React.FC = () => {
         <div className="w-10"></div>
       </header>
 
-      <main className="flex-1 px-5 py-6 w-full max-w-lg mx-auto pb-10">
+      <main className="flex-1 px-5 py-6 w-full max-w-lg mx-auto pb-24">
         {/* Show type badge when preselected from FAB or editing */}
         {(typeWasPreselected || editId) ? (
           <div className="text-center mb-6">
             <span className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl ${type === 'income' ? 'bg-green-500/10 text-green-500' :
-                type === 'expense' ? 'bg-red-500/10 text-red-500' :
-                  'bg-blue-500/10 text-blue-500'
+              type === 'expense' ? 'bg-red-500/10 text-red-500' :
+                'bg-blue-500/10 text-blue-500'
               }`}>
               <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: '"FILL" 1' }}>
                 {type === 'income' ? 'trending_up' : type === 'expense' ? 'shopping_bag' : 'swap_horiz'}
@@ -813,7 +813,7 @@ const NewTransaction: React.FC = () => {
         </form>
 
         {/* Safe area spacer */}
-        <div className="h-10"></div>
+        <div className="h-20"></div>
       </main>
     </div>
   );

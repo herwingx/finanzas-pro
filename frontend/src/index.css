@@ -1070,22 +1070,20 @@ body {
 
 /* === App Shell Layout === */
 
-/* Main app container - fills viewport without causing scroll */
+/* Main app container - flexible height, allows content to grow */
 .app-shell {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: hidden;
 }
 
 /* Scrollable main content area */
 .app-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
 }
 
 /* When content should grow naturally */

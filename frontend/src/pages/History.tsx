@@ -229,42 +229,42 @@ const History: React.FC = () => {
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filterType === 'all'
-              ? 'bg-app-primary text-white shadow-lg shadow-app-primary/20'
+            className={`shrink-0 h-8 px-4 rounded-full text-xs font-bold transition-all flex items-center justify-center ${filterType === 'all'
+              ? 'bg-app-primary text-white shadow-md'
               : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
-            Todo
+            Todas
           </button>
           <button
             onClick={() => setFilterType('income')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'income'
-              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+            className={`shrink-0 h-8 px-3 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${filterType === 'income'
+              ? 'bg-app-income text-white shadow-md'
               : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
-            <span className="material-symbols-outlined text-sm">arrow_downward</span>
-            Ingresos
+            <span className="material-symbols-outlined text-sm" style={{ fontSize: '14px' }}>trending_up</span>
+            <span>Ingresos</span>
           </button>
           <button
             onClick={() => setFilterType('expense')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'expense'
-              ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
+            className={`shrink-0 h-8 px-3 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${filterType === 'expense'
+              ? 'bg-app-expense text-white shadow-md'
               : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
-            <span className="material-symbols-outlined text-sm">arrow_upward</span>
-            Gastos
+            <span className="material-symbols-outlined text-sm" style={{ fontSize: '14px' }}>trending_down</span>
+            <span>Gastos</span>
           </button>
           <button
             onClick={() => setFilterType('transfer')}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'transfer'
-              ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+            className={`shrink-0 h-8 px-3 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1 ${filterType === 'transfer'
+              ? 'bg-app-transfer text-white shadow-md'
               : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
-            <span className="material-symbols-outlined text-sm">swap_horiz</span>
-            Transferencias
+            <span className="material-symbols-outlined text-sm" style={{ fontSize: '14px' }}>swap_horiz</span>
+            <span>Transferencias</span>
           </button>
         </div>
       </div>

@@ -81,6 +81,52 @@
   --shadow-lg: 0 20px 25px -5px rgba(30, 41, 59, 0.1), 0 10px 10px -5px rgba(30, 41, 59, 0.04);
   --shadow-xl: 0 25px 50px -12px rgba(30, 41, 59, 0.25);
   --shadow-2xl: 0 35px 60px -15px rgba(30, 41, 59, 0.3);
+
+  /* === SEMANTIC COLORS - Account Types === */
+  --color-account-credit: hsl(340, 85%, 55%);
+  /* Credit Card - Pink/Rose */
+  --color-account-credit-bg: hsla(340, 85%, 55%, 0.12);
+  --color-account-debit: hsl(210, 90%, 52%);
+  /* Debit Card - Blue */
+  --color-account-debit-bg: hsla(210, 90%, 52%, 0.12);
+  --color-account-cash: hsl(145, 75%, 42%);
+  /* Cash - Green */
+  --color-account-cash-bg: hsla(145, 75%, 42%, 0.12);
+  --color-account-savings: hsl(195, 85%, 45%);
+  /* Savings - Teal */
+  --color-account-savings-bg: hsla(195, 85%, 45%, 0.12);
+  --color-account-investment: hsl(45, 90%, 48%);
+  /* Investment - Gold */
+  --color-account-investment-bg: hsla(45, 90%, 48%, 0.12);
+
+  /* === SEMANTIC COLORS - Transaction Types === */
+  --color-income: hsl(145, 80%, 40%);
+  /* Income - Green */
+  --color-income-bg: hsla(145, 80%, 40%, 0.12);
+  --color-expense: hsl(0, 75%, 55%);
+  /* Expense - Red */
+  --color-expense-bg: hsla(0, 75%, 55%, 0.12);
+  --color-transfer: hsl(210, 85%, 55%);
+  /* Transfer - Blue */
+  --color-transfer-bg: hsla(210, 85%, 55%, 0.12);
+  --color-recurring: hsl(270, 70%, 55%);
+  /* Recurring - Purple */
+  --color-recurring-bg: hsla(270, 70%, 55%, 0.12);
+  --color-msi: hsl(35, 90%, 50%);
+  /* MSI/Installments - Orange */
+  --color-msi-bg: hsla(35, 90%, 50%, 0.12);
+
+  /* === SEMANTIC COLORS - Actions === */
+  --color-action-pay: hsl(145, 75%, 42%);
+  /* Pay/Confirm - Green */
+  --color-action-edit: hsl(45, 90%, 48%);
+  /* Edit - Amber */
+  --color-action-delete: hsl(0, 75%, 55%);
+  /* Delete - Red */
+  --color-action-add: hsl(210, 90%, 52%);
+  /* Add - Blue */
+  --color-action-cancel: hsl(0, 0%, 50%);
+  /* Cancel - Gray */
 }
 
 .dark {
@@ -158,6 +204,52 @@
   --shadow-glow-sm: 0 0 15px hsla(230, 100%, 65%, 0.15);
   --shadow-glow-md: 0 0 25px hsla(230, 100%, 65%, 0.2);
   --shadow-glow-lg: 0 0 40px hsla(230, 100%, 65%, 0.3);
+
+  /* === SEMANTIC COLORS - Account Types (Dark Mode) === */
+  --color-account-credit: hsl(340, 90%, 65%);
+  /* Credit Card - Pink Neon */
+  --color-account-credit-bg: hsla(340, 90%, 65%, 0.18);
+  --color-account-debit: hsl(210, 100%, 65%);
+  /* Debit Card - Blue Neon */
+  --color-account-debit-bg: hsla(210, 100%, 65%, 0.18);
+  --color-account-cash: hsl(145, 85%, 50%);
+  /* Cash - Green Neon */
+  --color-account-cash-bg: hsla(145, 85%, 50%, 0.18);
+  --color-account-savings: hsl(195, 90%, 55%);
+  /* Savings - Teal Neon */
+  --color-account-savings-bg: hsla(195, 90%, 55%, 0.18);
+  --color-account-investment: hsl(45, 100%, 55%);
+  /* Investment - Gold Neon */
+  --color-account-investment-bg: hsla(45, 100%, 55%, 0.18);
+
+  /* === SEMANTIC COLORS - Transaction Types (Dark Mode) === */
+  --color-income: hsl(145, 90%, 50%);
+  /* Income - Green Neon */
+  --color-income-bg: hsla(145, 90%, 50%, 0.18);
+  --color-expense: hsl(0, 85%, 62%);
+  /* Expense - Red Neon */
+  --color-expense-bg: hsla(0, 85%, 62%, 0.18);
+  --color-transfer: hsl(210, 100%, 65%);
+  /* Transfer - Blue Neon */
+  --color-transfer-bg: hsla(210, 100%, 65%, 0.18);
+  --color-recurring: hsl(270, 85%, 65%);
+  /* Recurring - Purple Neon */
+  --color-recurring-bg: hsla(270, 85%, 65%, 0.18);
+  --color-msi: hsl(35, 100%, 55%);
+  /* MSI/Installments - Orange Neon */
+  --color-msi-bg: hsla(35, 100%, 55%, 0.18);
+
+  /* === SEMANTIC COLORS - Actions (Dark Mode) === */
+  --color-action-pay: hsl(145, 85%, 50%);
+  /* Pay/Confirm - Green */
+  --color-action-edit: hsl(45, 100%, 55%);
+  /* Edit - Amber */
+  --color-action-delete: hsl(0, 85%, 62%);
+  /* Delete - Red */
+  --color-action-add: hsl(210, 100%, 65%);
+  /* Add - Blue */
+  --color-action-cancel: hsl(0, 0%, 55%);
+  /* Cancel - Gray */
 }
 
 .light {
@@ -216,6 +308,52 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+  /* === SEMANTIC COLORS - Account Types (Light Mode) === */
+  --color-account-credit: hsl(340, 80%, 50%);
+  /* Credit Card - Rose */
+  --color-account-credit-bg: hsla(340, 80%, 50%, 0.10);
+  --color-account-debit: hsl(210, 85%, 48%);
+  /* Debit Card - Blue */
+  --color-account-debit-bg: hsla(210, 85%, 48%, 0.10);
+  --color-account-cash: hsl(145, 70%, 38%);
+  /* Cash - Green */
+  --color-account-cash-bg: hsla(145, 70%, 38%, 0.10);
+  --color-account-savings: hsl(195, 80%, 42%);
+  /* Savings - Teal */
+  --color-account-savings-bg: hsla(195, 80%, 42%, 0.10);
+  --color-account-investment: hsl(45, 85%, 45%);
+  /* Investment - Gold */
+  --color-account-investment-bg: hsla(45, 85%, 45%, 0.10);
+
+  /* === SEMANTIC COLORS - Transaction Types (Light Mode) === */
+  --color-income: hsl(145, 75%, 35%);
+  /* Income - Green */
+  --color-income-bg: hsla(145, 75%, 35%, 0.10);
+  --color-expense: hsl(0, 70%, 50%);
+  /* Expense - Red */
+  --color-expense-bg: hsla(0, 70%, 50%, 0.10);
+  --color-transfer: hsl(210, 85%, 48%);
+  /* Transfer - Blue */
+  --color-transfer-bg: hsla(210, 85%, 48%, 0.10);
+  --color-recurring: hsl(270, 65%, 50%);
+  /* Recurring - Purple */
+  --color-recurring-bg: hsla(270, 65%, 50%, 0.10);
+  --color-msi: hsl(35, 85%, 45%);
+  /* MSI/Installments - Orange */
+  --color-msi-bg: hsla(35, 85%, 45%, 0.10);
+
+  /* === SEMANTIC COLORS - Actions (Light Mode) === */
+  --color-action-pay: hsl(145, 70%, 38%);
+  /* Pay/Confirm - Green */
+  --color-action-edit: hsl(45, 85%, 45%);
+  /* Edit - Amber */
+  --color-action-delete: hsl(0, 70%, 50%);
+  /* Delete - Red */
+  --color-action-add: hsl(210, 85%, 48%);
+  /* Add - Blue */
+  --color-action-cancel: hsl(0, 0%, 45%);
+  /* Cancel - Gray */
 }
 
 /* Fallback for system preference */
@@ -248,6 +386,237 @@ body {
     color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-x: hidden;
   /* Prevent horizontal scroll */
+}
+
+/* ==========================================================================
+   2.1 Form Element Reset & Standardization
+   ========================================================================== */
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  /* Standardize font size to prevent zooming on mobile */
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  accent-color: var(--color-primary);
+
+  /* CRITICAL: Force inputs to respect container width */
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Force dark color scheme on inputs in dark mode to fix native pickers */
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+}
+
+::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+/* Remove default focus styles and handle with Tailwind classes or custom vars */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* ==========================================================================
+   2.2 Prevent Horizontal Scroll - Global Safety Net
+   ========================================================================== */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Force all containers to respect viewport */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Prevent flex children from overflowing */
+.flex>* {
+  min-width: 0;
+}
+
+/* Prevent grid children from overflowing */
+.grid>* {
+  min-width: 0;
+}
+
+/* ==========================================================================
+   2.3 Consistent Form Elements - Inputs, Selects, Buttons
+   ========================================================================== */
+
+/* Base Input/Select Style */
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  color: var(--color-text-primary);
+  transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
+  outline: none;
+}
+
+.form-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.form-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+/* === Semantic Button Styles === */
+
+/* Base Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary Action Button */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverted);
+  box-shadow: 0 2px 8px var(--color-primary-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-primary-glow);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Pay/Confirm Action (Green) */
+.btn-pay {
+  background-color: var(--color-action-pay);
+  color: var(--color-text-inverted);
+  box-shadow: 0 2px 8px hsla(145, 75%, 42%, 0.25);
+}
+
+.btn-pay:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsla(145, 75%, 42%, 0.35);
+}
+
+/* Edit Action (Amber) */
+.btn-edit {
+  background-color: var(--color-action-edit);
+  color: var(--color-text-inverted);
+  box-shadow: 0 2px 8px hsla(45, 90%, 48%, 0.25);
+}
+
+.btn-edit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsla(45, 90%, 48%, 0.35);
+}
+
+/* Delete Action (Red) */
+.btn-delete {
+  background-color: var(--color-action-delete);
+  color: var(--color-text-inverted);
+  box-shadow: 0 2px 8px hsla(0, 75%, 55%, 0.25);
+}
+
+.btn-delete:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsla(0, 75%, 55%, 0.35);
+}
+
+/* Add Action (Blue) */
+.btn-add {
+  background-color: var(--color-action-add);
+  color: var(--color-text-inverted);
+  box-shadow: 0 2px 8px hsla(210, 90%, 52%, 0.25);
+}
+
+.btn-add:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsla(210, 90%, 52%, 0.35);
+}
+
+/* Cancel/Secondary Action (Gray/Outlined) */
+.btn-cancel {
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: var(--color-bg-hover);
+}
+
+/* Small Button Variant */
+.btn-sm {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.75rem;
+}
+
+/* Large Button Variant */
+.btn-lg {
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+}
+
+/* Full Width Button */
+.btn-block {
+  width: 100%;
+}
+
+/* Icon-only Button */
+.btn-icon {
+  padding: 0.625rem;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.btn-icon-sm {
+  padding: 0.375rem;
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 /* Custom Scrollbar for internal containers */
@@ -619,8 +988,15 @@ body {
 }
 
 /* ==========================================================================
-   6. Mobile Safe Area Support (iOS notch, home indicator)
+   6. Mobile Safe Area Support & Dynamic Viewport
    ========================================================================== */
+
+/* 
+  Modern viewport units with fallbacks:
+  - svh: Small viewport height (excludes browser chrome)
+  - lvh: Large viewport height (includes browser chrome)
+  - dvh: Dynamic viewport height (adapts to browser chrome visibility)
+*/
 
 /* Safe area padding utilities for iOS devices */
 .safe-area-pt {
@@ -639,22 +1015,121 @@ body {
   padding-right: max(env(safe-area-inset-right), 0.5rem);
 }
 
-/* Full bleed for mobile PWA */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  body {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
+/* Pages without bottom nav - just safe area padding */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 1rem);
 }
 
-/* Ensure content doesn't go behind browser UI */
-#root {
+/* === Dynamic Viewport Height Classes === */
+
+/* Full height with dvh fallback */
+.h-screen-dynamic {
+  height: 100vh;
+  /* Fallback */
+  height: 100dvh;
+}
+
+.min-h-screen-dynamic {
   min-height: 100vh;
+  /* Fallback */
+  min-height: 100dvh;
+}
+
+/* Small viewport (useful when keyboard is open) */
+.h-screen-small {
+  height: 100vh;
+  height: 100svh;
+}
+
+.min-h-screen-small {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+/* === Root & HTML Setup === */
+html {
+  /* Use dvh if supported, fallback to -webkit-fill-available, then vh */
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
+body {
+  /* Inherit height from html */
+  min-height: 100%;
   min-height: -webkit-fill-available;
 }
 
-html {
-  height: -webkit-fill-available;
+/* Root container setup */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+/* === App Shell Layout === */
+
+/* Main app container - fills viewport without causing scroll */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+/* Scrollable main content area */
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* When content should grow naturally */
+.app-content-grow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth scrolling */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+
+  /* Prevent rubber-band scrolling on body */
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  /* Fix for iOS standalone mode */
+  @media (display-mode: standalone) {
+    #root {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+  }
 }

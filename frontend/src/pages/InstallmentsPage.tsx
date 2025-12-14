@@ -89,7 +89,7 @@ const InstallmentsPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+            <div className="pb-28 animate-fade-in bg-app-bg text-app-text font-sans">
                 <PageHeader title="Mis Meses Sin Intereses" />
                 <div className="p-4 space-y-4">
                     <SkeletonTransactionList count={5} />
@@ -103,7 +103,7 @@ const InstallmentsPage: React.FC = () => {
     }
 
     return (
-        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+        <div className="bg-app-bg text-app-text font-sans relative overflow-hidden">
             {/* Ambient Background Glow */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
@@ -189,13 +189,7 @@ const InstallmentsPage: React.FC = () => {
                 )}
             </div>
 
-            {/* FAB to add new MSI */}
-            <button
-                onClick={() => navigate('/installments/new')}
-                className="fixed bottom-24 right-4 size-14 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-105 transition-transform z-40"
-            >
-                <span className="material-symbols-outlined text-2xl">add</span>
-            </button>
+
         </div>
     );
 };

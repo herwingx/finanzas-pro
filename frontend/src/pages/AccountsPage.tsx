@@ -64,7 +64,7 @@ const AccountsPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+            <div className="pb-28 animate-fade-in bg-app-bg text-app-text font-sans">
                 <PageHeader title="Mis Cuentas" showBackButton={false} />
                 <div className="px-4 mt-6">
                     <SkeletonTransactionList count={5} />
@@ -87,7 +87,7 @@ const AccountsPage: React.FC = () => {
     const netWorth = totalAssets - totalDebt;
 
     return (
-        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+        <div className="bg-app-bg text-app-text font-sans relative overflow-hidden">
             {/* Ambient Background Glow */}
             <div className="fixed inset-0 pointer-events-none -z-10">
                 <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />

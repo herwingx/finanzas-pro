@@ -50,20 +50,20 @@ const Dashboard: React.FC = () => {
 
 
   return (
-    <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+    <div className="animate-fade-in bg-app-bg text-app-text font-sans">
       {/* Ambient Background Glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
       </div>
 
-      <div className="flex items-center p-4 sticky top-0 bg-app-bg/80 backdrop-blur-xl z-20 border-b border-app-border transition-all">
-        <Link to="/profile" className="size-12 rounded-2xl bg-gradient-to-br from-app-primary via-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-app-primary/20 overflow-hidden shrink-0 ring-2 ring-app-bg transition-transform hover:scale-105 active:scale-95">
-          {profile?.avatar ? <img src={profile.avatar} alt="User Avatar" className="w-full h-full object-cover" /> : <span className="text-lg">{userInitials}</span>}
+      <div className="h-14 flex items-center px-4 sticky top-0 bg-app-bg/95 backdrop-blur-xl z-20 border-b border-app-border/50">
+        <Link to="/profile" className="size-11 rounded-xl bg-app-primary flex items-center justify-center text-white font-bold text-sm shadow-md shadow-app-primary/20 overflow-hidden shrink-0 transition-transform hover:scale-105 active:scale-95">
+          {profile?.avatar ? <img src={profile.avatar} alt="User Avatar" className="w-full h-full object-cover" /> : <span className="text-base">{userInitials}</span>}
         </Link>
-        <div className="flex-1 px-4">
-          <p className="text-xs text-app-muted font-bold uppercase tracking-wider mb-0.5">Bienvenido,</p>
-          <h1 className="text-xl font-bold tracking-tight truncate bg-clip-text text-transparent bg-gradient-to-r from-app-text-primary to-app-secondary">
+        <div className="flex-1 px-3 min-w-0">
+          <p className="text-[10px] text-app-muted font-bold uppercase tracking-wider">Bienvenido,</p>
+          <h1 className="text-lg font-bold tracking-tight truncate text-app-text">
             {profile?.name}
           </h1>
         </div>

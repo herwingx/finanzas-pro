@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories, useAddCategory, useUpdateCategory, useDeleteCategory } from '../hooks/useApi';
 import { TransactionType, Category } from '../types';
 import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { SkeletonTransactionList } from '../components/Skeleton';
+import { IconSelector } from '../components/IconSelector';
+import { CategorySelector } from '../components/CategorySelector';
 
 const ICONS = ['category', 'shopping_cart', 'restaurant', 'lunch_dining', 'local_cafe', 'directions_car', 'local_gas_station', 'flight', 'hotel', 'home', 'apartment', 'cottage', 'payments', 'savings', 'account_balance', 'credit_card', 'school', 'science', 'sports_esports', 'fitness_center', 'movie', 'music_note', 'medical_services', 'local_hospital', 'pets', 'stroller', 'checkroom', 'watch', 'diamond', 'work', 'business_center', 'build', 'star', 'favorite', 'bolt', 'receipt_long', 'redeem', 'local_offer'];
 const DEFAULT_CATEGORY_STATE = { name: '', icon: 'category', color: '#6B5FFF', type: 'expense' as TransactionType, budgetType: undefined };
@@ -23,26 +25,59 @@ const CategoryForm: React.FC<any> = ({ category, setCategory, onSubmit, isSaving
                 <button onClick={onCancel} className="p-1 text-app-muted hover:text-app-text"><span className="material-symbols-outlined text-lg">close</span></button>
             </div>
             <form onSubmit={onSubmit} className="space-y-4">
+                {/* Preview */}
+                <div className="flex justify-center mb-2">
+                    <div
+                        className="size-16 rounded-2xl flex items-center justify-center shadow-lg transition-all"
+                        style={{ backgroundColor: category.color }}
+                    >
+                        <span className="material-symbols-outlined text-3xl text-white" style={{ fontVariationSettings: '"FILL" 1' }}>
+                            {category.icon}
+                        </span>
+                    </div>
+                </div>
+
                 <div className="flex items-center gap-4">
                     <div className="flex-1">
                         <label className="block text-[10px] font-bold text-app-muted mb-1.5 uppercase">Nombre</label>
                         <input type="text" placeholder="Ej: Comida" value={category.name} onChange={e => setCategory({ ...category, name: e.target.value })} required className="w-full px-3 py-2.5 rounded-xl bg-app-elevated border border-app-border text-sm" />
                     </div>
-                    <div className="flex flex-col items-center">
-                        <label className="block text-[10px] font-bold text-app-muted mb-1.5 uppercase">Color</label>
-                        <input type="color" value={category.color} onChange={e => setCategory({ ...category, color: e.target.value })} className="w-10 h-10 rounded-full border-2 border-app-border bg-app-elevated cursor-pointer" />
+                </div>
+
+                {/* Color Picker */}
+                <div>
+                    <label className="block text-[10px] font-bold text-app-muted mb-1.5 uppercase">Color</label>
+                    <div className="flex gap-2 flex-wrap">
+                        {COLORS.map(color => (
+                            <button
+                                type="button"
+                                key={color}
+                                onClick={() => setCategory({ ...category, color })}
+                                className={`size-8 rounded-full transition-all ${category.color === color
+                                    ? 'ring-2 ring-offset-2 ring-offset-app-card ring-app-text scale-110'
+                                    : 'hover:scale-110'
+                                    }`}
+                                style={{ backgroundColor: color }}
+                            />
+                        ))}
+                        <input
+                            type="color"
+                            value={category.color}
+                            onChange={e => setCategory({ ...category, color: e.target.value })}
+                            className="size-8 rounded-full border-2 border-dashed border-app-border bg-transparent cursor-pointer"
+                            title="Color personalizado"
+                        />
                     </div>
                 </div>
 
                 <div>
                     <label className="block text-[10px] font-bold text-app-muted mb-1.5 uppercase">Icono</label>
-                    <div className="grid grid-cols-7 gap-2 bg-app-elevated p-2 rounded-xl border border-app-border">
-                        {ICONS.map(icon => (
-                            <button type="button" key={icon} onClick={() => setCategory({ ...category, icon })} className={`aspect-square rounded-lg flex items-center justify-center transition-all ${category.icon === icon ? 'bg-app-primary text-white' : 'hover:bg-app-card'}`}>
-                                <span className="material-symbols-outlined text-xl">{icon}</span>
-                            </button>
-                        ))}
-                    </div>
+                    <IconSelector
+                        icons={ICONS}
+                        selectedIcon={category.icon}
+                        selectedColor={category.color}
+                        onSelect={(icon) => setCategory({ ...category, icon })}
+                    />
                 </div>
 
                 <div>
@@ -55,10 +90,10 @@ const CategoryForm: React.FC<any> = ({ category, setCategory, onSubmit, isSaving
 
                 {category.type === 'expense' && (
                     <div>
-                        <label className="block text-[10px] font-bold text-app-muted mb-1.5 uppercase">Clasificación (Opcional)</label>
+                        <label className="block text-[10px] font-bold text-app-muted mb-1.5 uppercase">Clasificación 50/30/20 (Opcional)</label>
                         <div className="flex bg-app-elevated p-1 rounded-xl border border-app-border">
-                            {[{ id: 'need', label: 'Necesidad' }, { id: 'want', label: 'Deseo' }, { id: 'savings', label: 'Ahorro' }].map(type => (
-                                <button key={type.id} type="button" onClick={() => handleBudgetTypeToggle(type.id as any)} className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${category.budgetType === type.id ? 'bg-app-card text-app-primary shadow-sm border border-app-border' : 'text-app-muted'}`}>{type.label}</button>
+                            {[{ id: 'need', label: '50% Necesidad', color: 'text-blue-500' }, { id: 'want', label: '30% Deseo', color: 'text-purple-500' }, { id: 'savings', label: '20% Ahorro', color: 'text-green-500' }].map(type => (
+                                <button key={type.id} type="button" onClick={() => handleBudgetTypeToggle(type.id as any)} className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${category.budgetType === type.id ? `bg-app-card ${type.color} shadow-sm border border-app-border` : 'text-app-muted'}`}>{type.label}</button>
                             ))}
                         </div>
                     </div>
@@ -81,6 +116,11 @@ const Categories: React.FC = () => {
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [reassigningDelete, setReassigningDelete] = useState<Category | null>(null);
     const [reassignTargetId, setReassignTargetId] = useState<string>('');
+
+    const reassignCategories = useMemo(() => {
+        if (!reassigningDelete || !categories) return [];
+        return categories.filter(c => c.id !== reassigningDelete.id && c.type === reassigningDelete.type);
+    }, [reassigningDelete, categories]);
 
     const handleOpenForm = (category: Category | null) => {
         setEditingCategory(category);
@@ -128,6 +168,7 @@ const Categories: React.FC = () => {
             await deleteCategoryMutation.mutateAsync({ id: reassigningDelete.id, newCategoryId: reassignTargetId });
             toastSuccess('Categoría reasignada y eliminada');
             setReassigningDelete(null);
+            setReassignTargetId('');
         } catch (error: any) {
             toast.error(error.message || 'Error al reasignar');
         }
@@ -135,22 +176,44 @@ const Categories: React.FC = () => {
 
     const renderCategoryList = (title: string, catList: Category[]) => (
         <div className="bg-app-card rounded-2xl border border-app-border overflow-hidden shadow-sm">
-            <div className="px-4 py-3 bg-app-elevated/50 border-b border-app-border flex justify-between items-center"><h3 className="font-bold text-xs">{title}</h3><span className="text-[10px] font-bold bg-app-elevated px-2 py-0.5 rounded-full text-app-muted border border-app-border">{catList.length}</span></div>
+            <div className="px-4 py-3 bg-app-elevated/50 border-b border-app-border flex justify-between items-center">
+                <h3 className="font-bold text-xs">{title}</h3>
+                <span className="text-[10px] font-bold bg-app-elevated px-2 py-0.5 rounded-full text-app-muted border border-app-border">{catList.length}</span>
+            </div>
             <div className="divide-y divide-app-border">
                 {catList.map(cat => (
                     <div key={cat.id} className="flex items-center gap-3 p-3">
-                        <div className="size-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}><span className="material-symbols-outlined text-lg">{cat.icon}</span></div>
-                        <span className="flex-1 font-medium text-sm truncate">{cat.name}</span>
+                        <div
+                            className="size-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+                            style={{ backgroundColor: cat.color }}
+                        >
+                            <span className="material-symbols-outlined text-lg text-white" style={{ fontVariationSettings: '"FILL" 1' }}>{cat.icon}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm truncate block">{cat.name}</span>
+                            {cat.budgetType && (
+                                <span className={`text-[10px] font-medium ${cat.budgetType === 'need' ? 'text-blue-500' :
+                                    cat.budgetType === 'want' ? 'text-purple-500' : 'text-green-500'
+                                    }`}>
+                                    {cat.budgetType === 'need' ? '50% Necesidad' : cat.budgetType === 'want' ? '30% Deseo' : '20% Ahorro'}
+                                </span>
+                            )}
+                        </div>
                         <button onClick={() => handleOpenForm(cat)} className="p-1.5 rounded-md hover:bg-app-elevated transition-colors"><span className="material-symbols-outlined text-base">edit</span></button>
                         <button onClick={() => handleInitialDelete(cat)} className="p-1.5 rounded-md hover:bg-app-elevated transition-colors"><span className="material-symbols-outlined text-base text-app-danger">delete</span></button>
                     </div>
                 ))}
+                {catList.length === 0 && (
+                    <div className="p-6 text-center text-app-muted text-sm">
+                        No hay categorías de {title.toLowerCase()}
+                    </div>
+                )}
             </div>
         </div>
     );
 
     return (
-        <div className="pb-24 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+        <div className="bg-app-bg text-app-text relative overflow-hidden">
             {/* Ambient Background Glow */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
@@ -170,24 +233,42 @@ const Categories: React.FC = () => {
                 }
             </div>
 
+            {/* Reassign Modal with CategorySelector */}
             {reassigningDelete && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-app-card rounded-2xl p-6 max-w-sm w-full shadow-lg border border-app-border">
-                        <h3 className="text-lg font-bold mb-2">Reasignar y Eliminar</h3>
-                        <p className="text-sm text-app-muted mb-6">"{reassigningDelete.name}" tiene transacciones. Mueve sus transacciones a otra categoría para poder eliminarla.</p>
-                        <div className="relative mb-6">
-                            <select value={reassignTargetId} onChange={(e) => setReassignTargetId(e.target.value)} className="w-full p-4 pl-4 pr-10 bg-app-elevated border border-app-border rounded-xl text-app-text font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary transition-all text-sm">
-                                <option value="">Selecciona una categoría...</option>
-                                {categories?.filter(c => c.id !== reassigningDelete.id && c.type === reassigningDelete.type).map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
-                                <span className="material-symbols-outlined">expand_more</span>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div
+                                className="size-12 rounded-xl flex items-center justify-center"
+                                style={{ backgroundColor: reassigningDelete.color }}
+                            >
+                                <span className="material-symbols-outlined text-xl text-white" style={{ fontVariationSettings: '"FILL" 1' }}>
+                                    {reassigningDelete.icon}
+                                </span>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold">Reasignar y Eliminar</h3>
+                                <p className="text-sm text-app-muted">"{reassigningDelete.name}"</p>
                             </div>
                         </div>
+
+                        <p className="text-sm text-app-muted mb-4">
+                            Esta categoría tiene transacciones. Selecciona otra categoría para moverlas antes de eliminar.
+                        </p>
+
+                        <div className="mb-4">
+                            <label className="block text-xs font-bold text-app-muted mb-2 uppercase">Mover a:</label>
+                            <CategorySelector
+                                categories={reassignCategories}
+                                selectedId={reassignTargetId}
+                                onSelect={setReassignTargetId}
+                                emptyMessage="No hay otras categorías disponibles"
+                                columns={4}
+                            />
+                        </div>
+
                         <div className="flex justify-end gap-3">
-                            <button onClick={() => setReassigningDelete(null)} className="btn-modern btn-ghost px-4 py-2 font-semibold text-sm">Cancelar</button>
+                            <button onClick={() => { setReassigningDelete(null); setReassignTargetId(''); }} className="btn-modern btn-ghost px-4 py-2 font-semibold text-sm">Cancelar</button>
                             <button onClick={handleReassignAndDelete} disabled={!reassignTargetId || deleteCategoryMutation.isPending} className="btn-modern bg-app-danger text-white hover:bg-app-danger/90 px-4 py-2 font-semibold text-sm disabled:opacity-50 border-none shadow-md">{deleteCategoryMutation.isPending ? 'Eliminando...' : 'Reasignar y Eliminar'}</button>
                         </div>
                     </div>

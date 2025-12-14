@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useTransactions, useCategories, useProfile } from '../hooks/useApi';
 import { SkeletonDashboard } from '../components/Skeleton';
+import { PageHeader } from '../components/PageHeader';
 
 const Reports: React.FC = () => {
-    const navigate = useNavigate();
     const { data: transactions, isLoading: isLoadingTransactions } = useTransactions();
     const { data: categories, isLoading: isLoadingCategories } = useCategories();
     const { data: profile, isLoading: isLoadingProfile } = useProfile();
@@ -54,20 +53,14 @@ const Reports: React.FC = () => {
     const isLoading = isLoadingTransactions || isLoadingCategories || isLoadingProfile;
 
     return (
-        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+        <div className="bg-app-bg text-app-text font-sans relative overflow-hidden">
             {/* Ambient Background Glow */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+            <div className="fixed inset-0 pointer-events-none -z-10">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px]"></div>
             </div>
-            {/* Header */}
-            <header className="sticky top-0 z-20 flex items-center bg-app-bg/80 backdrop-blur-xl px-4 py-3 border-b border-app-border">
-                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated transition-colors">
-                    <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
-                </button>
-                <h1 className="font-bold text-base text-center flex-1 tracking-tight">Informes</h1>
-                <div className="w-10"></div>
-            </header>
+
+            <PageHeader title="Informes" />
 
             {isLoading ? (
                 <SkeletonDashboard />

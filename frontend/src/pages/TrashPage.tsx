@@ -85,7 +85,7 @@ const TrashPage: React.FC = () => {
   };
 
   return (
-    <div className="pb-28 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+    <div className="bg-app-bg text-app-text relative overflow-hidden">
       {/* Ambient Background Glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>

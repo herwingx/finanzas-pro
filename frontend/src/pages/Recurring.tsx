@@ -6,6 +6,7 @@ import { RecurringTransaction, Category, FrequencyType, TransactionType } from '
 import { toastSuccess, toastError, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { SkeletonTransactionList } from '../components/Skeleton';
+import { DatePicker } from '../components/DatePicker';
 
 // Modal for editing existing recurring transaction
 const EditRecurringModal: React.FC<any> = ({ transaction, categories, onSave, onCancel, isSaving }) => {
@@ -115,17 +116,17 @@ const NewRecurringModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center">
-            <div className="bg-app-card rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-slide-up">
+            <div className="bg-app-card rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden animate-slide-up">
                 {/* Header */}
-                <div className="sticky top-0 bg-app-card border-b border-app-border p-4 flex items-center justify-between">
+                <div className="sticky top-0 bg-app-card border-b border-app-border p-4 flex items-center justify-between z-10">
                     <button onClick={onCancel} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
                         <span className="material-symbols-outlined">close</span>
                     </button>
-                    <h2 className="font-bold text-lg">Nuevo Gasto Recurrente</h2>
+                    <h2 className="font-bold text-lg truncate pr-2">Nuevo Gasto Recurrente</h2>
                     <div className="w-10"></div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 space-y-6">
+                <form onSubmit={handleSubmit} className="p-4 space-y-5 overflow-hidden">
                     {/* Type Toggle */}
                     <div className="flex p-1 bg-app-elevated rounded-xl">
                         <button
@@ -144,11 +145,11 @@ const NewRecurringModal: React.FC<{
                         </button>
                     </div>
 
-                    {/* Amount */}
+                    {/* Amount - simplified and constrained */}
                     <div className="text-center">
                         <label className="text-xs text-app-muted uppercase font-bold">Monto</label>
                         <div className="flex items-center justify-center mt-2">
-                            <span className="text-2xl text-app-muted pr-1">$</span>
+                            <span className="text-2xl text-app-muted font-medium">$</span>
                             <input
                                 type="text"
                                 inputMode="decimal"
@@ -159,7 +160,7 @@ const NewRecurringModal: React.FC<{
                                     if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setAmount(val);
                                 }}
                                 placeholder="0.00"
-                                className="text-4xl font-bold bg-transparent text-center max-w-[200px] focus:outline-none"
+                                className="text-3xl font-bold bg-transparent text-center w-28 focus:outline-none text-app-text placeholder-app-muted/30"
                                 autoFocus
                             />
                         </div>
@@ -173,7 +174,7 @@ const NewRecurringModal: React.FC<{
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Netflix, Spotify, Renta..."
-                            className="w-full p-3 bg-app-elevated rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary"
+                            className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
                         />
                     </div>
 
@@ -183,7 +184,7 @@ const NewRecurringModal: React.FC<{
                         <select
                             value={accountId}
                             onChange={(e) => setAccountId(e.target.value)}
-                            className="w-full p-3 bg-app-elevated rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary"
+                            className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
                         >
                             {accounts.map(acc => (
                                 <option key={acc.id} value={acc.id}>{acc.name}</option>
@@ -194,7 +195,7 @@ const NewRecurringModal: React.FC<{
                     {/* Category */}
                     <div>
                         <label className="text-xs text-app-muted uppercase font-bold">Categoría</label>
-                        <div className="grid grid-cols-4 gap-2 mt-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
                             {availableCategories.map(cat => (
                                 <button
                                     type="button"
@@ -243,12 +244,9 @@ const NewRecurringModal: React.FC<{
                     {/* Start Date */}
                     <div>
                         <label className="text-xs text-app-muted uppercase font-bold">Primer Vencimiento</label>
-                        <input
-                            type="date"
-                            value={startDate.toISOString().split('T')[0]}
-                            onChange={(e) => setStartDate(new Date(e.target.value + 'T12:00:00'))}
-                            className="w-full p-3 bg-app-elevated rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary"
-                        />
+                        <div className="mt-2">
+                            <DatePicker date={startDate} onDateChange={(d) => d && setStartDate(d)} />
+                        </div>
                     </div>
 
                     {/* Already Paid Toggle */}
@@ -369,7 +367,7 @@ const Recurring: React.FC = () => {
     const isLoading = isLoadingRecurring || isLoadingCategories || isLoadingAccounts;
 
     return (
-        <div className="pb-24 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+        <div className="bg-app-bg text-app-text relative overflow-hidden">
             {/* Ambient Background Glow */}
             <div className="fixed inset-0 pointer-events-none -z-10">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px]"></div>
@@ -462,13 +460,7 @@ const Recurring: React.FC = () => {
                 }
             </div>
 
-            {/* FAB to add new */}
-            <button
-                onClick={() => navigate('/recurring/new')}
-                className="fixed bottom-24 right-4 size-14 bg-app-primary text-white rounded-full shadow-xl shadow-app-primary/30 flex items-center justify-center hover:scale-105 transition-transform"
-            >
-                <span className="material-symbols-outlined text-2xl">add</span>
-            </button>
+
 
             {/* Modals */}
             {showNewModal && categories && accounts && (

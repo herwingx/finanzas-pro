@@ -11,139 +11,100 @@ interface NavItemProps {
 const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isActive }) => (
   <Link
     to={to}
-    className="relative flex flex-col items-center justify-center gap-1 w-1/5 py-2 group"
+    className="relative flex flex-col items-center justify-center h-full flex-1 group"
   >
-    {/* Active indicator - modern pill shape at top */}
-    <div
-      className={`absolute -top-0.5 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300 ease-out ${isActive
-        ? 'w-10 bg-gradient-to-r from-app-primary to-app-secondary opacity-100'
-        : 'w-0 bg-app-primary opacity-0'
-        }`}
-    />
-
-    {/* Icon container with scale animation */}
-    <div className={`relative transition-all duration-300 ease-out ${isActive ? 'scale-110' : 'scale-100 group-hover:scale-105'
-      }`}>
+    <div className={`
+      relative rounded-xl p-1.5 transition-all duration-300 ease-out
+      ${isActive ? '-translate-y-0.5' : 'group-hover:-translate-y-0.5'}
+    `}>
+      {isActive && (
+        <div className="absolute inset-0 bg-app-primary/15 rounded-xl blur-sm" />
+      )}
       <span
-        className={`material-symbols-outlined text-2xl transition-all duration-300 ${isActive
-          ? 'text-app-primary font-bold'
-          : 'text-app-muted group-hover:text-app-text'
+        className={`material-symbols-outlined text-2xl transition-all duration-300 ${isActive ? 'text-app-primary font-bold' : 'text-app-muted group-hover:text-app-text'
           }`}
-        style={{ fontVariationSettings: isActive ? '"FILL" 1, "wght" 600' : '"FILL" 0, "wght" 400' }}
+        style={{ fontVariationSettings: isActive ? '"FILL" 1, "wght" 700' : '"FILL" 0, "wght" 400' }}
       >
         {icon}
       </span>
-
-      {/* Glow effect for active item */}
-      {isActive && (
-        <div className="absolute inset-0 bg-app-primary/20 blur-xl rounded-full -z-10 animate-pulse" />
-      )}
     </div>
 
-    {/* Label with fade animation */}
     <span
-      className={`text-[10px] font-semibold transition-all duration-300 ${isActive
-        ? 'text-app-primary opacity-100'
-        : 'text-app-muted opacity-70 group-hover:opacity-100 group-hover:text-app-text'
+      className={`text-[10px] font-medium transition-all duration-300 ${isActive ? 'text-app-primary opacity-100' : 'text-app-muted opacity-70'
         }`}
     >
       {label}
     </span>
+
+    {/* Active indicator line */}
+    {isActive && (
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-app-primary rounded-full" />
+    )}
   </Link>
 );
 
 interface QuickActionProps {
   icon: string;
   label: string;
-  color: string;
+  bgClass: string;
+  textClass: string;
   onClick: () => void;
 }
 
-const QuickAction: React.FC<QuickActionProps> = ({ icon, label, color, onClick }) => (
+const QuickAction: React.FC<QuickActionProps> = ({ icon, label, bgClass, textClass, onClick }) => (
   <button
     onClick={onClick}
-    className="flex flex-col items-center gap-2 w-20 group"
+    className="flex flex-col items-center gap-2 group w-full"
   >
     <div
-      className="size-14 rounded-2xl flex items-center justify-center shadow-lg transition-all group-hover:scale-110 group-active:scale-95"
-      style={{ backgroundColor: color }}
+      className={`size-12 rounded-2xl flex items-center justify-center shadow-md transition-all duration-200 group-hover:scale-105 group-active:scale-95 ${bgClass} ${textClass}`}
     >
-      <span className="material-symbols-outlined text-2xl text-white">{icon}</span>
+      <span className="material-symbols-outlined text-2xl">{icon}</span>
     </div>
-    <span className="text-[11px] font-medium text-app-text text-center">{label}</span>
+    <span className="text-[10px] font-semibold text-app-text text-center leading-tight max-w-[60px]">{label}</span>
   </button>
 );
 
 const FAB: React.FC<{ onClick: () => void; isOpen: boolean }> = ({ onClick, isOpen }) => (
-  <div className="w-1/5 flex justify-center items-start -mt-2">
+  <div className="relative -top-4 flex justify-center items-center size-14">
     <button
       onClick={onClick}
-      className="relative size-14 rounded-2xl bg-gradient-to-br from-app-primary via-app-primary to-app-secondary text-white flex items-center justify-center shadow-xl shadow-app-primary/40 hover:shadow-2xl hover:shadow-app-primary/50 hover:-translate-y-1 active:scale-95 transition-all duration-300 ease-out group"
+      className={`
+        relative size-14 rounded-full flex items-center justify-center
+        bg-app-primary text-white
+        shadow-lg shadow-app-primary/30
+        transition-all duration-300 ease-out z-20
+        ${isOpen ? 'rotate-45 bg-app-muted shadow-none' : 'hover:scale-105 hover:shadow-xl hover:shadow-app-primary/40'}
+      `}
     >
-      {/* Animated ring */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-app-primary to-app-secondary opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
-
-      {/* Icon with rotation effect */}
-      <span
-        className={`material-symbols-outlined text-3xl font-bold relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-45' : ''}`}
-      >
-        add
-      </span>
+      <span className="material-symbols-outlined text-3xl font-medium">add</span>
     </button>
   </div>
 );
 
+// Pages that show the bottom navigation (main tabs only)
+const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
+
 const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  useEffect(() => {
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-
-          // Show navbar when scrolling up or at the top
-          if (currentScrollY < lastScrollY || currentScrollY < 10) {
-            setIsVisible(true);
-          }
-          // Hide navbar when scrolling down (but only after scrolling past 50px)
-          else if (currentScrollY > 50 && currentScrollY > lastScrollY) {
-            setIsVisible(false);
-            setIsMenuOpen(false);
-          }
-
-          setLastScrollY(currentScrollY);
-          ticking = false;
-        });
-
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
-
-  // Close menu when navigating
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  const HIDDEN_PATHS = ['/new', '/profile', '/settings', '/categories', '/budgets'];
-  if (HIDDEN_PATHS.some(path => location.pathname.startsWith(path))) return null;
+  // Only show BottomNav on main navigation pages
+  const shouldShow = MAIN_NAV_PAGES.includes(location.pathname);
+
+  if (!shouldShow) return null;
 
   const quickActions = [
-    { icon: 'shopping_bag', label: 'Gasto', color: '#ef4444', path: '/new?type=expense' },
-    { icon: 'attach_money', label: 'Ingreso', color: '#22c55e', path: '/new?type=income' },
-    { icon: 'sync_alt', label: 'Transferir', color: '#3b82f6', path: '/new?type=transfer' },
-    { icon: 'repeat', label: 'Recurrente', color: '#8b5cf6', path: '/recurring/new' },
-    { icon: 'credit_card', label: 'MSI', color: '#f59e0b', path: '/installments/new' },
+    { icon: 'shopping_bag', label: 'Gasto', bgClass: 'bg-app-expense-bg', textClass: 'text-app-expense', path: '/new?type=expense' },
+    { icon: 'attach_money', label: 'Ingreso', bgClass: 'bg-app-income-bg', textClass: 'text-app-income', path: '/new?type=income' },
+    { icon: 'sync_alt', label: 'Transfer', bgClass: 'bg-app-transfer-bg', textClass: 'text-app-transfer', path: '/new?type=transfer' },
+    { icon: 'update', label: 'Recurrente', bgClass: 'bg-app-recurring-bg', textClass: 'text-app-recurring', path: '/recurring/new' },
+    { icon: 'credit_card', label: 'MSI', bgClass: 'bg-app-msi-bg', textClass: 'text-app-msi', path: '/installments/new' },
   ];
 
   const handleQuickAction = (path: string) => {
@@ -153,29 +114,34 @@ const BottomNav: React.FC = () => {
 
   return (
     <>
-      {/* Spacer to prevent content from hiding behind navbar */}
-      <div className="h-16" />
-
-      {/* Quick Actions Menu Overlay */}
+      {/* Backdrop for Menu */}
       {isMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-fade-in"
           onClick={() => setIsMenuOpen(false)}
         />
       )}
 
-      {/* Quick Actions Menu */}
-      <div className={`fixed bottom-20 left-0 right-0 z-50 transition-all duration-300 ease-out ${isMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'
-        }`}>
-        <div className="mx-4 p-4 bg-app-card rounded-2xl border border-app-border shadow-2xl">
-          <p className="text-xs font-bold text-app-muted uppercase mb-4 text-center">Acción Rápida</p>
-          <div className="flex justify-around">
+      {/* Quick Actions Menu - Positioned above FAB */}
+      <div
+        className={`fixed left-0 right-0 z-50 flex justify-center px-4 transition-all duration-300 ease-out ${isMenuOpen
+          ? 'opacity-100 scale-100'
+          : 'opacity-0 scale-95 pointer-events-none'
+          }`}
+        style={{
+          bottom: 'calc(72px + env(safe-area-inset-bottom) + 16px)'
+        }}
+      >
+        <div className="w-full max-w-sm bg-app-card backdrop-blur-xl p-4 rounded-2xl border border-app-border shadow-2xl">
+          <p className="text-[10px] font-bold text-app-muted uppercase mb-3 text-center tracking-widest">Nueva Transacción</p>
+          <div className="grid grid-cols-5 gap-2">
             {quickActions.map(action => (
               <QuickAction
                 key={action.label}
                 icon={action.icon}
                 label={action.label}
-                color={action.color}
+                bgClass={action.bgClass}
+                textClass={action.textClass}
                 onClick={() => handleQuickAction(action.path)}
               />
             ))}
@@ -183,45 +149,43 @@ const BottomNav: React.FC = () => {
         </div>
       </div>
 
-      {/* Bottom Navigation Bar */}
+      {/* Bottom Nav Bar - Always Fixed */}
       <nav
-        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
-          }`}
-        style={{
-          paddingBottom: 'env(safe-area-inset-bottom)',
-          willChange: 'transform, opacity'
-        }}
+        className="fixed bottom-0 left-0 right-0 z-50"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {/* Solid backdrop with blur */}
-        <div className="absolute inset-0 bg-app-card backdrop-blur-xl border-t border-app-border" />
+        <div className="relative bg-app-card border-t border-app-border shadow-[0_-4px_24px_rgba(0,0,0,0.08)] h-[72px]">
+          <div className="flex items-center justify-around h-full px-2 max-w-lg mx-auto">
+            <NavItem
+              to="/"
+              icon="dashboard"
+              label="Panel"
+              isActive={location.pathname === '/'}
+            />
+            <NavItem
+              to="/history"
+              icon="history"
+              label="Historial"
+              isActive={location.pathname === '/history'}
+            />
 
-        {/* Navigation content */}
-        <div className="relative flex h-16 items-center justify-around px-2">
-          <NavItem
-            to="/"
-            icon="dashboard"
-            label="Panel"
-            isActive={location.pathname === '/'}
-          />
-          <NavItem
-            to="/history"
-            icon="history"
-            label="Historial"
-            isActive={location.pathname === '/history'}
-          />
-          <FAB onClick={() => setIsMenuOpen(!isMenuOpen)} isOpen={isMenuOpen} />
-          <NavItem
-            to="/accounts"
-            icon="account_balance_wallet"
-            label="Cuentas"
-            isActive={location.pathname.startsWith('/accounts')}
-          />
-          <NavItem
-            to="/more"
-            icon="more_horiz"
-            label="Más"
-            isActive={location.pathname === '/more'}
-          />
+            <div className="w-14 shrink-0 flex justify-center">
+              <FAB onClick={() => setIsMenuOpen(!isMenuOpen)} isOpen={isMenuOpen} />
+            </div>
+
+            <NavItem
+              to="/accounts"
+              icon="account_balance_wallet"
+              label="Cuentas"
+              isActive={location.pathname.startsWith('/accounts')}
+            />
+            <NavItem
+              to="/more"
+              icon="apps"
+              label="Más"
+              isActive={location.pathname === '/more'}
+            />
+          </div>
         </div>
       </nav>
     </>

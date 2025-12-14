@@ -69,8 +69,8 @@ const SwipeableExpenseRow = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={`relative p-3 rounded-xl flex items-center justify-between border transition-transform duration-200 ease-out hover:bg-app-card ${item.isOverdue
-            ? 'bg-red-500/10 border-red-500/30'
-            : 'bg-app-elevated border-transparent'
+          ? 'bg-red-500/10 border-red-500/30'
+          : 'bg-app-elevated border-transparent'
           }`}
         style={{
           transform: `translateX(${offsetX}px)`,
@@ -173,7 +173,7 @@ const CreditCardStatementCard = ({
         </div>
 
         <div className="flex items-start gap-3 mb-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-app-secondary to-blue-600 flex items-center justify-center text-white shadow-lg shadow-app-secondary/20 shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-app-credit flex items-center justify-center text-white shadow-lg shrink-0">
             <span className="material-symbols-outlined text-2xl">credit_card</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -195,12 +195,12 @@ const CreditCardStatementCard = ({
 
         {/* Breakdown Summary */}
         <div className="grid grid-cols-2 gap-2 text-center">
-          <div className="bg-app-primary/10 rounded-lg p-2 border border-app-primary/20">
-            <p className="text-[10px] text-app-primary font-bold uppercase">MSI ({msiItems.length})</p>
+          <div className="bg-app-msi-bg rounded-lg p-2 border border-app-msi/20">
+            <p className="text-[10px] text-app-msi font-bold uppercase">MSI ({msiItems.length})</p>
             <p className="text-sm font-bold text-app-text">{formatCurrency(msiTotal)}</p>
           </div>
-          <div className="bg-app-info/10 rounded-lg p-2 border border-app-info/20">
-            <p className="text-[10px] text-app-info font-bold uppercase">Consumos ({regularItems.length})</p>
+          <div className="bg-app-debit-bg rounded-lg p-2 border border-app-debit/20">
+            <p className="text-[10px] text-app-debit font-bold uppercase">Consumos ({regularItems.length})</p>
             <p className="text-sm font-bold text-app-text">{formatCurrency(regularTotal)}</p>
           </div>
         </div>
@@ -242,7 +242,7 @@ const CreditCardStatementCard = ({
           {/* MSI Items */}
           {msiItems.length > 0 && (
             <div className="p-3 border-b border-app-border/50">
-              <h6 className="text-xs font-bold text-app-primary uppercase tracking-wider mb-2 flex items-center gap-1">
+              <h6 className="text-xs font-bold text-app-msi uppercase tracking-wider mb-2 flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">schedule</span>
                 Mensualidades (MSI)
               </h6>
@@ -274,7 +274,7 @@ const CreditCardStatementCard = ({
           {/* Regular Purchases */}
           {regularItems.length > 0 && (
             <div className="p-3 border-b border-app-border/50">
-              <h6 className="text-xs font-bold text-app-info uppercase tracking-wider mb-2 flex items-center gap-1">
+              <h6 className="text-xs font-bold text-app-debit uppercase tracking-wider mb-2 flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">shopping_cart</span>
                 Consumos del Periodo
               </h6>
@@ -297,10 +297,9 @@ const CreditCardStatementCard = ({
             <button
               onClick={onPayAll}
               disabled={!selectedSourceAccount}
-              className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all
-                ${selectedSourceAccount
-                  ? 'bg-gradient-to-r from-app-success to-emerald-600 text-white shadow-lg shadow-app-success/20 active:scale-[0.98] hover:shadow-xl'
-                  : 'bg-app-elevated text-app-muted cursor-not-allowed'
+              className={`btn btn-block ${selectedSourceAccount
+                ? 'btn-pay'
+                : 'btn-cancel cursor-not-allowed'
                 }`}
             >
               <span className="material-symbols-outlined">payments</span>
@@ -587,9 +586,9 @@ export const FinancialPlanningWidget: React.FC = () => {
         {/* Expenses Breakdown */}
         <div className="grid grid-cols-2 gap-2">
           {/* TDC Payments */}
-          <div className="bg-app-elevated border border-app-border rounded-xl p-3">
+          <div className="bg-app-credit-bg border border-app-credit/20 rounded-xl p-3">
             <div className="flex items-center gap-1 mb-1">
-              <span className="material-symbols-outlined text-app-secondary text-sm">credit_card</span>
+              <span className="material-symbols-outlined text-app-credit text-sm">credit_card</span>
               <span className="text-[10px] text-app-muted font-bold uppercase">Tarjetas</span>
             </div>
             <span className="text-lg font-bold text-app-text">
@@ -598,9 +597,9 @@ export const FinancialPlanningWidget: React.FC = () => {
           </div>
 
           {/* Recurring Expenses */}
-          <div className="bg-app-elevated border border-app-border rounded-xl p-3">
+          <div className="bg-app-recurring-bg border border-app-recurring/20 rounded-xl p-3">
             <div className="flex items-center gap-1 mb-1">
-              <span className="material-symbols-outlined text-app-warning text-sm">sync</span>
+              <span className="material-symbols-outlined text-app-recurring text-sm">sync</span>
               <span className="text-[10px] text-app-muted font-bold uppercase">Recurrentes</span>
             </div>
             <span className="text-lg font-bold text-app-text">
@@ -625,7 +624,7 @@ export const FinancialPlanningWidget: React.FC = () => {
       {hasCards && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-app-secondary text-lg">credit_card</span>
+            <span className="material-symbols-outlined text-app-credit text-lg">credit_card</span>
             <h4 className="text-sm font-bold text-app-text">Pagos de Tarjeta al Corte</h4>
           </div>
 
@@ -654,7 +653,7 @@ export const FinancialPlanningWidget: React.FC = () => {
       {hasExpenses && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-app-warning text-lg">sync</span>
+            <span className="material-symbols-outlined text-app-recurring text-lg">sync</span>
             <h4 className="text-sm font-bold text-app-text">Gastos Recurrentes</h4>
           </div>
 

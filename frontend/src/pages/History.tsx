@@ -215,7 +215,7 @@ const History: React.FC = () => {
   const deletionImpact = itemToDelete ? getDeletionImpact(itemToDelete) : null;
 
   return (
-    <div className="pb-28 bg-app-bg min-h-screen text-app-text relative overflow-hidden">
+    <div className="bg-app-bg text-app-text relative overflow-hidden">
       {/* Ambient Background Glow */}
       <div className="fixed inset-0 pointer-events-none -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
@@ -225,13 +225,13 @@ const History: React.FC = () => {
       <PageHeader title="Historial" />
 
       {/* Filter Chips */}
-      <div className="px-4 pt-2 pb-4 border-b border-app-border sticky top-16 bg-app-bg/95 backdrop-blur-sm z-10">
+      <div className="px-4 pt-2 pb-3 border-b border-app-border sticky top-14 bg-app-bg/95 backdrop-blur-sm z-10">
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
           <button
             onClick={() => setFilterType('all')}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filterType === 'all'
-                ? 'bg-app-primary text-white shadow-lg shadow-app-primary/20'
-                : 'bg-app-elevated text-app-muted border border-app-border'
+              ? 'bg-app-primary text-white shadow-lg shadow-app-primary/20'
+              : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
             Todo
@@ -239,8 +239,8 @@ const History: React.FC = () => {
           <button
             onClick={() => setFilterType('income')}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'income'
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                : 'bg-app-elevated text-app-muted border border-app-border'
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+              : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
             <span className="material-symbols-outlined text-sm">arrow_downward</span>
@@ -249,8 +249,8 @@ const History: React.FC = () => {
           <button
             onClick={() => setFilterType('expense')}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'expense'
-                ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
-                : 'bg-app-elevated text-app-muted border border-app-border'
+              ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
+              : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
             <span className="material-symbols-outlined text-sm">arrow_upward</span>
@@ -259,8 +259,8 @@ const History: React.FC = () => {
           <button
             onClick={() => setFilterType('transfer')}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1 ${filterType === 'transfer'
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                : 'bg-app-elevated text-app-muted border border-app-border'
+              ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+              : 'bg-app-elevated text-app-muted border border-app-border'
               }`}
           >
             <span className="material-symbols-outlined text-sm">swap_horiz</span>
@@ -407,8 +407,8 @@ const History: React.FC = () => {
                             {/* Amount */}
                             <div className="text-right shrink-0">
                               <p className={`font-bold text-base ${tx.type === 'income' ? 'text-emerald-500' :
-                                  tx.type === 'expense' ? 'text-red-500' :
-                                    'text-app-text'
+                                tx.type === 'expense' ? 'text-red-500' :
+                                  'text-app-text'
                                 }`}>
                                 {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
                                 {formatCurrency(tx.amount)}

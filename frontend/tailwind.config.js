@@ -48,10 +48,41 @@ export default {
           'info-light': 'var(--color-info-light)',
           'info-bg': 'var(--color-info-bg)',
 
+          // Account Type Colors (Semantic)
+          'credit': 'var(--color-account-credit)',
+          'credit-bg': 'var(--color-account-credit-bg)',
+          'debit': 'var(--color-account-debit)',
+          'debit-bg': 'var(--color-account-debit-bg)',
+          'cash': 'var(--color-account-cash)',
+          'cash-bg': 'var(--color-account-cash-bg)',
+          'savings': 'var(--color-account-savings)',
+          'savings-bg': 'var(--color-account-savings-bg)',
+          'investment': 'var(--color-account-investment)',
+          'investment-bg': 'var(--color-account-investment-bg)',
+
+          // Transaction Type Colors (Semantic)
+          'income': 'var(--color-income)',
+          'income-bg': 'var(--color-income-bg)',
+          'expense': 'var(--color-expense)',
+          'expense-bg': 'var(--color-expense-bg)',
+          'transfer': 'var(--color-transfer)',
+          'transfer-bg': 'var(--color-transfer-bg)',
+          'recurring': 'var(--color-recurring)',
+          'recurring-bg': 'var(--color-recurring-bg)',
+          'msi': 'var(--color-msi)',
+          'msi-bg': 'var(--color-msi-bg)',
+
+          // Action Colors (Semantic)
+          'action-pay': 'var(--color-action-pay)',
+          'action-edit': 'var(--color-action-edit)',
+          'action-delete': 'var(--color-action-delete)',
+          'action-add': 'var(--color-action-add)',
+          'action-cancel': 'var(--color-action-cancel)',
+
           // Text Colors
           text: 'var(--color-text-primary)',
           muted: 'var(--color-text-secondary)',
-          tertiary: 'var(--color-text-tertiary)',
+          'text-tertiary': 'var(--color-text-tertiary)',
           quaternary: 'var(--color-text-quaternary)',
           inverted: 'var(--color-text-inverted)',
 

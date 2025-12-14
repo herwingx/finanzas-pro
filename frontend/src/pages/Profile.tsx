@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile, useUpdateProfile } from '../hooks/useApi';
-import useTheme from '../hooks/useTheme';
-import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../utils/toast';
+import { toastSuccess, toastError } from '../utils/toast';
 import { SkeletonAppLoading } from '../components/Skeleton';
+import { PageHeader } from '../components/PageHeader';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -68,28 +68,27 @@ const Profile: React.FC = () => {
   if (isError) return <div className="p-8 text-center text-app-danger">Error al cargar el perfil.</div>;
 
   return (
-    <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans relative overflow-hidden">
+    <div className="bg-app-bg text-app-text font-sans relative overflow-hidden">
       {/* Ambient Background Glow */}
       <div className="fixed inset-0 pointer-events-none -z-10">
         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
       </div>
-      {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center bg-app-bg/80 backdrop-blur-xl p-4 border-b border-app-border">
-        <button onClick={() => navigate(-1)} className="text-app-text p-2 -ml-2 hover:bg-app-elevated rounded-full transition-colors">
-          <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
-        </button>
-        <h1 className="font-bold text-base text-center flex-1 tracking-tight">Perfil</h1>
-        <button
-          onClick={isEditing ? handleSave : handleEdit}
-          className="p-2 hover:bg-app-elevated rounded-full transition-colors"
-          disabled={updateProfileMutation.isPending}
-        >
-          <span className="material-symbols-outlined text-xl text-app-primary">
-            {isEditing ? 'check' : 'edit'}
-          </span>
-        </button>
-      </header>
+
+      <PageHeader
+        title="Perfil"
+        rightAction={
+          <button
+            onClick={isEditing ? handleSave : handleEdit}
+            className="size-10 rounded-xl flex items-center justify-center hover:bg-app-elevated transition-colors"
+            disabled={updateProfileMutation.isPending}
+          >
+            <span className="material-symbols-outlined text-xl text-app-primary">
+              {isEditing ? 'check' : 'edit'}
+            </span>
+          </button>
+        }
+      />
 
       <div className="p-4 mt-2 space-y-8 max-w-lg mx-auto">
         {/* Profile Card */}

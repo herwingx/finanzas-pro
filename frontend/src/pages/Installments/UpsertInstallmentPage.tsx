@@ -358,120 +358,145 @@ const UpsertInstallmentPage: React.FC = () => {
     }
 
     return (
-        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+        <div className="min-h-screen bg-app-bg text-app-text">
             <PageHeader title={isEditMode ? 'Editar Compra a MSI' : 'Nueva Compra a MSI'} showBackButton={true} />
 
-            {isSettled && (
-                <div className="mx-4 mt-4 p-4 bg-app-elevated border border-app-border rounded-xl flex items-center gap-3">
-                    <span className="material-symbols-outlined text-app-success">check_circle</span>
-                    <p className="text-sm text-app-text">Esta compra está totalmente liquidada y forma parte de tu historial. No se puede editar ni eliminar.</p>
-                </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="px-4 mt-4 space-y-6">
-                <fieldset disabled={isSettled} className="space-y-6">
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-app-muted mb-2">Descripción</label>
-                        <input
-                            type="text"
-                            id="description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                            required
-                        />
+            <main className="px-5 py-6 pb-10">
+                {isSettled && (
+                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl flex items-center gap-3">
+                        <span className="material-symbols-outlined text-green-500">check_circle</span>
+                        <p className="text-sm text-app-text leading-tight">Esta compra está totalmente liquidada.</p>
                     </div>
-
-                    <div>
-                        <label htmlFor="totalAmount" className="block text-sm font-medium text-app-muted mb-2">Monto Total</label>
-                        <input
-                            type="number"
-                            id="totalAmount"
-                            value={totalAmount}
-                            onChange={(e) => setTotalAmount(e.target.value)}
-                            className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                            placeholder="0.00"
-                            step="0.01"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="installments" className="block text-sm font-medium text-app-muted mb-2">Número de Mensualidades</label>
-                        <input
-                            type="number"
-                            id="installments"
-                            value={installments}
-                            onChange={(e) => setInstallments(e.target.value)}
-                            className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                            placeholder="12"
-                            min="1"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="accountId" className="block text-sm font-medium text-app-muted mb-2">Tarjeta de Crédito</label>
-                        <select
-                            id="accountId"
-                            value={accountId}
-                            onChange={(e) => setAccountId(e.target.value)}
-                            className="w-full p-3 bg-app-card rounded-xl border border-app-border text-app-text focus:outline-none focus:ring-2 focus:ring-app-primary"
-                            required
-                        >
-                            {isLoadingAccounts ? (
-                                <option value="" disabled>Cargando tarjetas...</option>
-                            ) : availableCreditAccounts.length > 0 ? (
-                                availableCreditAccounts.map(account => (
-                                    <option key={account.id} value={account.id}>{account.name}</option>
-                                ))
-                            ) : (
-                                <option value="">No hay tarjetas de crédito disponibles</option>
-                            )}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label htmlFor="purchaseDate" className="block text-sm font-medium text-app-muted mb-2">Fecha de Compra</label>
-                        <DatePicker date={purchaseDate} onDateChange={setPurchaseDate} />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-app-muted mb-3">Categoría de Gasto</label>
-                        <CategorySelector
-                            categories={availableCategories}
-                            selectedId={categoryId}
-                            onSelect={setCategoryId}
-                            isLoading={isLoadingCategories}
-                            emptyMessage="No hay categorías de gasto disponibles"
-                        />
-                    </div>
-
-                </fieldset>
-
-                {(!isSettled || !isEditMode) && (
-                    <button
-                        type="submit"
-                        className="btn-modern btn-primary w-full text-white font-bold p-3 rounded-xl shadow-premium hover:bg-app-primary/90 transition-all active:scale-[0.98]"
-                        disabled={addPurchaseMutation.isPending || updatePurchaseMutation.isPending}
-                    >
-                        {(addPurchaseMutation.isPending || updatePurchaseMutation.isPending)
-                            ? 'Guardando...'
-                            : isEditMode ? 'Actualizar Compra a MSI' : 'Crear Compra a MSI'}
-                    </button>
                 )}
 
-                {isEditMode && (
-                    <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="btn-modern btn-danger w-full p-3 rounded-xl mt-3"
-                        disabled={deletePurchaseMutation.isPending}
-                    >
-                        {deletePurchaseMutation.isPending ? 'Eliminando...' : 'Eliminar Compra a MSI'}
-                    </button>
-                )}
-            </form>
+                <form id="msi-form" onSubmit={handleSubmit} className="space-y-5">
+                    <fieldset disabled={isSettled} className="space-y-5">
+
+                        {/* Description */}
+                        <div>
+                            <label className="text-xs text-app-muted uppercase font-bold">Descripción</label>
+                            <input
+                                type="text"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
+                                placeholder="Ej. Laptop, Celular..."
+                                required
+                            />
+                        </div>
+
+                        {/* Total Amount */}
+                        <div className="text-center">
+                            <label className="text-xs text-app-muted uppercase font-bold">Monto Total</label>
+                            <div className="flex items-center justify-center mt-2">
+                                <span className="text-2xl text-app-muted font-medium">$</span>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={totalAmount}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setTotalAmount(val);
+                                    }}
+                                    className="text-3xl font-bold bg-transparent text-center w-32 focus:outline-none text-app-text placeholder-app-muted/30"
+                                    placeholder="0.00"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Installments */}
+                        <div>
+                            <label className="text-xs text-app-muted uppercase font-bold">Meses (Plazo)</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={installments}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || /^\d+$/.test(val)) setInstallments(val);
+                                }}
+                                className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary font-bold text-xl"
+                                placeholder="12"
+                                required
+                            />
+                        </div>
+
+                        {/* Purchase Date */}
+                        <div>
+                            <label className="text-xs text-app-muted uppercase font-bold">Fecha de Compra</label>
+                            <div className="mt-2">
+                                <DatePicker date={purchaseDate} onDateChange={setPurchaseDate} />
+                            </div>
+                        </div>
+
+                        {/* Credit Card Select */}
+                        <div>
+                            <label className="text-xs text-app-muted uppercase font-bold">Tarjeta de Crédito</label>
+                            <select
+                                value={accountId}
+                                onChange={(e) => setAccountId(e.target.value)}
+                                className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
+                                required
+                            >
+                                {isLoadingAccounts ? (
+                                    <option value="" disabled>Cargando...</option>
+                                ) : availableCreditAccounts.length > 0 ? (
+                                    availableCreditAccounts.map(account => (
+                                        <option key={account.id} value={account.id}>{account.name}</option>
+                                    ))
+                                ) : (
+                                    <option value="">No hay tarjetas disponibles</option>
+                                )}
+                            </select>
+                        </div>
+
+                        {/* Category Selector */}
+                        <div>
+                            <label className="text-xs text-app-muted uppercase font-bold">Categoría</label>
+                            <div className="mt-2">
+                                <CategorySelector
+                                    categories={availableCategories}
+                                    selectedId={categoryId}
+                                    onSelect={setCategoryId}
+                                    isLoading={isLoadingCategories}
+                                    emptyMessage="No hay categorías disponibles"
+                                />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    {/* Action Buttons */}
+                    <div className="pt-4 space-y-3">
+                        {(!isSettled || !isEditMode) && (
+                            <button
+                                type="submit"
+                                className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold text-lg rounded-xl shadow-lg shadow-app-primary/25 disabled:opacity-50 active:scale-[0.98] transition-all"
+                                disabled={addPurchaseMutation.isPending || updatePurchaseMutation.isPending}
+                            >
+                                {(addPurchaseMutation.isPending || updatePurchaseMutation.isPending) ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Guardando...
+                                    </span>
+                                ) : isEditMode ? 'Actualizar' : 'Crear Compra a MSI'}
+                            </button>
+                        )}
+
+                        {isEditMode && (
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                className="w-full py-3.5 bg-red-500/10 text-red-500 font-bold rounded-xl hover:bg-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                disabled={deletePurchaseMutation.isPending}
+                            >
+                                <span className="material-symbols-outlined text-lg">delete</span>
+                                {deletePurchaseMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </main>
 
             {/* Delete Confirmation Sheet */}
             <DeleteConfirmationSheet

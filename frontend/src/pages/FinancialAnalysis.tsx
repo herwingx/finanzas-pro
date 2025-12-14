@@ -67,7 +67,7 @@ const FinancialAnalysis: React.FC = () => {
   const netWorth = summary.netWorth ?? (summary.currentBalance - (summary.currentDebt || 0) - (summary.currentMSIDebt || 0));
 
   return (
-    <div className="p-4 space-y-6 pb-24 bg-app-bg min-h-screen text-app-text">
+    <div className="p-4 space-y-6 pb-24 bg-app-bg text-app-text">
       {/* Consistent App Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-hover transition-colors">

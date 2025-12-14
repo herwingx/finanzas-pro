@@ -18,12 +18,18 @@ import TrashPage from '../pages/TrashPage';
 import FinancialAnalysis from '../pages/FinancialAnalysis';
 import BottomNav from '../components/BottomNav';
 
+// Pages that show the bottom nav (main tabs)
+const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
+
 const MainApp: React.FC = () => {
   const location = useLocation();
-  const showBottomNav = !['/new'].includes(location.pathname);
+
+  // Check if current page is in the main navigation tabs
+  const isMainNavPage = MAIN_NAV_PAGES.includes(location.pathname);
+
   return (
-    <div className="bg-app-bg text-app-text min-h-screen">
-      <main className="pb-20 min-h-screen">
+    <div className="app-shell bg-app-bg text-app-text">
+      <main className={`app-content ${isMainNavPage ? 'pb-20' : 'pb-safe'}`}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/history" element={<History />} />
@@ -45,7 +51,7 @@ const MainApp: React.FC = () => {
           <Route path="/trash" element={<TrashPage />} />
         </Routes>
       </main>
-      {showBottomNav && <BottomNav />}
+      <BottomNav />
     </div>
   );
 }

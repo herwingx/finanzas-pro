@@ -44,8 +44,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   const gridCols = {
     3: 'grid-cols-3',
-    4: 'grid-cols-4',
-    5: 'grid-cols-5',
+    4: 'grid-cols-3 sm:grid-cols-4',
+    5: 'grid-cols-3 sm:grid-cols-5',
   };
 
   return (

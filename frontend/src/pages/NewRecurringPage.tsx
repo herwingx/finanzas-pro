@@ -122,197 +122,201 @@ const NewRecurringPage: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-app-bg text-app-text">
       <PageHeader title="Nuevo Recurrente" showBackButton />
 
-      <form onSubmit={handleSubmit} className="flex-1 p-4 space-y-6 pb-32">
-        {/* Type Toggle */}
-        <div>
-          <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Tipo</label>
-          <div className="flex p-1 bg-app-elevated rounded-xl">
-            <button
-              type="button"
-              onClick={() => setType('expense')}
-              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${type === 'expense' ? 'bg-red-500 text-white shadow-lg' : 'text-app-muted'
-                }`}
-            >
-              <span className="material-symbols-outlined text-lg">shopping_bag</span>
-              Gasto
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('income')}
-              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${type === 'income' ? 'bg-green-500 text-white shadow-lg' : 'text-app-muted'
-                }`}
-            >
-              <span className="material-symbols-outlined text-lg">attach_money</span>
-              Ingreso
-            </button>
+      <main className="flex-1 px-5 py-6 w-full max-w-lg mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Type Toggle */}
+          <div>
+            <label className="text-xs text-app-muted uppercase font-bold">Tipo de Transacción</label>
+            <div className="flex p-1.5 bg-app-elevated rounded-xl mt-2">
+              <button
+                type="button"
+                onClick={() => setType('expense')}
+                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${type === 'expense' ? 'bg-app-bg text-red-500 shadow-sm border border-app-border' : 'text-app-muted hover:text-app-text'
+                  }`}
+              >
+                <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: '"FILL" 1' }}>shopping_bag</span>
+                Gasto
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('income')}
+                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${type === 'income' ? 'bg-app-bg text-green-500 shadow-sm border border-app-border' : 'text-app-muted hover:text-app-text'
+                  }`}
+              >
+                <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: '"FILL" 1' }}>attach_money</span>
+                Ingreso
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Amount */}
-        <div>
-          <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Monto</label>
-          <div className="flex items-center bg-app-card border border-app-border rounded-xl p-4">
-            <span className="text-2xl text-app-muted pr-2">$</span>
+          {/* Amount - centered */}
+          <div className="text-center pb-4 border-b border-app-border/30">
+            <label className="text-xs text-app-muted uppercase font-bold">Monto</label>
+            <div className="flex items-center justify-center mt-2">
+              <span className="text-2xl text-app-muted font-medium">$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
+                value={amount}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setAmount(val);
+                }}
+                placeholder="0.00"
+                className="text-3xl font-bold bg-transparent text-center w-32 focus:outline-none text-app-text placeholder-app-muted/30"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-xs text-app-muted uppercase font-bold">Descripción</label>
             <input
               type="text"
-              inputMode="decimal"
-              pattern="[0-9]*\.?[0-9]*"
-              value={amount}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setAmount(val);
-              }}
-              placeholder="0.00"
-              className="flex-1 text-3xl font-bold bg-transparent focus:outline-none"
-              autoFocus
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={type === 'expense' ? 'Netflix, Spotify, Renta...' : 'Nómina, Freelance...'}
+              className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
             />
           </div>
-        </div>
 
-        {/* Description */}
-        <div>
-          <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Descripción</label>
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={type === 'expense' ? 'Netflix, Spotify, Renta...' : 'Nómina, Freelance...'}
-            className="w-full p-4 bg-app-card border border-app-border rounded-xl focus:outline-none focus:ring-2 focus:ring-app-primary"
-          />
-        </div>
-
-        {/* Account */}
-        <div>
-          <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Cuenta</label>
-          <div className="relative">
+          {/* Account */}
+          <div>
+            <label className="text-xs text-app-muted uppercase font-bold">Cuenta de Cargo</label>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="w-full p-4 pr-10 bg-app-card border border-app-border rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-app-primary"
+              className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
             >
               {availableAccounts.map(acc => (
                 <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.type === 'CREDIT' ? 'Crédito' : acc.type === 'DEBIT' ? 'Débito' : 'Efectivo'})
+                  {acc.name}
                 </option>
               ))}
             </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted">
-              <span className="material-symbols-outlined">expand_more</span>
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="text-xs text-app-muted uppercase font-bold">Categoría</label>
+            <div className="mt-2">
+              <CategorySelector
+                categories={availableCategories}
+                selectedId={categoryId}
+                onSelect={setCategoryId}
+                isLoading={isLoadingCategories}
+                emptyMessage={`No hay categorías de ${type === 'expense' ? 'gasto' : 'ingreso'}`}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Category */}
-        <div>
-          <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Categoría</label>
-          <CategorySelector
-            categories={availableCategories}
-            selectedId={categoryId}
-            onSelect={setCategoryId}
-            isLoading={isLoadingCategories}
-            emptyMessage={`No hay categorías de ${type === 'expense' ? 'gasto' : 'ingreso'}`}
-          />
-        </div>
-
-        {/* Frequency */}
-        <div>
-          <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Frecuencia</label>
-          <div className="grid grid-cols-3 gap-3">
-            {frequencyOptions.slice(1, 4).map(f => (
+          {/* Frequency */}
+          <div>
+            <label className="block text-xs text-app-muted font-bold mb-2 uppercase tracking-wider">Frecuencia de Cobro</label>
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              {frequencyOptions.filter(f => ['weekly', 'biweekly', 'monthly'].includes(f.value)).map(f => (
+                <button
+                  type="button"
+                  key={f.value}
+                  onClick={() => setFrequency(f.value as FrequencyType)}
+                  className={`p-3 rounded-xl text-center transition-all border-2 relative overflow-hidden ${frequency === f.value
+                    ? 'border-app-primary bg-app-primary/10 text-app-primary'
+                    : 'border-app-border bg-app-elevated hover:border-app-muted'
+                    }`}
+                >
+                  <div className="text-lg font-black">{f.days}</div>
+                  <div className="text-[10px] font-bold uppercase opacity-80">{f.label}</div>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
               <button
                 type="button"
-                key={f.value}
-                onClick={() => setFrequency(f.value as FrequencyType)}
-                className={`p-4 rounded-xl text-center transition-all border-2 ${frequency === f.value
-                  ? 'border-app-primary bg-app-primary/10 shadow-md'
-                  : 'border-app-border bg-app-card hover:border-app-primary/50'
+                onClick={() => setFrequency('daily')}
+                className={`flex-1 p-3 rounded-xl text-center transition-all border-2 ${frequency === 'daily'
+                  ? 'border-app-primary bg-app-primary/10 text-app-primary'
+                  : 'border-app-border bg-app-elevated'
                   }`}
               >
-                <div className="text-xl font-bold">{f.days}</div>
-                <div className="text-xs text-app-muted">{f.label}</div>
+                <span className="text-xs font-bold uppercase">Diario</span>
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setFrequency('yearly')}
+                className={`flex-1 p-3 rounded-xl text-center transition-all border-2 ${frequency === 'yearly'
+                  ? 'border-app-primary bg-app-primary/10 text-app-primary'
+                  : 'border-app-border bg-app-elevated'
+                  }`}
+              >
+                <span className="text-xs font-bold uppercase">Anual</span>
+              </button>
+            </div>
           </div>
-          <div className="flex gap-3 mt-3">
-            <button
-              type="button"
-              onClick={() => setFrequency('daily')}
-              className={`flex-1 p-3 rounded-xl text-center transition-all border-2 ${frequency === 'daily'
-                ? 'border-app-primary bg-app-primary/10'
-                : 'border-app-border bg-app-card'
-                }`}
-            >
-              <span className="text-sm font-medium">Diario</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFrequency('yearly')}
-              className={`flex-1 p-3 rounded-xl text-center transition-all border-2 ${frequency === 'yearly'
-                ? 'border-app-primary bg-app-primary/10'
-                : 'border-app-border bg-app-card'
-                }`}
-            >
-              <span className="text-sm font-medium">Anual</span>
-            </button>
+
+          {/* Start Date */}
+          <div>
+            <label className="block text-xs text-app-muted font-bold mb-2 uppercase tracking-wider">Primer Vencimiento</label>
+            <div className="bg-app-elevated/50 p-2 rounded-2xl border border-app-border">
+              <DatePicker date={startDate} onDateChange={setStartDate} />
+            </div>
           </div>
-        </div>
 
-        {/* Start Date */}
-        <div>
-          <label className="block text-xs text-app-muted font-bold mb-2 uppercase">Primer Vencimiento</label>
-          <DatePicker date={startDate} onDateChange={setStartDate} />
-          <p className="text-xs text-app-muted mt-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">info</span>
-            El sistema te recordará este {type === 'expense' ? 'gasto' : 'ingreso'} desde esta fecha.
-          </p>
-        </div>
+          {/* Already Paid Toggle */}
+          <div className="p-4 bg-app-elevated/50 border border-app-border rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`size-10 rounded-full flex items-center justify-center ${alreadyPaidCurrent ? 'bg-app-success/20 text-app-success' : 'bg-app-muted/20 text-app-muted'}`}>
+                  <span className="material-symbols-outlined text-xl">check_circle</span>
+                </div>
+                <div>
+                  <label htmlFor="paid-toggle" className="text-sm font-bold cursor-pointer">¿Ya pagué este periodo?</label>
+                  <p className="text-xs text-app-muted">Se programará para el siguiente</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  id="paid-toggle"
+                  type="checkbox"
+                  checked={alreadyPaidCurrent}
+                  onChange={() => setAlreadyPaidCurrent(!alreadyPaidCurrent)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-app-elevated border border-app-border rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-success peer-checked:border-transparent"></div>
+              </label>
+            </div>
 
-        {/* Already Paid Toggle */}
-        <div className="p-4 bg-app-card border border-app-border rounded-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-app-success text-xl">check_circle</span>
-              <div>
-                <p className="text-sm font-medium">¿Ya pagué este periodo?</p>
-                <p className="text-xs text-app-muted">El primer recordatorio será el siguiente</p>
+            <div className={`grid transition-all duration-300 ${alreadyPaidCurrent ? 'grid-rows-[1fr] mt-3 opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+              <div className="overflow-hidden">
+                <div className="p-3 bg-app-success/10 border border-app-success/20 rounded-xl flex items-center gap-2">
+                  <span className="material-symbols-outlined text-app-success text-sm">event</span>
+                  <p className="text-xs text-app-success font-bold">
+                    Próximo cobro: {calculateNextDueDate().toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
+                  </p>
+                </div>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={alreadyPaidCurrent}
-                onChange={() => setAlreadyPaidCurrent(!alreadyPaidCurrent)}
-                className="sr-only peer"
-              />
-              <div className="w-12 h-6 bg-app-elevated rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-success"></div>
-            </label>
           </div>
-          {alreadyPaidCurrent && (
-            <div className="mt-3 p-3 bg-app-success/10 rounded-lg">
-              <p className="text-sm text-app-success font-medium">
-                ✓ Primer recordatorio: {calculateNextDueDate().toLocaleDateString('es-MX', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </p>
-            </div>
-          )}
-        </div>
-      </form>
 
-      {/* Fixed Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-app-bg/95 backdrop-blur-xl border-t border-app-border">
-        <button
-          type="submit"
-          form="recurring-form"
-          onClick={handleSubmit}
-          disabled={addMutation.isPending}
-          className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold rounded-2xl shadow-lg shadow-app-primary/20 disabled:opacity-50 transition-all hover:shadow-xl active:scale-[0.98]"
-        >
-          {addMutation.isPending ? 'Guardando...' : 'Crear Recurrente'}
-        </button>
-      </footer>
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={addMutation.isPending}
+            className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold text-lg rounded-2xl shadow-lg shadow-app-primary/25 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 mt-6"
+          >
+            {addMutation.isPending ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Guardando...
+              </span>
+            ) : 'Crear Recurrente'}
+          </button>
+        </form>
+
+        {/* Safe area spacer */}
+        <div className="h-10" />
+      </main>
     </div>
   );
 };

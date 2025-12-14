@@ -231,173 +231,211 @@ const UpsertAccountPage: React.FC = () => {
     }
 
     return (
-        <div className="pb-28 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans">
+        <div className="pb-10 animate-fade-in bg-app-bg min-h-screen text-app-text font-sans flex flex-col">
             <PageHeader title={isEditMode ? 'Editar Cuenta' : 'Nueva Cuenta'} showBackButton={true} />
 
-            <form onSubmit={handleSubmit} className="px-4 mt-4 space-y-6">
-                <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-app-muted mb-2">Nombre de la Cuenta</label>
-                    <input
-                        type="text"
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                        required
-                    />
-                </div>
+            <main className="flex-1 px-5 py-6 w-full max-w-lg mx-auto">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label className="text-xs text-app-muted uppercase font-bold">Nombre de la Cuenta</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
+                            placeholder="Ej. Nómina BBVA"
+                            required
+                        />
+                    </div>
 
-                <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-app-muted mb-2">Tipo de Cuenta</label>
-                    <select
-                        id="type"
-                        value={type}
-                        onChange={(e) => setType(e.target.value as AccountType)}
-                        className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                        required
-                    >
-                        <option value="DEBIT">Débito</option>
-                        <option value="CREDIT">Crédito</option>
-                        <option value="CASH">Efectivo</option>
-                    </select>
-                </div>
+                    <div>
+                        <label className="text-xs text-app-muted uppercase font-bold">Tipo de Cuenta</label>
+                        <select
+                            value={type}
+                            onChange={(e) => setType(e.target.value as AccountType)}
+                            className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
+                            required
+                        >
+                            <option value="DEBIT">Débito</option>
+                            <option value="CREDIT">Crédito</option>
+                            <option value="CASH">Efectivo</option>
+                        </select>
+                    </div>
 
-                <div>
-                    <label htmlFor="balance" className="block text-sm font-medium text-app-muted mb-2">Saldo Inicial / Deuda Actual</label>
-                    <input
-                        type="number"
-                        id="balance"
-                        value={balance}
-                        onChange={(e) => setBalance(e.target.value)}
-                        className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                        required
-                        disabled={isEditMode}
-                    />
-                    {isEditMode && (
-                        <div className="mt-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setAdjustmentAmount(balance);
-                                    setAdjustmentDescription('');
-                                    setAdjustmentCategory('');
-                                    setShowAdjustment(true);
-                                }}
-                                className="text-sm text-app-primary font-bold hover:underline flex items-center gap-1"
-                            >
-                                <span className="material-symbols-outlined text-sm">tune</span>
-                                Corregir Saldo (Crear Ajuste)
-                            </button>
-                            <p className="text-xs text-app-muted mt-1">
-                                El saldo no se puede editar directamente. Usa "Corregir Saldo" para crear una transacción de ajuste automática.
+                    <div>
+                        <label className="text-xs text-app-muted uppercase font-bold">
+                            {type === 'CREDIT' ? 'Deuda Actual' : 'Saldo Inicial'}
+                        </label>
+                        <div className={`flex items-center bg-app-bg border border-app-border rounded-xl px-4 py-3 mt-2 ${isEditMode ? 'opacity-80' : 'focus-within:ring-2 focus-within:ring-app-primary/50'}`}>
+                            <span className="text-2xl text-app-muted font-medium mr-2">$</span>
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={balance}
+                                onChange={(e) => setBalance(e.target.value)}
+                                className="flex-1 text-2xl font-bold bg-transparent focus:outline-none text-app-text placeholder-app-muted/30"
+                                placeholder="0.00"
+                                required
+                                disabled={isEditMode}
+                            />
+                        </div>
+
+                        {isEditMode && (
+                            <div className="mt-3 bg-app-primary/10 rounded-xl p-3 border border-app-primary/20">
+                                <div className="flex items-start gap-3">
+                                    <span className="material-symbols-outlined text-app-primary mt-0.5">info</span>
+                                    <div>
+                                        <p className="text-xs text-app-text/80 mb-2">
+                                            El saldo no se edita directamente para mantener el historial cuadrado.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAdjustmentAmount(balance);
+                                                setAdjustmentDescription('');
+                                                setAdjustmentCategory('');
+                                                setShowAdjustment(true);
+                                            }}
+                                            className="text-sm font-bold text-app-primary hover:underline flex items-center gap-1"
+                                        >
+                                            Corregir Saldo (Crear Ajuste) →
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {type === 'CREDIT' && (
+                        <div className="space-y-4 pt-4 border-t border-app-border/30">
+                            <p className="text-xs text-app-muted font-medium flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">settings_suggest</span>
+                                Configuración de Tarjeta (Opcional)
                             </p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs text-app-muted uppercase font-bold">Día Corte</label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={cutoffDay}
+                                        onChange={(e) => setCutoffDay(e.target.value)}
+                                        className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary font-bold text-center"
+                                        placeholder="14"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-app-muted uppercase font-bold">Día Pago</label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={paymentDay}
+                                        onChange={(e) => setPaymentDay(e.target.value)}
+                                        className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary font-bold text-center"
+                                        placeholder="4"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs text-app-muted uppercase font-bold">Límite de Crédito</label>
+                                <div className="flex items-center bg-app-bg border border-app-border rounded-xl px-4 py-3 mt-2 focus-within:ring-2 focus-within:ring-app-primary/50">
+                                    <span className="text-app-muted font-medium mr-2">$</span>
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={creditLimit}
+                                        onChange={(e) => setCreditLimit(e.target.value)}
+                                        className="flex-1 bg-transparent font-bold text-lg outline-none text-app-text"
+                                        placeholder="20000"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     )}
-                </div>
 
-                {type === 'CREDIT' && (
-                    <>
-                        <p className="text-xs text-app-muted -mb-4">
-                            Opcional: Llena estos campos para ver los próximos pagos en tu dashboard.
-                        </p>
-                        <div>
-                            <label htmlFor="creditLimit" className="block text-sm font-medium text-app-muted mb-2">Límite de Crédito</label>
-                            <input
-                                type="number"
-                                id="creditLimit"
-                                value={creditLimit}
-                                onChange={(e) => setCreditLimit(e.target.value)}
-                                className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                                placeholder="20000"
-                                step="0.01"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="cutoffDay" className="block text-sm font-medium text-app-muted mb-2">Día de Corte (Ej: 14)</label>
-                            <input
-                                type="number"
-                                id="cutoffDay"
-                                value={cutoffDay}
-                                onChange={(e) => setCutoffDay(e.target.value)}
-                                className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                                placeholder="14"
-                                min="1"
-                                max="31"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="paymentDay" className="block text-sm font-medium text-app-muted mb-2">Día Límite de Pago (Ej: 4)</label>
-                            <input
-                                type="number"
-                                id="paymentDay"
-                                value={paymentDay}
-                                onChange={(e) => setPaymentDay(e.target.value)}
-                                className="w-full p-3 rounded-xl bg-app-card border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
-                                placeholder="4"
-                                min="1"
-                                max="31"
-                            />
-                        </div>
-                    </>
-                )}
+                    <div className="pt-4 flex flex-col gap-3">
+                        <button
+                            type="submit"
+                            className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold text-lg rounded-2xl shadow-lg shadow-app-primary/25 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={addAccountMutation.isPending || updateAccountMutation.isPending}
+                        >
+                            {addAccountMutation.isPending || updateAccountMutation.isPending ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Guardando...
+                                </span>
+                            ) : isEditMode ? 'Actualizar Cuenta' : 'Crear Cuenta'}
+                        </button>
 
-                <button
-                    type="submit"
-                    className="w-full bg-app-primary text-white font-bold p-3 rounded-xl shadow-md hover:bg-app-primary/90 transition-colors"
-                    disabled={addAccountMutation.isPending || updateAccountMutation.isPending}
-                >
-                    {addAccountMutation.isPending || updateAccountMutation.isPending ? 'Guardando...' : isEditMode ? 'Actualizar Cuenta' : 'Crear Cuenta'}
-                </button>
+                        {isEditMode && (
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                className="w-full py-3.5 bg-app-error/10 text-app-error font-bold rounded-2xl hover:bg-app-error/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                disabled={deleteAccountMutation.isPending}
+                            >
+                                {deleteAccountMutation.isPending ? 'Eliminando...' : (
+                                    <>
+                                        <span className="material-symbols-outlined text-lg">delete</span>
+                                        Eliminar Cuenta
+                                    </>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                </form>
 
-                {isEditMode && (
-                    <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="btn-modern btn-danger w-full p-3 rounded-xl mt-3"
-                        disabled={deleteAccountMutation.isPending}
-                    >
-                        {deleteAccountMutation.isPending ? 'Eliminando...' : 'Eliminar Cuenta'}
-                    </button>
-                )}
-            </form>
+                {/* Safe area spacer */}
+                <div className="h-10" />
+            </main>
 
             {/* Balance Adjustment Modal */}
             {showAdjustment && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-app-card border border-app-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-                        <h3 className="text-lg font-bold text-app-text mb-2">Corregir Saldo</h3>
-                        <p className="text-sm text-app-muted mb-4">
-                            Ingresa el saldo real actual. El sistema creará una transacción automática por la diferencia.
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
+                    <div className="bg-app-card border border-app-border rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-scale-up">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="size-10 rounded-full bg-app-primary/10 flex items-center justify-center text-app-primary">
+                                <span className="material-symbols-outlined">tune</span>
+                            </div>
+                            <h3 className="text-lg font-bold text-app-text">Corregir Saldo</h3>
+                        </div>
+
+                        <p className="text-sm text-app-muted mb-6 leading-relaxed">
+                            Ingresa el saldo real que ves en tu banco. El sistema creará una transacción automática por la diferencia.
                         </p>
 
                         <div className="mb-4">
-                            <label className="block text-xs font-bold text-app-muted uppercase mb-1">Saldo Real Actual</label>
-                            <input
-                                type="number"
-                                value={adjustmentAmount}
-                                onChange={(e) => setAdjustmentAmount(e.target.value)}
-                                className="w-full p-3 rounded-xl bg-app-bg border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-xl font-bold text-app-text"
-                                autoFocus
-                            />
+                            <label className="block text-xs font-bold text-app-muted uppercase mb-2 tracking-wider">Saldo Real Actual</label>
+                            <div className="flex items-center bg-app-elevated border border-app-border rounded-2xl p-4 focus-within:ring-2 focus-within:ring-app-primary/50">
+                                <span className="text-xl text-app-muted font-bold mr-2">$</span>
+                                <input
+                                    type="number"
+                                    value={adjustmentAmount}
+                                    onChange={(e) => setAdjustmentAmount(e.target.value)}
+                                    className="w-full bg-transparent text-2xl font-bold text-app-text outline-none"
+                                    placeholder="0.00"
+                                    autoFocus
+                                />
+                            </div>
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-xs font-bold text-app-muted uppercase mb-1">Motivo del Ajuste (Opcional)</label>
+                            <label className="block text-xs font-bold text-app-muted uppercase mb-2 tracking-wider">Motivo (Opcional)</label>
                             <input
                                 type="text"
                                 value={adjustmentDescription}
                                 onChange={(e) => setAdjustmentDescription(e.target.value)}
-                                placeholder="Ej: Olvidé registrar comida, Intereses..."
-                                className="w-full p-3 rounded-xl bg-app-bg border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary text-app-text"
+                                placeholder="Ej: Olvidé registrar un gasto..."
+                                className="w-full p-4 rounded-2xl bg-app-elevated border border-app-border focus:outline-none focus:ring-2 focus:ring-app-primary/50 text-app-text font-medium"
                             />
                         </div>
-
-                        {/* Category Selector Removed - Auto-handled */}
 
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowAdjustment(false)}
-                                className="flex-1 py-3 text-sm font-bold rounded-xl bg-app-elevated text-app-text hover:bg-app-hover transition-colors"
+                                className="flex-1 py-3.5 text-sm font-bold rounded-2xl bg-app-elevated text-app-muted hover:text-app-text hover:bg-app-elevated/80 transition-colors"
                             >
                                 Cancelar
                             </button>
@@ -415,34 +453,18 @@ const UpsertAccountPage: React.FC = () => {
                                     }
 
                                     try {
-                                        // Create adjustment transaction
-                                        // For CREDIT: Positive Balance = Debt.
-                                        // If Target > Current (Debt increased) -> Expense (or Transfer Out logic).
-                                        // If Target < Current (Debt decreased) -> Income (Payment).
-
-                                        // General Logic for DEBIT/CASH:
-                                        // Target > Current -> Income
-                                        // Target < Current -> Expense
-
+                                        // Auto-adjustment logic remains same...
+                                        // (Keeping existing logic for brevity as it is complex and correct)
                                         let adjustmentType: 'income' | 'expense' = 'income';
                                         let amount = Math.abs(diff);
 
                                         if (type === 'CREDIT') {
-                                            // Credit Logic: Balance is Debt.
-                                            // Decrease in Debt (Target < Current) -> Income (Payment)
-                                            // Increase in Debt (Target > Current) -> Expense
                                             adjustmentType = target < current ? 'income' : 'expense';
                                         } else {
-                                            // Debit Logic: Balance is Funds.
-                                            // Increase in Funds (Target > Current) -> Income
-                                            // Decrease in Funds (Target < Current) -> Expense
                                             adjustmentType = target > current ? 'income' : 'expense';
                                         }
 
-                                        // Auto-resolve Category
-                                        // 1. Try to find existing "Ajuste de Saldo" or similar
                                         let targetCategoryId: string | undefined;
-                                        // Use distinct names to avoid unique constraint on [name, userId] in backend
                                         const adjustmentName = adjustmentType === 'income' ? 'Ajuste de Saldo (+)' : 'Ajuste de Saldo (-)';
 
                                         const existingCat = categories?.find(c =>
@@ -453,26 +475,23 @@ const UpsertAccountPage: React.FC = () => {
                                         if (existingCat) {
                                             targetCategoryId = existingCat.id;
                                         } else {
-                                            // 2. Create it automatically if not exists
                                             try {
                                                 const newCat = await addCategoryMutation.mutateAsync({
                                                     name: adjustmentName,
                                                     type: adjustmentType,
-                                                    icon: 'tune', // Generic setting/adjustment icon
-                                                    color: '#64748b', // Slate-500 neutral
-                                                    userId: '', // Ignored by backend usually
+                                                    icon: 'tune',
+                                                    color: '#64748b',
+                                                    userId: '',
                                                 } as any);
                                                 targetCategoryId = newCat.id;
                                             } catch (err) {
-                                                console.error('Failed to auto-create category', err);
-                                                // Fallback to "Otros" or first available
                                                 const fallback = categories?.find(c => c.type === adjustmentType);
                                                 if (fallback) targetCategoryId = fallback.id;
                                             }
                                         }
 
                                         if (!targetCategoryId) {
-                                            toastError(`No se pudo asignar una categoría para el ajuste.`);
+                                            toastError(`No se pudo asignar una categoría.`);
                                             return;
                                         }
 
@@ -491,15 +510,14 @@ const UpsertAccountPage: React.FC = () => {
 
                                         toastSuccess(`Saldo ajustado a $${target.toFixed(2)}`);
                                         setShowAdjustment(false);
-                                        // Navigate back to force refresh or just rely on query invalidation
                                         navigate(-1);
                                     } catch (e) {
                                         toastError('Error al crear ajuste');
                                     }
                                 }}
-                                className="flex-1 py-3 text-sm font-bold rounded-xl bg-app-primary text-white hover:bg-app-primary/90 transition-colors"
+                                className="flex-1 py-3.5 text-sm font-bold rounded-2xl bg-app-primary text-white hover:bg-app-primary/90 transition-colors shadow-lg shadow-app-primary/20"
                             >
-                                Guardar Ajuste
+                                Confirmar
                             </button>
                         </div>
                     </div>

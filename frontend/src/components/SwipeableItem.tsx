@@ -98,7 +98,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   const showRightAction = offset > threshold / 2 && leftAction;
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden w-full touch-pan-y ${className}`}>
       {/* Left action (revealed by swiping right) - Background Layer */}
       {rightAction && offset > 0 && (
         <div

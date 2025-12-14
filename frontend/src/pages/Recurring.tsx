@@ -1,505 +1,179 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useRecurringTransactions, useCategories, useDeleteRecurringTransaction, useAccounts } from '../hooks/useApi';
 import { SwipeableItem } from '../components/SwipeableItem';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useRecurringTransactions, useCategories, useUpdateRecurringTransaction, useDeleteRecurringTransaction, useAddRecurringTransaction, useAccounts } from '../hooks/useApi';
-import { RecurringTransaction, Category, FrequencyType, TransactionType } from '../types';
-import { toastSuccess, toastError, toast } from '../utils/toast';
+import { toastSuccess, toastError } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SkeletonTransactionList } from '../components/Skeleton';
-import { DatePicker } from '../components/DatePicker';
-
-// Modal for editing existing recurring transaction
-const EditRecurringModal: React.FC<any> = ({ transaction, categories, onSave, onCancel, isSaving }) => {
-    const [formState, setFormState] = useState(transaction);
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave(formState);
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-app-card rounded-2xl p-6 w-full max-w-sm">
-                <h3 className="font-bold text-lg mb-4">Editar Recurrente</h3>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-app-muted uppercase">Descripción</label>
-                        <input type="text" value={formState.description} onChange={e => setFormState({ ...formState, description: e.target.value })} className="w-full p-2 bg-app-elevated rounded-lg mt-1" />
-                    </div>
-                    <div>
-                        <label className="text-xs font-bold text-app-muted uppercase">Monto</label>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            pattern="[0-9]*\.?[0-9]*"
-                            value={formState.amount}
-                            onChange={e => {
-                                const val = e.target.value;
-                                if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
-                                    setFormState({ ...formState, amount: val === '' ? 0 : parseFloat(val) });
-                                }
-                            }}
-                            className="w-full p-2 bg-app-elevated rounded-lg mt-1"
-                        />
-                    </div>
-                    <div className="flex justify-end gap-3 mt-6">
-                        <button type="button" onClick={onCancel} className="btn-modern btn-ghost px-4 py-2 rounded-lg font-semibold">Cancelar</button>
-                        <button type="submit" disabled={isSaving} className="btn-modern btn-primary px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50">{isSaving ? 'Guardando...' : 'Guardar'}</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-// Modal for creating new recurring transaction
-const NewRecurringModal: React.FC<{
-    categories: Category[];
-    accounts: any[];
-    onSave: (data: any) => void;
-    onCancel: () => void;
-    isSaving: boolean;
-}> = ({ categories, accounts, onSave, onCancel, isSaving }) => {
-    const [type, setType] = useState<TransactionType>('expense');
-    const [amount, setAmount] = useState('');
-    const [description, setDescription] = useState('');
-    const [categoryId, setCategoryId] = useState('');
-    const [accountId, setAccountId] = useState(accounts[0]?.id || '');
-    const [frequency, setFrequency] = useState<FrequencyType>('monthly');
-    const [startDate, setStartDate] = useState<Date>(new Date());
-    const [alreadyPaidCurrent, setAlreadyPaidCurrent] = useState(false);
-
-    const availableCategories = categories.filter(c => c.type === type);
-
-    const calculateNextDueDate = () => {
-        const nextDate = new Date(startDate);
-        if (alreadyPaidCurrent) {
-            if (frequency === 'daily') nextDate.setDate(nextDate.getDate() + 1);
-            else if (frequency === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
-            else if (frequency === 'biweekly') nextDate.setDate(nextDate.getDate() + 14);
-            else if (frequency === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
-            else if (frequency === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
-        }
-        return nextDate;
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!amount || parseFloat(amount) <= 0) {
-            toast.error('Ingresa un monto válido');
-            return;
-        }
-        if (!categoryId) {
-            toast.error('Selecciona una categoría');
-            return;
-        }
-        if (!accountId) {
-            toast.error('Selecciona una cuenta');
-            return;
-        }
-
-        const nextDueDate = calculateNextDueDate();
-
-        onSave({
-            amount: parseFloat(amount),
-            description: description || 'Gasto Recurrente',
-            categoryId,
-            accountId,
-            startDate: startDate.toISOString(),
-            type,
-            frequency,
-            active: true,
-            nextDueDate: nextDueDate.toISOString(),
-        });
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center">
-            <div className="bg-app-card rounded-t-3xl sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden animate-slide-up">
-                {/* Header */}
-                <div className="sticky top-0 bg-app-card border-b border-app-border p-4 flex items-center justify-between z-10">
-                    <button onClick={onCancel} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
-                        <span className="material-symbols-outlined">close</span>
-                    </button>
-                    <h2 className="font-bold text-lg truncate pr-2">Nuevo Gasto Recurrente</h2>
-                    <div className="w-10"></div>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-4 space-y-5 overflow-hidden">
-                    {/* Type Toggle */}
-                    <div className="flex p-1 bg-app-elevated rounded-xl">
-                        <button
-                            type="button"
-                            onClick={() => { setType('expense'); setCategoryId(''); }}
-                            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${type === 'expense' ? 'bg-red-500 text-white' : 'text-app-muted'}`}
-                        >
-                            Gasto
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setType('income'); setCategoryId(''); }}
-                            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${type === 'income' ? 'bg-green-500 text-white' : 'text-app-muted'}`}
-                        >
-                            Ingreso
-                        </button>
-                    </div>
-
-                    {/* Amount - simplified and constrained */}
-                    <div className="text-center">
-                        <label className="text-xs text-app-muted uppercase font-bold">Monto</label>
-                        <div className="flex items-center justify-center mt-2">
-                            <span className="text-2xl text-app-muted font-medium">$</span>
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                pattern="[0-9]*\.?[0-9]*"
-                                value={amount}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setAmount(val);
-                                }}
-                                placeholder="0.00"
-                                className="text-3xl font-bold bg-transparent text-center w-28 focus:outline-none text-app-text placeholder-app-muted/30"
-                                autoFocus
-                            />
-                        </div>
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                        <label className="text-xs text-app-muted uppercase font-bold">Descripción</label>
-                        <input
-                            type="text"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Netflix, Spotify, Renta..."
-                            className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
-                        />
-                    </div>
-
-                    {/* Account */}
-                    <div>
-                        <label className="text-xs text-app-muted uppercase font-bold">Cuenta</label>
-                        <select
-                            value={accountId}
-                            onChange={(e) => setAccountId(e.target.value)}
-                            className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
-                        >
-                            {accounts.map(acc => (
-                                <option key={acc.id} value={acc.id}>{acc.name}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Category */}
-                    <div>
-                        <label className="text-xs text-app-muted uppercase font-bold">Categoría</label>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                            {availableCategories.map(cat => (
-                                <button
-                                    type="button"
-                                    key={cat.id}
-                                    onClick={() => setCategoryId(cat.id)}
-                                    className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all border-2 ${categoryId === cat.id ? 'border-app-primary bg-app-primary/10' : 'border-transparent hover:bg-app-elevated'
-                                        }`}
-                                >
-                                    <div
-                                        className="size-10 rounded-full flex items-center justify-center"
-                                        style={{ backgroundColor: `${cat.color}20`, color: cat.color }}
-                                    >
-                                        <span className="material-symbols-outlined">{cat.icon}</span>
-                                    </div>
-                                    <span className="text-[10px] font-medium truncate w-full text-center">{cat.name}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Frequency */}
-                    <div>
-                        <label className="text-xs text-app-muted uppercase font-bold">Frecuencia</label>
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                            {[
-                                { value: 'weekly', label: 'Semanal', icon: '7' },
-                                { value: 'biweekly', label: 'Quincenal', icon: '14' },
-                                { value: 'monthly', label: 'Mensual', icon: '30' },
-                            ].map(f => (
-                                <button
-                                    type="button"
-                                    key={f.value}
-                                    onClick={() => setFrequency(f.value as FrequencyType)}
-                                    className={`p-3 rounded-xl text-center transition-all border-2 ${frequency === f.value
-                                        ? 'border-app-primary bg-app-primary/10'
-                                        : 'border-app-border hover:border-app-primary/50'
-                                        }`}
-                                >
-                                    <div className="text-lg font-bold">{f.icon}</div>
-                                    <div className="text-xs text-app-muted">{f.label}</div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Start Date */}
-                    <div>
-                        <label className="text-xs text-app-muted uppercase font-bold">Primer Vencimiento</label>
-                        <div className="mt-2">
-                            <DatePicker date={startDate} onDateChange={(d) => d && setStartDate(d)} />
-                        </div>
-                    </div>
-
-                    {/* Already Paid Toggle */}
-                    <div className="p-4 bg-app-elevated rounded-xl">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-app-success">check_circle</span>
-                                <div>
-                                    <p className="text-sm font-medium">¿Ya pagué este periodo?</p>
-                                    <p className="text-xs text-app-muted">Empieza desde el siguiente</p>
-                                </div>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={alreadyPaidCurrent}
-                                    onChange={() => setAlreadyPaidCurrent(!alreadyPaidCurrent)}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-app-bg rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-success"></div>
-                            </label>
-                        </div>
-                        {alreadyPaidCurrent && (
-                            <p className="text-xs text-app-success mt-2 font-medium">
-                                ✓ Primer recordatorio: {calculateNextDueDate().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Submit */}
-                    <button
-                        type="submit"
-                        disabled={isSaving}
-                        className="w-full py-4 bg-app-primary text-white font-bold rounded-xl shadow-lg shadow-app-primary/20 disabled:opacity-50 transition-all hover:bg-app-primary/90"
-                    >
-                        {isSaving ? 'Guardando...' : 'Crear Gasto Recurrente'}
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-};
 
 const Recurring: React.FC = () => {
+    // --- Routing ---
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const { data: recurring, isLoading: isLoadingRecurring } = useRecurringTransactions();
-    const { data: categories, isLoading: isLoadingCategories } = useCategories();
-    const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
-    const updateMutation = useUpdateRecurringTransaction();
+
+    // --- Data Queries ---
+    const { data: recurring, isLoading } = useRecurringTransactions();
+    const { data: categories } = useCategories();
+    const { data: accounts } = useAccounts();
     const deleteMutation = useDeleteRecurringTransaction();
-    const addMutation = useAddRecurringTransaction();
 
-    const [editingTx, setEditingTx] = useState<RecurringTransaction | null>(null);
+    // --- Local State ---
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [showNewModal, setShowNewModal] = useState(false);
 
-    // Auto-open modal if ?new=true is in URL
-    useEffect(() => {
-        if (searchParams.get('new') === 'true') {
-            setShowNewModal(true);
-            // Remove the param from URL to avoid reopening on refresh
-            searchParams.delete('new');
-            setSearchParams(searchParams, { replace: true });
-        }
-    }, [searchParams, setSearchParams]);
-
-    const handleSave = async (updatedTx: RecurringTransaction) => {
-        try {
-            await updateMutation.mutateAsync({ id: updatedTx.id, transaction: updatedTx });
-            toast.success("Actualizado con éxito");
-            setEditingTx(null);
-        } catch (error) {
-            toast.error("Error al actualizar");
-        }
-    };
-
-    const handleCreate = async (newTx: any) => {
-        try {
-            await addMutation.mutateAsync(newTx);
-            const nextDate = new Date(newTx.nextDueDate);
-            toast.success(`Recurrente creado. Próximo: ${nextDate.toLocaleDateString('es-MX')}`);
-            setShowNewModal(false);
-        } catch (error: any) {
-            toast.error(error.message || "Error al crear");
-        }
-    };
-
-    const handleDelete = async (id: string) => {
-        try {
-            await deleteMutation.mutateAsync(id);
-            toast.success("Transacción recurrente eliminada");
-            setDeletingId(null);
-        } catch (error) {
-            toast.error("Error al eliminar");
-        }
-    };
-
+    // --- Helpers ---
     const getCategory = (id: string) => categories?.find(c => c.id === id);
     const getAccount = (id: string) => accounts?.find(a => a.id === id);
 
     const getFrequencyLabel = (freq: string) => {
         const labels: Record<string, string> = {
-            'daily': 'Diario',
-            'weekly': 'Semanal',
-            'biweekly': 'Quincenal',
-            'monthly': 'Mensual',
-            'yearly': 'Anual',
-            'DAILY': 'Diario',
-            'WEEKLY': 'Semanal',
-            'BIWEEKLY': 'Quincenal',
-            'MONTHLY': 'Mensual',
-            'YEARLY': 'Anual',
+            'daily': 'Diario', 'weekly': 'Semanal', 'biweekly': 'Quincenal',
+            'monthly': 'Mensual', 'yearly': 'Anual'
         };
-        return labels[freq] || freq;
+        return labels[freq?.toLowerCase()] || freq;
     };
 
-    const isLoading = isLoadingRecurring || isLoadingCategories || isLoadingAccounts;
+    const handleDelete = async () => {
+        if (!deletingId) return;
+        try {
+            await deleteMutation.mutateAsync(deletingId);
+            toastSuccess('Suscripción eliminada');
+            setDeletingId(null);
+        } catch (error: any) {
+            toastError(error.message || "Error al eliminar");
+        }
+    };
+
+    // La edición redirige al usuario a la página completa de "New/Edit Recurring" para reusar lógica
+    const handleEdit = (id: string) => {
+        // Implementaremos lógica de edición pasando props por URL o Context, 
+        // pero por ahora redirigimos asumiendo que `NewRecurringPage` soportará modo edición en futuro refactor 
+        // (Para este MVP Clean, lo dejaremos como borrar y crear nuevo es más seguro o añadir soporte en el futuro).
+        // Como placeholder de UX correcta:
+        navigate(`/recurring/edit/${id}`); // Necesitarías configurar esta ruta si quisieras full edit
+    };
 
     return (
-        <div className="bg-app-bg text-app-text relative overflow-hidden">
-            {/* Ambient Background Glow */}
-            <div className="fixed inset-0 pointer-events-none -z-10">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px]"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px]"></div>
-            </div>
+        <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
+            <PageHeader title="Gastos Fijos" showBackButton={true} />
 
-            <PageHeader title="Gastos Recurrentes" />
+            <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
 
-            <div className="p-4 max-w-lg mx-auto space-y-4">
-                {/* Info Card */}
-                <div className="bg-gradient-to-r from-app-primary/10 to-app-secondary/10 border border-app-primary/20 rounded-2xl p-4 mb-6">
-                    <div className="flex items-start gap-3">
-                        <span className="material-symbols-outlined text-app-primary text-2xl">repeat</span>
+                {/* Section Header with Add Button */}
+                <div className="flex justify-between items-center px-1">
+                    <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Suscripciones</h2>
+                    <button
+                        onClick={() => navigate('/recurring/new')}
+                        className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                        <span className="hidden sm:inline">Nuevo</span>
+                    </button>
+                </div>
+
+                {/* Intro Card */}
+                <div className="bento-card p-5 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
+                    <div className="flex gap-4">
+                        <div className="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
+                            <span className="material-symbols-outlined">update</span>
+                        </div>
                         <div>
-                            <p className="font-bold text-app-text">Tus compromisos fijos</p>
-                            <p className="text-xs text-app-muted mt-1">
-                                Aquí configuras gastos que se repiten: Netflix, Spotify, renta, servicios, etc.
-                                El sistema te recordará cuando sea hora de pagar.
+                            <h3 className="font-bold text-sm text-app-text">Control de Suscripciones</h3>
+                            <p className="text-xs text-app-muted mt-1 leading-relaxed">
+                                Tus gastos fijos se generarán automáticamente en la fecha correspondiente.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {isLoading ? <SkeletonTransactionList count={5} /> :
-                    recurring?.length === 0 ? (
-                        <div className="text-center py-12">
-                            <span className="material-symbols-outlined text-6xl text-app-muted/30">event_repeat</span>
-                            <p className="text-app-muted mt-4">No tienes gastos recurrentes</p>
-                            <p className="text-xs text-app-muted mt-1">Agrega tus suscripciones y pagos fijos</p>
-                        </div>
-                    ) :
-                        recurring?.map(tx => {
-                            const category = getCategory(tx.categoryId);
-                            const account = getAccount(tx.accountId);
-                            const nextDue = new Date(tx.nextDueDate);
-                            const isOverdue = nextDue < new Date();
-
-                            return (
-                                <SwipeableItem
-                                    key={tx.id}
-                                    onSwipeRight={() => setEditingTx(tx)}
-                                    rightAction={{
-                                        icon: 'edit',
-                                        color: '#3b82f6',
-                                        label: 'Editar',
-                                    }}
-                                    onSwipeLeft={() => setDeletingId(tx.id)}
-                                    leftAction={{
-                                        icon: 'delete',
-                                        color: '#ef4444',
-                                        label: 'Eliminar',
-                                    }}
-                                    className="rounded-2xl"
+                {isLoading ? <SkeletonTransactionList count={4} /> : (
+                    <div className="space-y-4">
+                        {recurring?.length === 0 ? (
+                            <div className="py-12 flex flex-col items-center text-center opacity-50 border-2 border-dashed border-app-border rounded-3xl">
+                                <span className="material-symbols-outlined text-4xl mb-3 text-app-muted">event_busy</span>
+                                <p className="text-sm font-medium">Sin recurrentes</p>
+                                <button
+                                    onClick={() => navigate('/recurring/new')}
+                                    className="mt-4 btn btn-secondary text-xs px-4 py-2"
                                 >
-                                    <div className={`card-modern bg-app-card p-4 rounded-2xl border transition-premium hover:shadow-md ${isOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-app-border'
-                                        }`}>
-                                        <div className="flex items-center gap-4">
+                                    Crear Primero
+                                </button>
+                            </div>
+                        ) : (
+                            recurring?.map(tx => {
+                                const category = getCategory(tx.categoryId);
+                                const account = getAccount(tx.accountId);
+                                const nextDue = new Date(tx.nextDueDate);
+                                const isOverdue = nextDue < new Date();
+
+                                return (
+                                    <SwipeableItem
+                                        key={tx.id}
+                                        onSwipeLeft={() => setDeletingId(tx.id)}
+                                        leftAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
+                                        // TODO: Add onSwipeRight for edit when supported
+                                        className="mb-3"
+                                    >
+                                        <div className={`
+                                            bg-app-surface border p-4 rounded-2xl flex items-center gap-4 cursor-default
+                                            ${isOverdue ? 'border-rose-200 dark:border-rose-900/50 bg-rose-50/30' : 'border-app-border'}
+                                        `}>
                                             <div
-                                                className="size-12 rounded-full flex items-center justify-center"
-                                                style={{ backgroundColor: `${category?.color}20`, color: category?.color }}
+                                                className="size-12 rounded-2xl flex items-center justify-center shrink-0 border border-transparent"
+                                                style={{
+                                                    backgroundColor: `${category?.color || '#999'}20`,
+                                                    color: category?.color || '#999',
+                                                    borderColor: isOverdue ? '#f43f5e' : 'transparent'
+                                                }}
                                             >
-                                                <span className="material-symbols-outlined">{category?.icon}</span>
+                                                <span className="material-symbols-outlined text-[24px]">
+                                                    {isOverdue ? 'warning' : category?.icon || 'refresh'}
+                                                </span>
                                             </div>
+
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-bold truncate">{tx.description}</p>
-                                                    {isOverdue && (
-                                                        <span className="text-[9px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">
-                                                            VENCIDO
-                                                        </span>
-                                                    )}
+                                                <h4 className="font-bold text-sm text-app-text truncate">{tx.description}</h4>
+
+                                                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-app-muted font-medium">
+                                                    <span className="capitalize">{getFrequencyLabel(tx.frequency)}</span>
+                                                    <span>•</span>
+                                                    <span className="truncate max-w-[100px]">{account?.name}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-xs text-app-muted">{getFrequencyLabel(tx.frequency)}</span>
-                                                    <span className="text-xs text-app-muted">•</span>
-                                                    <span className="text-xs text-app-muted">{account?.name}</span>
-                                                </div>
-                                                <p className={`text-xs mt-1 ${isOverdue ? 'text-red-400' : 'text-app-muted'}`}>
-                                                    Próximo: {nextDue.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+
+                                                {isOverdue && (
+                                                    <p className="text-[10px] text-rose-500 font-bold mt-1.5">VENCIDO: {nextDue.toLocaleDateString()}</p>
+                                                )}
+                                                {!isOverdue && (
+                                                    <p className="text-[10px] text-app-muted/80 mt-1">Próximo: {nextDue.toLocaleDateString()}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="text-right">
+                                                <p className={`font-bold text-[15px] ${tx.type === 'income' ? 'text-emerald-500' : 'text-app-text'}`}>
+                                                    ${tx.amount.toLocaleString('es-MX', { minimumFractionDigits: 0 })}
                                                 </p>
                                             </div>
-                                            <p className={`font-bold text-lg ${tx.type === 'income' ? 'text-green-500' : ''}`}>
-                                                ${tx.amount.toFixed(2)}
-                                            </p>
                                         </div>
-                                    </div>
-                                </SwipeableItem>
-                            )
-                        })
-                }
+                                    </SwipeableItem>
+                                )
+                            })
+                        )}
+                    </div>
+                )}
+
+                {/* New Floating Action (Mobile only visual anchor) */}
+                <div className="h-16" />
             </div>
 
-
-
-            {/* Modals */}
-            {showNewModal && categories && accounts && (
-                <NewRecurringModal
-                    categories={categories}
-                    accounts={accounts}
-                    onSave={handleCreate}
-                    onCancel={() => setShowNewModal(false)}
-                    isSaving={addMutation.isPending}
-                />
-            )}
-
-            {editingTx && <EditRecurringModal transaction={editingTx} categories={categories} onSave={handleSave} onCancel={() => setEditingTx(null)} isSaving={updateMutation.isPending} />}
-
             {deletingId && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-app-card rounded-2xl p-6 w-full max-w-sm">
-                        <h3 className="font-bold text-lg mb-2">¿Eliminar transacción recurrente?</h3>
-                        <p className="text-sm text-app-muted mb-6">
-                            Esto eliminará la plantilla recurrente y no se generarán más recordatorios.
-                            Las transacciones ya creadas no se eliminarán.
-                        </p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setDeletingId(null)}
-                                className="btn-modern btn-ghost px-4 py-2 rounded-lg font-semibold hover:bg-app-elevated"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={() => handleDelete(deletingId)}
-                                disabled={deleteMutation.isPending}
-                                className="btn-modern bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-lg font-semibold disabled:opacity-50 shadow-md"
-                            >
-                                {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <DeleteConfirmationSheet
+                    isOpen={!!deletingId}
+                    onClose={() => setDeletingId(null)}
+                    onConfirm={handleDelete}
+                    itemName="esta suscripción"
+                    warningMessage="Detener pago recurrente"
+                    warningDetails={['Esto no borrará el historial pasado, solo los cobros futuros.']}
+                    isDeleting={deleteMutation.isPending}
+                />
             )}
         </div>
     );

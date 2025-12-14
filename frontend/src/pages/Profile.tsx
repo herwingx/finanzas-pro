@@ -11,23 +11,22 @@ const Profile: React.FC = () => {
   const updateProfileMutation = useUpdateProfile();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({
-    name: '',
-    currency: 'USD' as 'USD' | 'EUR' | 'GBP' | 'MXN',
-    avatar: '',
-  });
+
+  // Local edit state initialized
+  const [name, setName] = useState('');
+  const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP' | 'MXN'>('MXN');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const userInitials = useMemo(() => {
     return profile?.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
   }, [profile?.name]);
 
-  const handleEdit = () => {
+  // Sync state when entering edit mode
+  const startEditing = () => {
     if (profile) {
-      setEditData({
-        name: profile.name,
-        currency: profile.currency,
-        avatar: profile.avatar || '',
-      });
+      setName(profile.name);
+      setCurrency(profile.currency);
+      setAvatarPreview(profile.avatar || null);
       setIsEditing(true);
     }
   };
@@ -35,143 +34,148 @@ const Profile: React.FC = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 1024) {
-        toastError('La imagen debe ser menor a 1MB');
+      if (file.size > 2 * 1024 * 1024) { // 2MB Limit standard
+        toastError('La imagen es muy pesada (max 2MB)');
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditData({ ...editData, avatar: reader.result as string });
-      };
+      reader.onloadend = () => setAvatarPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
   const handleSave = async () => {
     try {
-      await updateProfileMutation.mutateAsync(editData);
-      toastSuccess('Perfil actualizado');
+      await updateProfileMutation.mutateAsync({ name, currency, avatar: avatarPreview || '' });
+      toastSuccess('Perfil actualizado correctamente');
       setIsEditing(false);
     } catch (error) {
-      toastError('Error al actualizar perfil');
+      toastError('No se pudo guardar los cambios');
     }
   };
 
   const handleLogout = () => {
+    // Limpia todo para evitar inconsistencias
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Si tienes un context de Auth, aquí deberías llamar al método logout()
     navigate('/login');
   };
 
   if (isLoading) return <SkeletonAppLoading />;
+  if (isError) return <div className="p-8 text-center text-app-muted">Error cargando perfil.</div>;
 
-  if (isError) return <div className="p-8 text-center text-app-danger">Error al cargar el perfil.</div>;
+  const currentAvatar = isEditing ? avatarPreview : profile?.avatar;
 
   return (
-    <div className="bg-app-bg text-app-text font-sans relative overflow-hidden">
-      {/* Ambient Background Glow */}
-      <div className="fixed inset-0 pointer-events-none -z-10">
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[40%] bg-app-primary/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
-      </div>
-
+    <div className="min-h-dvh bg-app-bg pb-safe text-app-text font-sans">
       <PageHeader
-        title="Perfil"
+        title="Mi Perfil"
+        showBackButton={true}
+        onBack={() => isEditing ? setIsEditing(false) : navigate('/more')} // Navegación lógica: cancelar edición o volver
         rightAction={
           <button
-            onClick={isEditing ? handleSave : handleEdit}
-            className="size-10 rounded-xl flex items-center justify-center hover:bg-app-elevated transition-colors"
+            onClick={isEditing ? handleSave : startEditing}
             disabled={updateProfileMutation.isPending}
+            className={`text-sm font-bold transition-colors px-2 py-1 rounded-lg ${isEditing ? 'text-app-primary bg-app-primary/10' : 'text-app-muted hover:text-app-text hover:bg-app-subtle'}`}
           >
-            <span className="material-symbols-outlined text-xl text-app-primary">
-              {isEditing ? 'check' : 'edit'}
-            </span>
+            {updateProfileMutation.isPending ? '...' : isEditing ? 'Guardar' : 'Editar'}
           </button>
         }
       />
 
-      <div className="p-4 mt-2 space-y-8 max-w-lg mx-auto">
-        {/* Profile Card */}
-        <div className="flex flex-col items-center">
-          <div className="relative group">
-            <div className="size-24 rounded-full bg-gradient-to-br from-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-4xl shadow-lg shadow-app-primary/30 ring-4 ring-app-bg group-hover:ring-app-primary/30 transition-all duration-500 relative z-10">
-              {(isEditing ? editData.avatar : profile?.avatar) ?
-                <img src={isEditing ? editData.avatar : profile?.avatar} alt="Avatar" className="w-full h-full object-cover" /> :
-                <span>{userInitials}</span>
-              }
-            </div>
+      <div className="max-w-lg mx-auto px-6 py-8 flex flex-col items-center">
+
+        {/* Avatar Hero Section */}
+        <div className="relative group mb-6">
+          <div className="size-28 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl overflow-hidden ring-4 ring-app-surface relative">
+            {currentAvatar ? (
+              <img src={currentAvatar} alt="Profile" className="w-full h-full object-cover transition-opacity duration-300" />
+            ) : (
+              <span>{userInitials}</span>
+            )}
+
+            {/* Edit Overlay (Only visible in edit mode) */}
             {isEditing && (
-              <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined text-white text-2xl">photo_camera</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
+              <label className="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-black/50 backdrop-blur-[2px]">
+                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                <span className="material-symbols-outlined text-white text-3xl drop-shadow-md">photo_camera</span>
               </label>
             )}
           </div>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editData.name}
-              onChange={e => setEditData({ ...editData, name: e.target.value })}
-              className="mt-4 text-2xl font-bold tracking-tight text-center bg-app-elevated border border-app-border rounded-xl px-4 py-2"
-            />
-          ) : (
-            <h2 className="text-2xl font-bold tracking-tight mt-4">{profile?.name}</h2>
-          )}
         </div>
 
-        {/* Account Settings */}
-        <section>
-          <h2 className="text-sm font-bold text-app-muted uppercase tracking-wider mb-3">Cuenta</h2>
-          <div className="bg-app-card rounded-2xl border border-app-border p-4 shadow-sm">
-            <div className="flex justify-between items-center">
-              <div className="flex-1">
-                <p className="font-semibold text-sm">Moneda</p>
-                <p className="text-app-muted text-xs">Moneda predeterminada para reportes.</p>
+        {/* Name Section (Editable Title) */}
+        {isEditing ? (
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="text-2xl font-bold text-center bg-transparent border-b-2 border-app-border focus:border-app-primary outline-none px-2 py-1 mb-1 w-full max-w-[240px] transition-colors"
+            autoFocus
+            placeholder="Tu nombre"
+          />
+        ) : (
+          <h1 className="text-2xl font-bold text-app-text mb-1 tracking-tight">{profile?.name}</h1>
+        )}
+
+        <p className="text-sm text-app-muted mb-10 font-medium">{profile?.email}</p>
+
+
+        {/* Settings Form Blocks */}
+        <div className="w-full space-y-6 animate-slide-up">
+
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider pl-1">Configuración Regional</h3>
+
+            <div className="bg-app-surface border border-app-border rounded-2xl p-4 flex justify-between items-center shadow-sm">
+              <div>
+                <p className="font-semibold text-sm text-app-text">Moneda Principal</p>
+                <p className="text-xs text-app-muted mt-0.5">Usada para los reportes globales</p>
               </div>
+
               {isEditing ? (
                 <div className="relative">
                   <select
-                    value={editData.currency}
-                    onChange={e => setEditData({ ...editData, currency: e.target.value as any })}
-                    className="appearance-none bg-app-elevated border border-app-border rounded-lg pl-3 pr-8 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-app-primary"
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as any)}
+                    className="appearance-none bg-app-subtle border-transparent py-2 pl-3 pr-9 rounded-lg text-sm font-bold text-app-text focus:ring-2 focus:ring-app-primary outline-none cursor-pointer transition-shadow"
                   >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="MXN">MXN</option>
+                    <option value="MXN">MXN ($)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
                   </select>
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-app-muted flex items-center">
-                    <span className="material-symbols-outlined text-lg">expand_more</span>
-                  </div>
+                  <span className="absolute right-2.5 top-2.5 text-app-muted pointer-events-none material-symbols-outlined text-sm">expand_more</span>
                 </div>
               ) : (
-                <span className="font-bold text-app-primary bg-app-primary/10 px-3 py-1 rounded-lg text-sm">{profile?.currency}</span>
+                <div className="bg-app-subtle px-3 py-1.5 rounded-lg text-sm font-bold text-app-text border border-app-border">
+                  {profile?.currency}
+                </div>
               )}
             </div>
           </div>
-        </section>
 
-        {/* Logout Section */}
-        <section>
-          <h2 className="text-sm font-bold text-app-muted uppercase tracking-wider mb-3">Sesión</h2>
-          <div className="bg-app-card rounded-2xl border border-app-border p-4 shadow-sm">
-            <p className="text-app-muted text-xs mb-4">
-              Cerrar sesión en este dispositivo.
-            </p>
+          {/* Account Danger Zone */}
+          <div className="space-y-6 pt-4">
             <button
               onClick={handleLogout}
-              className="btn-modern btn-danger btn-ghost w-full py-3 bg-app-danger/10 text-app-danger hover:bg-app-danger hover:text-white transition-all shadow-none hover:shadow-md flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-2xl bg-app-surface border border-app-border text-rose-500 font-bold text-sm hover:bg-rose-50 dark:hover:bg-rose-900/10 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
             >
-              <span className="material-symbols-outlined text-lg">logout</span>
+              <span className="material-symbols-outlined text-[20px]">logout</span>
               Cerrar Sesión
             </button>
+
+            <div className="text-center space-y-1">
+              <p className="text-[10px] text-app-muted uppercase tracking-widest font-bold">
+                Finanzas Pro
+              </p>
+              <p className="text-[10px] text-app-muted/60 font-mono">
+                v2.4.0
+              </p>
+            </div>
           </div>
-        </section>
+
+        </div>
       </div>
     </div>
   );

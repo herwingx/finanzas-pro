@@ -1,370 +1,254 @@
 import React, { useMemo } from 'react';
 import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  AreaChart, Area,
+  BarChart, Bar,
+  PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
 } from 'recharts';
 import { Transaction, Category } from '../types';
 
-// Modern Tooltip Component - Spanish
+// --- Shared: Modern Tooltip (Linear Style) ---
 const ModernTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-app-elevated border border-app-border rounded-xl p-3 shadow-lg">
-        <p className="text-xs text-app-muted font-bold mb-1">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <p key={index} className="text-sm font-bold" style={{ color: entry.color }}>
-            {entry.name}: ${entry.value.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-        ))}
+      <div className="bg-app-surface border border-app-border rounded-lg p-2.5 shadow-lg min-w-[140px]">
+        <p className="text-[10px] text-app-muted uppercase tracking-wider mb-1.5 font-bold">{label}</p>
+        <div className="space-y-1">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex justify-between items-center text-xs">
+              <span className="font-medium capitalize text-app-text flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                {entry.name}
+              </span>
+              <span className="font-bold tabular-nums text-app-text">
+                {entry.value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
   return null;
 };
 
-// Spending Trend Chart (Line) - Improved Spanish Version
-interface SpendingTrendProps {
-  transactions: Transaction[];
-}
+// --- Spending Trend (Area) ---
+interface SpendingTrendProps { transactions: Transaction[]; }
 
 export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions }) => {
   const { data, totals } = useMemo(() => {
-    // Group by month with Spanish month names
+    // Agrupar por Mes
     const monthlyData = transactions.reduce((acc, tx) => {
       const date = new Date(tx.date);
-      const monthKey = date.toLocaleDateString('es-MX', { month: 'short' }).replace('.', '');
+      // Sort Key: YYYY-MM
       const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      // Display Key: Ene
+      const monthName = date.toLocaleDateString('es-MX', { month: 'short' });
+      const displayKey = monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', '');
 
-      if (!acc[sortKey]) {
-        acc[sortKey] = { mes: monthKey.charAt(0).toUpperCase() + monthKey.slice(1), Ingresos: 0, Gastos: 0 };
-      }
+      if (!acc[sortKey]) acc[sortKey] = { mes: displayKey, Ingresos: 0, Gastos: 0 };
 
-      if (tx.type === 'income') {
-        acc[sortKey].Ingresos += tx.amount;
-      } else if (tx.type === 'expense') {
-        acc[sortKey].Gastos += tx.amount;
-      }
+      if (tx.type === 'income') acc[sortKey].Ingresos += tx.amount;
+      else if (tx.type === 'expense') acc[sortKey].Gastos += tx.amount;
 
       return acc;
-    }, {} as Record<string, { mes: string; Ingresos: number; Gastos: number }>);
+    }, {} as Record<string, any>);
 
-    const chartData = Object.entries(monthlyData)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6)
-      .map(([, value]) => value);
+    const chartData = Object.entries(monthlyData).sort(([a], [b]) => a.localeCompare(b)).slice(-6).map(([, val]) => val);
 
-    const totals = chartData.reduce(
-      (acc, item) => ({
-        ingresos: acc.ingresos + item.Ingresos,
-        gastos: acc.gastos + item.Gastos,
-      }),
-      { ingresos: 0, gastos: 0 }
-    );
+    // Totals para pills
+    const t = chartData.reduce((acc, item) => ({
+      ingresos: acc.ingresos + item.Ingresos,
+      gastos: acc.gastos + item.Gastos
+    }), { ingresos: 0, gastos: 0 });
 
-    return { data: chartData, totals };
+    return { data: chartData, totals: t };
   }, [transactions]);
 
-  const formatCurrency = (value: number) =>
-    `$${value.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const formatMoney = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(val);
 
   if (data.length === 0) {
     return (
-      <div className="bg-app-card border border-app-border rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="material-symbols-outlined text-app-primary">trending_up</span>
-          <h3 className="font-bold text-app-text">Tendencia de Gastos</h3>
-        </div>
-        <div className="flex items-center justify-center h-40 text-app-muted">
-          <p className="text-sm">Sin datos suficientes para mostrar tendencias</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-48 text-app-muted text-xs">
+        <span className="material-symbols-outlined text-3xl opacity-20 mb-2">bar_chart</span>
+        Sin suficientes datos
       </div>
     );
   }
 
   return (
-    <div className="bg-app-card border border-app-border rounded-2xl p-5 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-app-primary/10">
-            <span className="material-symbols-outlined text-app-primary text-lg">trending_up</span>
-          </div>
+    <div className="w-full h-full flex flex-col">
+      {/* KPIs Compactos */}
+      <div className="flex gap-4 mb-4 mt-1 overflow-x-auto pb-1 no-scrollbar">
+        <div className="shrink-0 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
           <div>
-            <h3 className="font-bold text-app-text text-sm">Tendencia de Gastos</h3>
-            <p className="text-[10px] text-app-muted">Últimos {data.length} meses</p>
+            <p className="text-[10px] text-app-muted uppercase">Ingresos</p>
+            <p className="text-xs font-bold text-app-text">{formatMoney(totals.ingresos)}</p>
+          </div>
+        </div>
+        <div className="shrink-0 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+          <div>
+            <p className="text-[10px] text-app-muted uppercase">Gastos</p>
+            <p className="text-xs font-bold text-app-text">{formatMoney(totals.gastos)}</p>
           </div>
         </div>
       </div>
 
-      {/* Summary Pills */}
-      <div className="flex gap-3 mb-4">
-        <div className="flex-1 bg-app-income-bg rounded-xl px-3 py-2">
-          <p className="text-[10px] text-app-income font-bold uppercase tracking-wide">Ingresos</p>
-          <p className="text-sm font-bold text-app-text">{formatCurrency(totals.ingresos)}</p>
-        </div>
-        <div className="flex-1 bg-app-expense-bg rounded-xl px-3 py-2">
-          <p className="text-[10px] text-app-expense font-bold uppercase tracking-wide">Gastos</p>
-          <p className="text-sm font-bold text-app-text">{formatCurrency(totals.gastos)}</p>
-        </div>
-        <div className={`flex-1 rounded-xl px-3 py-2 ${totals.ingresos >= totals.gastos ? 'bg-app-income-bg' : 'bg-app-expense-bg'}`}>
-          <p className="text-[10px] text-app-muted font-bold uppercase tracking-wide">Balance</p>
-          <p className={`text-sm font-bold ${totals.ingresos >= totals.gastos ? 'text-app-income' : 'text-app-expense'}`}>
-            {totals.ingresos >= totals.gastos ? '+' : ''}{formatCurrency(totals.ingresos - totals.gastos)}
-          </p>
-        </div>
-      </div>
-
-      {/* Chart */}
-      <ResponsiveContainer width="100%" height={180}>
-        <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--color-income)" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--color-expense)" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-          <XAxis
-            dataKey="mes"
-            stroke="var(--color-text-tertiary)"
-            style={{ fontSize: '10px' }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            stroke="var(--color-text-tertiary)"
-            style={{ fontSize: '9px' }}
-            tickLine={false}
-            axisLine={false}
-            width={45}
-            tickFormatter={(value) => {
-              if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-              if (value >= 1000) return `$${(value / 1000).toFixed(0)}k`;
-              return `$${value.toFixed(0)}`;
-            }}
-          />
-          <Tooltip content={<ModernTooltip />} />
-          <Area
-            type="monotone"
-            dataKey="Ingresos"
-            stroke="var(--color-income)"
-            fill="url(#colorIngresos)"
-            strokeWidth={2}
-          />
-          <Area
-            type="monotone"
-            dataKey="Gastos"
-            stroke="var(--color-expense)"
-            fill="url(#colorGastos)"
-            strokeWidth={2}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-
-      {/* Legend */}
-      <div className="flex justify-center gap-6 mt-3">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-app-income"></div>
-          <span className="text-[10px] font-medium text-app-muted">Ingresos</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-app-expense"></div>
-          <span className="text-[10px] font-medium text-app-muted">Gastos</span>
-        </div>
+      {/* Chart Area */}
+      <div className="flex-1 min-h-[160px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradIngresos" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--semantic-success)" stopOpacity={0.15} />
+                <stop offset="90%" stopColor="var(--semantic-success)" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="gradGastos" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--semantic-danger)" stopOpacity={0.15} />
+                <stop offset="90%" stopColor="var(--semantic-danger)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-default)" strokeOpacity={0.6} />
+            <XAxis
+              dataKey="mes"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+              dy={10}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+              tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
+            />
+            <Tooltip content={<ModernTooltip />} cursor={{ stroke: 'var(--text-muted)', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Area
+              type="monotone"
+              dataKey="Ingresos"
+              stroke="var(--semantic-success)"
+              strokeWidth={2}
+              fill="url(#gradIngresos)"
+            />
+            <Area
+              type="monotone"
+              dataKey="Gastos"
+              stroke="var(--semantic-danger)"
+              strokeWidth={2}
+              fill="url(#gradGastos)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
 };
 
-// Category Distribution Chart (Donut)
-interface CategoryDistributionProps {
-  transactions: Transaction[];
-  categories: Category[];
-}
 
-export const CategoryDistributionChart: React.FC<CategoryDistributionProps> = ({
-  transactions,
-  categories
-}) => {
+// --- Category Donut ---
+export const CategoryDistributionChart: React.FC<{ transactions: Transaction[], categories: Category[] }> = ({ transactions, categories }) => {
   const data = useMemo(() => {
-    const categoryTotals = transactions
+    const totals = transactions
       .filter(tx => tx.type === 'expense')
       .reduce((acc, tx) => {
-        const categoryId = tx.categoryId || 'unknown';
-        acc[categoryId] = (acc[categoryId] || 0) + tx.amount;
+        acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
         return acc;
       }, {} as Record<string, number>);
 
-    return Object.entries(categoryTotals)
-      .map(([categoryId, amount]) => {
-        const category = categories.find(c => c.id === categoryId);
+    return Object.entries(totals)
+      .map(([id, val]) => {
+        const cat = categories.find(c => c.id === id);
         return {
-          name: category?.name || 'Sin categoría',
-          value: amount,
-          color: category?.color || '#999',
+          name: cat?.name || 'Otros',
+          value: val,
+          color: cat?.color || 'var(--text-muted)'
         };
       })
       .sort((a, b) => b.value - a.value)
-      .slice(0, 6); // Top 6 categories
+      .slice(0, 5); // Solo Top 5
   }, [transactions, categories]);
 
+  if (!data.length) return <div className="h-40 flex items-center justify-center text-xs text-app-muted">Sin gastos registrados</div>;
+
   return (
-    <ResponsiveContainer width="100%" height={250}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={60}
-          outerRadius={80}
-          paddingAngle={2}
-          dataKey="value"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip content={<ModernTooltip />} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="flex items-center h-[200px]">
+      {/* Legend Custom */}
+      <div className="w-1/3 flex flex-col gap-2 pr-2">
+        {data.map((item, i) => (
+          <div key={i} className="flex items-center gap-1.5 overflow-hidden">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+            <span className="text-[10px] text-app-muted truncate" title={item.name}>{item.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Chart */}
+      <div className="w-2/3 h-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={50}
+              outerRadius={70}
+              paddingAngle={4}
+              dataKey="value"
+              cornerRadius={4}
+            >
+              {data.map((e, i) => <Cell key={i} fill={e.color} stroke="var(--bg-surface)" strokeWidth={2} />)}
+            </Pie>
+            <Tooltip content={<ModernTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 };
 
-// Monthly Comparison Chart (Bar) - Spanish
-interface MonthlyComparisonProps {
-  transactions: Transaction[];
-}
 
-export const MonthlyComparisonChart: React.FC<MonthlyComparisonProps> = ({ transactions }) => {
+// --- Balance Area (Net Worth Evolution) ---
+export const BalanceOverTimeChart: React.FC<{ transactions: Transaction[] }> = ({ transactions }) => {
   const data = useMemo(() => {
-    const monthlyData = transactions.reduce((acc, tx) => {
-      const date = new Date(tx.date);
-      const monthKey = date.toLocaleDateString('es-MX', { month: 'short' }).replace('.', '');
-      const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    // Simplificación rápida de saldo acumulado
+    const sorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let balance = 0;
+    const daily: Record<string, number> = {};
 
-      if (!acc[sortKey]) {
-        acc[sortKey] = { mes: monthKey.charAt(0).toUpperCase() + monthKey.slice(1), Ingresos: 0, Gastos: 0 };
-      }
+    sorted.forEach(tx => {
+      if (tx.type === 'income') balance += tx.amount;
+      else if (tx.type === 'expense') balance -= tx.amount;
 
-      if (tx.type === 'income') {
-        acc[sortKey].Ingresos += tx.amount;
-      } else if (tx.type === 'expense') {
-        acc[sortKey].Gastos += tx.amount;
-      }
-
-      return acc;
-    }, {} as Record<string, { mes: string; Ingresos: number; Gastos: number }>);
-
-    return Object.entries(monthlyData)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6)
-      .map(([, value]) => value);
-  }, [transactions]);
-
-  return (
-    <ResponsiveContainer width="100%" height={250}>
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-        <XAxis
-          dataKey="mes"
-          stroke="var(--color-text-tertiary)"
-          style={{ fontSize: '0.7rem' }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          stroke="var(--color-text-tertiary)"
-          style={{ fontSize: '0.7rem' }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-        />
-        <Tooltip content={<ModernTooltip />} />
-        <Bar dataKey="Ingresos" fill="var(--color-income)" radius={[6, 6, 0, 0]} />
-        <Bar dataKey="Gastos" fill="var(--color-expense)" radius={[6, 6, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-};
-
-// Balance Over Time Chart (Area) - Spanish
-interface BalanceOverTimeProps {
-  transactions: Transaction[];
-}
-
-export const BalanceOverTimeChart: React.FC<BalanceOverTimeProps> = ({ transactions }) => {
-  const data = useMemo(() => {
-    const sortedTransactions = [...transactions].sort((a, b) =>
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    let runningBalance = 0;
-    const balanceData = sortedTransactions.map(tx => {
-      if (tx.type === 'income') {
-        runningBalance += tx.amount;
-      } else if (tx.type === 'expense') {
-        runningBalance -= tx.amount;
-      }
-
-      return {
-        fecha: new Date(tx.date).toLocaleDateString('es-MX', { month: 'short', day: 'numeric' }).replace('.', ''),
-        Saldo: runningBalance,
-      };
+      const d = new Date(tx.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+      daily[d] = balance;
     });
 
-    return balanceData.slice(-30); // Last 30 transactions
+    // Tomar últimos 15 puntos para que el gráfico respire
+    const entries = Object.entries(daily).map(([k, v]) => ({ fecha: k, Saldo: v }));
+    return entries.slice(-15);
   }, [transactions]);
 
+  if (data.length < 2) return <div className="h-40 flex items-center justify-center text-xs text-app-muted">Se requieren más datos</div>;
+
   return (
-    <ResponsiveContainer width="100%" height={250}>
-      <AreaChart data={data}>
+    <ResponsiveContainer width="100%" height={200}>
+      <AreaChart data={data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
         <defs>
-          <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
+          <linearGradient id="gradBalance" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--brand-primary)" stopOpacity={0.2} />
+            <stop offset="100%" stopColor="var(--brand-primary)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-        <XAxis
-          dataKey="fecha"
-          stroke="var(--color-text-tertiary)"
-          style={{ fontSize: '0.65rem' }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          stroke="var(--color-text-tertiary)"
-          style={{ fontSize: '0.65rem' }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-        />
-        <Tooltip content={<ModernTooltip />} />
-        <Area
-          type="monotone"
-          dataKey="Saldo"
-          stroke="var(--color-primary)"
-          fill="url(#colorSaldo)"
-          strokeWidth={2}
-        />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-default)" />
+        <XAxis dataKey="fecha" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} dy={5} />
+        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+          tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val} />
+        <Tooltip content={<ModernTooltip />} cursor={false} />
+        <Area type="monotone" dataKey="Saldo" stroke="var(--brand-primary)" strokeWidth={2} fill="url(#gradBalance)" />
       </AreaChart>
     </ResponsiveContainer>
   );
-};
+}

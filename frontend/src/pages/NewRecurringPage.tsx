@@ -2,17 +2,21 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories, useAccounts, useAddRecurringTransaction } from '../hooks/useApi';
 import { FrequencyType, TransactionType } from '../types';
-import { toast } from '../utils/toast';
+import { toastSuccess, toastError, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { DatePicker } from '../components/DatePicker';
 import { CategorySelector } from '../components/CategorySelector';
+import { ToggleButtonGroup } from '../components/Button';
 
 const NewRecurringPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // Queries
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const addMutation = useAddRecurringTransaction();
 
+  // State
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -22,36 +26,27 @@ const NewRecurringPage: React.FC = () => {
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [alreadyPaidCurrent, setAlreadyPaidCurrent] = useState(false);
 
-  const availableCategories = useMemo(() =>
-    categories?.filter(c => c.type === type) || [],
-    [categories, type]
-  );
+  // Derived Data
+  const availableCategories = useMemo(() => categories?.filter(c => c.type === type) || [], [categories, type]);
+  const availableAccounts = useMemo(() => accounts || [], [accounts]);
 
-  const availableAccounts = useMemo(() =>
-    accounts || [],
-    [accounts]
-  );
-
-  // Set default account and category
+  // Effects
   useEffect(() => {
-    if (availableAccounts.length > 0 && !accountId) {
-      setAccountId(availableAccounts[0].id);
-    }
+    if (availableAccounts.length > 0 && !accountId) setAccountId(availableAccounts[0].id);
   }, [availableAccounts, accountId]);
 
   useEffect(() => {
-    if (availableCategories.length > 0 && !categoryId) {
-      setCategoryId(availableCategories[0].id);
-    }
+    if (availableCategories.length > 0 && !categoryId) setCategoryId(availableCategories[0].id);
   }, [availableCategories, categoryId]);
 
-  // Reset category when type changes
-  useEffect(() => {
-    setCategoryId('');
-  }, [type]);
+  useEffect(() => setCategoryId(''), [type]);
 
+  // Logic
   const calculateNextDueDate = () => {
     const nextDate = new Date(startDate);
+    // Reset hours for cleaner calc
+    nextDate.setHours(12, 0, 0, 0);
+
     if (alreadyPaidCurrent) {
       if (frequency === 'daily') nextDate.setDate(nextDate.getDate() + 1);
       else if (frequency === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
@@ -64,20 +59,11 @@ const NewRecurringPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const numAmount = parseFloat(amount);
-    if (!amount || numAmount <= 0) {
-      toast.error('Ingresa un monto válido');
-      return;
-    }
-    if (!categoryId) {
-      toast.error('Selecciona una categoría');
-      return;
-    }
-    if (!accountId) {
-      toast.error('Selecciona una cuenta');
-      return;
-    }
+
+    if (!amount || numAmount <= 0) return toast.error('Monto inválido');
+    if (!categoryId) return toast.error('Selecciona una categoría');
+    if (!accountId) return toast.error('Selecciona una cuenta');
 
     const nextDueDate = calculateNextDueDate();
 
@@ -93,229 +79,161 @@ const NewRecurringPage: React.FC = () => {
         active: true,
         nextDueDate: nextDueDate.toISOString(),
       });
-      toast.success(`Recurrente creado. Próximo: ${nextDueDate.toLocaleDateString('es-MX')}`);
+      toastSuccess('Recurrente programado', { description: `Próximo: ${nextDueDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}` });
       navigate('/recurring');
     } catch (error: any) {
-      toast.error(error.message || 'Error al crear');
+      toastError(error.message);
     }
   };
 
-  const isLoading = isLoadingCategories || isLoadingAccounts;
-
-  const frequencyOptions = [
-    { value: 'daily', label: 'Diario', days: '1' },
-    { value: 'weekly', label: 'Semanal', days: '7' },
-    { value: 'biweekly', label: 'Quincenal', days: '14' },
-    { value: 'monthly', label: 'Mensual', days: '30' },
-    { value: 'yearly', label: 'Anual', days: '365' },
-  ];
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-min-h-full bg-app-bg">
-        <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  if (isLoadingCategories || isLoadingAccounts) {
+    return <div className="min-h-dvh flex items-center justify-center text-app-muted animate-pulse">Cargando...</div>;
   }
 
+  // Frequency Configuration
+  const freqOptions: { value: FrequencyType; label: string; days: string }[] = [
+    { value: 'weekly', label: 'Semanal', days: '7d' },
+    { value: 'biweekly', label: 'Quincenal', days: '15d' },
+    { value: 'monthly', label: 'Mensual', days: '1m' },
+    { value: 'yearly', label: 'Anual', days: '1a' },
+  ];
+
   return (
-    <div className="flex flex-col min-min-h-full bg-app-bg text-app-text">
-      <PageHeader title="Nuevo Recurrente" showBackButton />
+    <div className="min-h-dvh bg-app-bg pb-safe text-app-text font-sans">
+      <PageHeader title="Nuevo Fijo" showBackButton={true} />
 
-      <main className="flex-1 px-5 py-6 w-full max-w-lg mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Type Toggle */}
-          <div>
-            <label className="text-xs text-app-muted uppercase font-bold">Tipo de Transacción</label>
-            <div className="flex p-1.5 bg-app-elevated rounded-xl mt-2">
-              <button
-                type="button"
-                onClick={() => setType('expense')}
-                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${type === 'expense' ? 'bg-app-bg text-red-500 shadow-sm border border-app-border' : 'text-app-muted hover:text-app-text'
-                  }`}
-              >
-                <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: '"FILL" 1' }}>shopping_bag</span>
-                Gasto
-              </button>
-              <button
-                type="button"
-                onClick={() => setType('income')}
-                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${type === 'income' ? 'bg-app-bg text-green-500 shadow-sm border border-app-border' : 'text-app-muted hover:text-app-text'
-                  }`}
-              >
-                <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: '"FILL" 1' }}>attach_money</span>
-                Ingreso
-              </button>
+      <main className="px-5 py-6 w-full max-w-lg mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* Amount Section */}
+          <div className="text-center">
+            <div className="inline-flex bg-app-surface border border-app-border rounded-xl p-1 mb-4 shadow-sm">
+              <ToggleButtonGroup
+                value={type}
+                onChange={(val) => setType(val as any)}
+                options={[
+                  { value: 'expense', label: 'Gasto' },
+                  { value: 'income', label: 'Ingreso' }
+                ]}
+              />
             </div>
-          </div>
 
-          {/* Amount - centered */}
-          <div className="text-center pb-4 border-b border-app-border/30">
-            <label className="text-xs text-app-muted uppercase font-bold">Monto</label>
-            <div className="flex items-center justify-center mt-2">
-              <span className="text-2xl text-app-muted font-medium">$</span>
+            <div className="flex items-center justify-center">
+              <span className="text-2xl font-bold text-app-muted mr-2">$</span>
               <input
-                type="text"
-                inputMode="decimal"
-                pattern="[0-9]*\.?[0-9]*"
+                type="number" inputMode="decimal"
                 value={amount}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setAmount(val);
-                }}
+                onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="text-3xl font-bold bg-transparent text-center w-32 focus:outline-none text-app-text placeholder-app-muted/30"
                 autoFocus
+                className="bg-transparent text-4xl font-black text-app-text outline-none text-center w-40 placeholder-app-muted/20"
               />
             </div>
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="text-xs text-app-muted uppercase font-bold">Descripción</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={type === 'expense' ? 'Netflix, Spotify, Renta...' : 'Nómina, Freelance...'}
-              className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
-            />
-          </div>
+          {/* Details */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Concepto</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={type === 'expense' ? 'Netflix, Renta...' : 'Nómina...'}
+                className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none transition-all"
+              />
+            </div>
 
-          {/* Account */}
-          <div>
-            <label className="text-xs text-app-muted uppercase font-bold">Cuenta de Cargo</label>
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
-            >
-              {availableAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Frecuencia</label>
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {freqOptions.map(f => (
+                  <button
+                    type="button" key={f.value}
+                    onClick={() => setFrequency(f.value)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${frequency === f.value
+                      ? 'border-app-primary bg-app-primary/5 text-app-primary'
+                      : 'border-app-border bg-app-surface hover:border-app-muted'
+                      }`}
+                  >
+                    <span className="text-lg font-black leading-none mb-1">{f.days}</span>
+                    <span className="text-[9px] uppercase font-bold">{f.label}</span>
+                  </button>
+                ))}
+              </div>
+              {/* Fallback freq buttons row if needed, mainly Daily which is rare */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Optionally put Daily here if strictly needed */}
+              </div>
+            </div>
 
-          {/* Category */}
-          <div>
-            <label className="text-xs text-app-muted uppercase font-bold">Categoría</label>
-            <div className="mt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Inicio / Corte</label>
+                <DatePicker date={startDate} onDateChange={(d) => d && setStartDate(d)} className="bg-app-surface border-app-border" />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Cuenta Cargo</label>
+                <select
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="w-full h-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none appearance-none"
+                >
+                  {availableAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-2 block">Categoría</label>
               <CategorySelector
                 categories={availableCategories}
                 selectedId={categoryId}
                 onSelect={setCategoryId}
-                isLoading={isLoadingCategories}
-                emptyMessage={`No hay categorías de ${type === 'expense' ? 'gasto' : 'ingreso'}`}
+                emptyMessage="Selecciona una categoría"
               />
             </div>
           </div>
 
-          {/* Frequency */}
-          <div>
-            <label className="block text-xs text-app-muted font-bold mb-2 uppercase tracking-wider">Frecuencia de Cobro</label>
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              {frequencyOptions.filter(f => ['weekly', 'biweekly', 'monthly'].includes(f.value)).map(f => (
-                <button
-                  type="button"
-                  key={f.value}
-                  onClick={() => setFrequency(f.value as FrequencyType)}
-                  className={`p-3 rounded-xl text-center transition-all border-2 relative overflow-hidden ${frequency === f.value
-                    ? 'border-app-primary bg-app-primary/10 text-app-primary'
-                    : 'border-app-border bg-app-elevated hover:border-app-muted'
-                    }`}
-                >
-                  <div className="text-lg font-black">{f.days}</div>
-                  <div className="text-[10px] font-bold uppercase opacity-80">{f.label}</div>
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setFrequency('daily')}
-                className={`flex-1 p-3 rounded-xl text-center transition-all border-2 ${frequency === 'daily'
-                  ? 'border-app-primary bg-app-primary/10 text-app-primary'
-                  : 'border-app-border bg-app-elevated'
-                  }`}
-              >
-                <span className="text-xs font-bold uppercase">Diario</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFrequency('yearly')}
-                className={`flex-1 p-3 rounded-xl text-center transition-all border-2 ${frequency === 'yearly'
-                  ? 'border-app-primary bg-app-primary/10 text-app-primary'
-                  : 'border-app-border bg-app-elevated'
-                  }`}
-              >
-                <span className="text-xs font-bold uppercase">Anual</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Start Date */}
-          <div>
-            <label className="block text-xs text-app-muted font-bold mb-2 uppercase tracking-wider">Primer Vencimiento</label>
-            <div className="bg-app-elevated/50 p-2 rounded-2xl border border-app-border">
-              <DatePicker date={startDate} onDateChange={setStartDate} />
-            </div>
-          </div>
-
-          {/* Already Paid Toggle */}
-          <div className="p-4 bg-app-elevated/50 border border-app-border rounded-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`size-10 rounded-full flex items-center justify-center ${alreadyPaidCurrent ? 'bg-app-success/20 text-app-success' : 'bg-app-muted/20 text-app-muted'}`}>
-                  <span className="material-symbols-outlined text-xl">check_circle</span>
+          {/* Logic Toggle */}
+          <div className="p-4 bg-app-surface border border-app-border rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex gap-3">
+                <div className="size-10 bg-app-subtle rounded-full flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-app-muted">event_available</span>
                 </div>
                 <div>
-                  <label htmlFor="paid-toggle" className="text-sm font-bold cursor-pointer">¿Ya pagué este periodo?</label>
-                  <p className="text-xs text-app-muted">Se programará para el siguiente</p>
+                  <p className="text-sm font-bold text-app-text">¿Pago de este periodo?</p>
+                  <p className="text-xs text-app-muted">{alreadyPaidCurrent ? 'Ya pagado, saltar al siguiente' : 'Pendiente para esta fecha'}</p>
                 </div>
               </div>
+              {/* Native Toggle Switch styled with Tailwind */}
               <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  id="paid-toggle"
-                  type="checkbox"
-                  checked={alreadyPaidCurrent}
-                  onChange={() => setAlreadyPaidCurrent(!alreadyPaidCurrent)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-app-elevated border border-app-border rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-success peer-checked:border-transparent"></div>
+                <input type="checkbox" checked={alreadyPaidCurrent} onChange={() => setAlreadyPaidCurrent(!alreadyPaidCurrent)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-app-primary/50 dark:peer-focus:ring-app-primary/30 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-app-primary"></div>
               </label>
             </div>
 
-            <div className={`grid transition-all duration-300 ${alreadyPaidCurrent ? 'grid-rows-[1fr] mt-3 opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-              <div className="overflow-hidden">
-                <div className="p-3 bg-app-success/10 border border-app-success/20 rounded-xl flex items-center gap-2">
-                  <span className="material-symbols-outlined text-app-success text-sm">event</span>
-                  <p className="text-xs text-app-success font-bold">
-                    Próximo cobro: {calculateNextDueDate().toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
-                  </p>
-                </div>
-              </div>
+            {/* Result Preview */}
+            <div className="mt-3 pt-3 border-t border-app-subtle">
+              <p className="text-xs text-app-muted flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-app-primary">next_plan</span>
+                Próxima generación: <strong className="text-app-text">{calculateNextDueDate().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'long' })}</strong>
+              </p>
             </div>
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={addMutation.isPending}
-            className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold text-lg rounded-2xl shadow-lg shadow-app-primary/25 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 mt-6"
-          >
-            {addMutation.isPending ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Guardando...
-              </span>
-            ) : 'Crear Recurrente'}
-          </button>
-        </form>
+          <div className="pt-6 pb-4">
+            <button
+              type="submit"
+              disabled={addMutation.isPending}
+              className="w-full py-4 bg-app-primary hover:bg-app-primary-dark text-white font-bold text-lg rounded-2xl shadow-lg shadow-app-primary/30 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {addMutation.isPending ? 'Programando...' : 'Guardar Fijo'}
+            </button>
+          </div>
 
-        {/* Safe area spacer */}
-        <div className="h-10" />
+        </form>
       </main>
     </div>
   );

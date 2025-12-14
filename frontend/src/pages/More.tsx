@@ -1,72 +1,141 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import { useProfile } from '../hooks/useApi'; // Para mostrar la tarjeta de usuario
+import { toast } from 'sonner';
+
+interface MenuItemProps {
+  path: string;
+  icon: string;
+  title: string;
+  description?: string;
+  colorClass: string;
+  bgClass: string;
+}
+
+const MenuItem: React.FC<MenuItemProps> = ({ path, icon, title, description, colorClass, bgClass }) => (
+  <Link
+    to={path}
+    className="group flex items-center gap-3.5 p-3.5 hover:bg-app-subtle transition-all duration-200 cursor-pointer relative"
+  >
+    <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 border border-transparent group-hover:border-black/5 dark:group-hover:border-white/5 transition-colors ${bgClass} ${colorClass}`}>
+      <span className="material-symbols-outlined text-[22px]">{icon}</span>
+    </div>
+
+    <div className="flex-1 min-w-0 flex flex-col justify-center">
+      <span className="text-[15px] font-semibold text-app-text leading-tight group-hover:text-app-primary transition-colors">{title}</span>
+      {description && <span className="text-xs text-app-muted truncate mt-0.5">{description}</span>}
+    </div>
+
+    <span className="material-symbols-outlined text-app-border text-lg group-hover:text-app-text group-hover:translate-x-0.5 transition-all">
+      chevron_right
+    </span>
+  </Link>
+);
 
 const More: React.FC = () => {
+  const { data: profile } = useProfile();
+
+  // Simulación de Logout (puedes conectar tu lógica real aquí)
+  const handleLogout = () => {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+      loading: 'Cerrando sesión...',
+      success: 'Hasta pronto',
+      error: 'Error'
+    });
+  };
+
   const sections = [
     {
-      title: 'Gestión Financiera',
+      title: 'Gestión',
       items: [
-        { path: '/categories', icon: 'category', title: 'Categorías', description: 'Personaliza tus gastos e ingresos', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-        { path: '/reports', icon: 'bar_chart', title: 'Reportes', description: 'Análisis detallado de tus finanzas', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-        { path: '/recurring', icon: 'update', title: 'Recurrentes', description: 'Gestiona tus gastos fijos y suscripciones', color: 'text-pink-500', bg: 'bg-pink-500/10' },
-        { path: '/installments', icon: 'credit_card', title: 'Meses Sin Intereses', description: 'Control de compras a plazos', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+        { path: '/categories', icon: 'category', title: 'Categorías', description: 'Organiza tus gastos', colorClass: 'text-indigo-600 dark:text-indigo-400', bgClass: 'bg-indigo-50 dark:bg-indigo-900/20' },
+        { path: '/reports', icon: 'bar_chart', title: 'Reportes y Análisis', description: null, colorClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-50 dark:bg-blue-900/20' },
+        { path: '/recurring', icon: 'update', title: 'Recurrentes', description: 'Suscripciones y fijos', colorClass: 'text-purple-600 dark:text-purple-400', bgClass: 'bg-purple-50 dark:bg-purple-900/20' },
+        { path: '/installments', icon: 'credit_card_clock', title: 'Meses Sin Intereses', description: null, colorClass: 'text-pink-600 dark:text-pink-400', bgClass: 'bg-pink-50 dark:bg-pink-900/20' },
       ]
     },
     {
-      title: 'Cuenta y Configuración',
+      title: 'Configuración',
       items: [
-        { path: '/profile', icon: 'person', title: 'Perfil', description: 'Datos personales y moneda', color: 'text-teal-500', bg: 'bg-teal-500/10' },
-        { path: '/settings', icon: 'settings', title: 'Ajustes', description: 'Apariencia y notificaciones', color: 'text-gray-500', bg: 'bg-gray-500/10' },
+        // { path: '/profile', icon: 'badge', title: 'Perfil', description: 'Moneda y datos', colorClass: 'text-teal-600', bgClass: 'bg-teal-50 dark:bg-teal-900/20' }, // Se movió a la tarjeta superior
+        { path: '/settings', icon: 'tune', title: 'Preferencias', description: 'Tema y apariencia', colorClass: 'text-zinc-600 dark:text-zinc-400', bgClass: 'bg-zinc-100 dark:bg-zinc-800' },
+        { path: '/backup', icon: 'cloud_upload', title: 'Copias de Seguridad', description: 'Exportar datos', colorClass: 'text-sky-600 dark:text-sky-400', bgClass: 'bg-sky-50 dark:bg-sky-900/20' },
       ]
     },
     {
       title: 'Sistema',
       items: [
-        { path: '/trash', icon: 'delete', title: 'Papelera', description: 'Restaurar elementos eliminados', color: 'text-red-500', bg: 'bg-red-500/10' },
+        { path: '/trash', icon: 'delete_history', title: 'Papelera', description: 'Restaurar items', colorClass: 'text-rose-600 dark:text-rose-400', bgClass: 'bg-rose-50 dark:bg-rose-900/20' },
       ]
     }
   ];
 
   return (
-    <div className="bg-app-bg text-app-text relative overflow-hidden">
-      {/* Ambient Background Glow */}
-      <div className="fixed inset-0 pointer-events-none -z-10">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px]"></div>
-      </div>
+    <div className="min-h-dvh bg-app-bg text-app-text font-sans pb-24 md:pb-8">
 
-      <PageHeader title="Más Opciones" />
+      {/* 
+         El Header no tiene botón back porque es una página "Root" de navegación
+         en mobile. 
+      */}
+      <PageHeader title="Menú" showBackButton={false} />
 
-      <div className="p-4 max-w-lg mx-auto space-y-6">
-        {sections.map((section, index) => (
-          <div key={index}>
-            <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider mb-3 px-2">{section.title}</h3>
-            <div className="bg-app-card border border-app-border rounded-2xl overflow-hidden shadow-sm divide-y divide-app-border">
+      <div className="max-w-xl mx-auto px-4 pt-4 space-y-6 animate-fade-in">
+
+        {/* Profile Card (iOS Settings Style) */}
+        <Link
+          to="/profile"
+          className="flex items-center gap-4 p-4 bg-app-surface border border-app-border rounded-2xl shadow-sm hover:border-app-border/80 hover:shadow-md transition-all active:scale-[0.99]"
+        >
+          <div className="size-16 rounded-full bg-gradient-to-br from-brand-primary to-indigo-600 flex items-center justify-center text-white shadow-inner shrink-0 text-xl font-bold">
+            {profile?.avatar ? (
+              <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <span>{profile?.name?.charAt(0).toUpperCase() || 'U'}</span>
+            )}
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-app-text tracking-tight">{profile?.name || 'Usuario'}</h2>
+            <p className="text-sm text-app-muted">{profile?.email || 'Sin correo vinculado'}</p>
+          </div>
+          <span className="material-symbols-outlined text-app-border">chevron_right</span>
+        </Link>
+
+        {/* Menu Sections */}
+        {sections.map((section, idx) => (
+          <div key={idx}>
+            <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider mb-2.5 px-1 ml-1">{section.title}</h3>
+
+            {/* 
+                Group Container: 
+                - bg-app-surface (blanco/oscuro)
+                - bordes redondeados (rounded-2xl)
+                - divisor interno entre ítems
+            */}
+            <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm divide-y divide-app-subtle">
               {section.items.map((item) => (
-                <Link
+                <MenuItem
                   key={item.path}
-                  to={item.path}
-                  className="group flex items-center gap-4 p-4 hover:bg-app-elevated transition-colors duration-200"
-                >
-                  <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${item.bg} ${item.color}`}>
-                    <span className="material-symbols-outlined text-xl">{item.icon}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-app-text group-hover:text-app-primary transition-colors">{item.title}</p>
-                    <p className="text-xs text-app-muted truncate">{item.description}</p>
-                  </div>
-                  <span className="material-symbols-outlined text-app-muted text-lg group-hover:translate-x-1 transition-transform group-hover:text-app-primary">chevron_right</span>
-                </Link>
+                  {...item}
+                />
               ))}
             </div>
           </div>
         ))}
-      </div>
 
-      {/* Version Info */}
-      <div className="text-center py-4">
-        <p className="text-[10px] text-app-muted/50 font-mono">Finanzas Pro v1.0.0</p>
+        {/* Logout Button Zone */}
+        <div className="pt-2 pb-6">
+          <button
+            onClick={handleLogout}
+            className="w-full py-3.5 rounded-2xl bg-app-surface border border-app-border text-rose-500 font-bold text-sm hover:bg-rose-50 dark:hover:bg-rose-900/10 active:scale-[0.99] transition-all"
+          >
+            Cerrar Sesión
+          </button>
+          <p className="text-center text-[10px] text-app-muted/40 font-mono mt-4">
+            Finanzas Pro v2.0.0 (Build 2024)
+          </p>
+        </div>
+
       </div>
     </div>
   );

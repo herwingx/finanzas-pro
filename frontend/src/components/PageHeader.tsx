@@ -6,21 +6,23 @@ interface PageHeaderProps {
   showBackButton?: boolean;
   rightAction?: React.ReactNode;
   onBack?: () => void;
+  className?: string; // Permitir estilos extra si se requieren
 }
 
-// Main pages from the bottom navigation - these should NOT show back button
-const MAIN_PAGES = ['/', '/history', '/accounts', '/more'];
+// Pages where the main navigation is visible, so we don't need a back button by default
+const MAIN_PAGES = ['/', '/history', '/accounts', '/more', '/dashboard'];
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   showBackButton,
   rightAction,
-  onBack
+  onBack,
+  className = ''
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Auto-determine if we should show back button based on current route
+  // Determine back button visibility
   const isMainPage = MAIN_PAGES.includes(location.pathname);
   const shouldShowBack = showBackButton !== undefined ? showBackButton : !isMainPage;
 
@@ -33,23 +35,52 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-20 h-14 px-4 flex items-center bg-app-bg/95 backdrop-blur-xl border-b border-app-border">
-      <div className="flex items-center justify-between w-full max-w-lg mx-auto">
-        {shouldShowBack ? (
-          <button
-            onClick={handleBack}
-            className="size-10 rounded-xl flex items-center justify-center hover:bg-app-elevated transition-colors -ml-1"
-            aria-label="Volver"
-          >
-            <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
-          </button>
-        ) : (
-          <div className="w-10" />
-        )}
+    <header className={`
+      sticky top-0 z-30 w-full flex flex-col 
+      bg-app-bg/85 backdrop-blur-md border-b border-app-border
+      transition-all duration-300
+      ${className}
+    `}>
 
-        <h1 className="font-bold text-base tracking-tight text-center flex-1 mx-2 truncate">{title}</h1>
+      {/* 
+         iOS Safe Area Spacer
+         Empuja el contenido hacia abajo solo en dispositivos iOS para evitar el Notch
+         (Requiere que tengas las utilidades .pt-safe en tu CSS o tailwind config)
+      */}
+      <div className="pt-safe" />
 
-        {rightAction || <div className="w-10" />}
+      <div className="h-14 px-4 w-full flex items-center justify-between">
+
+        {/* Left Section (Back Button or Spacer) */}
+        <div className="flex shrink-0 w-10 items-center justify-start">
+          {shouldShowBack ? (
+            <button
+              onClick={handleBack}
+              className="group size-10 rounded-xl flex items-center justify-center text-app-muted hover:text-app-text hover:bg-app-subtle active:scale-95 transition-all"
+              aria-label="Volver atrás"
+            >
+              <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">
+                arrow_back_ios_new
+              </span>
+            </button>
+          ) : (
+            <div className="w-10" />
+          )}
+        </div>
+
+        {/* Center Section (Title) */}
+        <h1 className="flex-1 font-bold text-[15px] sm:text-base tracking-tight text-center text-app-text truncate px-2 select-none">
+          {title}
+        </h1>
+
+        {/* Right Section (Action or Spacer) */}
+        <div className="flex shrink-0 w-10 items-center justify-end">
+          {rightAction ? (
+            rightAction
+          ) : (
+            <div className="w-10" />
+          )}
+        </div>
       </div>
     </header>
   );

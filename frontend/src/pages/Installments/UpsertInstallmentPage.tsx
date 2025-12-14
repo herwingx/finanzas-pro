@@ -3,36 +3,49 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { DeleteConfirmationSheet } from '../../components/DeleteConfirmationSheet';
 import { useInstallmentPurchases, useAddInstallmentPurchase, useUpdateInstallmentPurchase, useDeleteInstallmentPurchase, useAccounts, useCategories } from '../../hooks/useApi';
-import { toastSuccess, toastError, toastWarning, toastInfo, toast } from '../../utils/toast';
+import { toastSuccess, toastError, toast } from '../../utils/toast';
 import { DatePicker } from '../../components/DatePicker';
 import { CategorySelector } from '../../components/CategorySelector';
 
 const UpsertInstallmentPage: React.FC = () => {
+    // --- Routing & State ---
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+
+    // Modes
     const isEditMode = !!id;
-    const mode = searchParams.get('mode');
-    const [isViewingDetails, setIsViewingDetails] = useState(!!id && mode !== 'edit');
+    const initialMode = searchParams.get('mode');
+    const [isViewingDetails, setIsViewingDetails] = useState(!!id && initialMode !== 'edit');
 
-    const { data: allPurchases, isLoading: isLoadingPurchases, isError } = useInstallmentPurchases();
-    const { data: accounts, isLoading: isLoadingAccounts, isError: isErrorAccounts } = useAccounts();
-    const { data: categories, isLoading: isLoadingCategories, isError: isErrorCategories } = useCategories();
+    // --- Data Queries ---
+    const { data: allPurchases, isLoading, isError } = useInstallmentPurchases();
+    const { data: accounts } = useAccounts();
+    const { data: categories } = useCategories();
 
+    // Derived State
     const existingPurchase = useMemo(() => allPurchases?.find(p => p.id === id), [allPurchases, id]);
+    const creditAccounts = useMemo(() => accounts?.filter(a => a.type === 'CREDIT') || [], [accounts]);
+    const expenseCategories = useMemo(() => categories?.filter(c => c.type === 'expense') || [], [categories]);
+    const isSettled = useMemo(() => existingPurchase ? (existingPurchase.totalAmount - existingPurchase.paidAmount) <= 0.05 : false, [existingPurchase]);
 
+    // Form State
     const [description, setDescription] = useState('');
     const [totalAmount, setTotalAmount] = useState('');
-    const [installments, setInstallments] = useState('');
+    const [installments, setInstallments] = useState('12');
     const [purchaseDate, setPurchaseDate] = useState(new Date());
     const [accountId, setAccountId] = useState('');
     const [categoryId, setCategoryId] = useState('');
-    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
-    const addPurchaseMutation = useAddInstallmentPurchase();
-    const updatePurchaseMutation = useUpdateInstallmentPurchase();
-    const deletePurchaseMutation = useDeleteInstallmentPurchase();
+    // UI State
+    const [showDelete, setShowDelete] = useState(false);
 
+    // Mutations
+    const addMutation = useAddInstallmentPurchase();
+    const updateMutation = useUpdateInstallmentPurchase();
+    const deleteMutation = useDeleteInstallmentPurchase();
+
+    // --- Effect: Load Data ---
     useEffect(() => {
         if (isEditMode && existingPurchase) {
             setDescription(existingPurchase.description);
@@ -40,49 +53,33 @@ const UpsertInstallmentPage: React.FC = () => {
             setInstallments(String(existingPurchase.installments));
             setPurchaseDate(new Date(existingPurchase.purchaseDate));
             setAccountId(existingPurchase.accountId);
-            if (existingPurchase.generatedTransactions && existingPurchase.generatedTransactions.length > 0) {
+            // Intenta inferir categoría
+            if (existingPurchase.generatedTransactions?.length) {
                 setCategoryId(existingPurchase.generatedTransactions[0].categoryId);
             }
+        } else if (!isEditMode) {
+            // Defaults for new purchase
+            if (creditAccounts.length) setAccountId(creditAccounts[0].id);
+            if (expenseCategories.length) setCategoryId(expenseCategories[0].id);
         }
-    }, [isEditMode, existingPurchase]);
+    }, [isEditMode, existingPurchase, creditAccounts, expenseCategories]);
 
-    const isSettled = useMemo(() => {
-        if (!existingPurchase) return false;
-        return (existingPurchase.totalAmount - existingPurchase.paidAmount) <= 0.05;
-    }, [existingPurchase]);
 
-    const availableCreditAccounts = useMemo(() => accounts?.filter(acc => acc.type === 'CREDIT') || [], [accounts]);
-
-    useEffect(() => {
-        if (availableCreditAccounts.length > 0 && !accountId) {
-            setAccountId(availableCreditAccounts[0].id);
-        }
-    }, [availableCreditAccounts, accountId]);
-
-    const availableCategories = useMemo(() => categories?.filter(c => c.type === 'expense') || [], [categories]);
-
-    useEffect(() => {
-        if (availableCategories.length > 0 && !categoryId) {
-            setCategoryId(availableCategories[0].id);
-        }
-    }, [availableCategories, categoryId]);
+    // --- Handlers ---
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const amount = parseFloat(totalAmount);
+        const months = parseInt(installments);
 
-        if (!description || !totalAmount || !installments || !accountId || !categoryId) {
-            toastError('Faltan campos requeridos.');
-            return;
-        }
-        if (parseFloat(totalAmount) <= 0 || parseInt(installments, 10) <= 0) {
-            toastError('El monto total y el número de meses deben ser mayores a cero.');
-            return;
+        if (!description || isNaN(amount) || isNaN(months) || !accountId || !categoryId) {
+            return toast.error('Completa todos los campos');
         }
 
-        const purchaseData = {
+        const payload = {
             description,
-            totalAmount: parseFloat(totalAmount),
-            installments: parseInt(installments, 10),
+            totalAmount: amount,
+            installments: months,
             purchaseDate: purchaseDate.toISOString(),
             accountId,
             categoryId,
@@ -90,443 +87,285 @@ const UpsertInstallmentPage: React.FC = () => {
 
         try {
             if (isEditMode) {
-                await updatePurchaseMutation.mutateAsync({ id: id!, purchase: purchaseData });
-                toastSuccess('Compra a MSI actualizada con éxito!');
+                await updateMutation.mutateAsync({ id: id!, purchase: payload });
+                toastSuccess('Plan actualizado');
+                setIsViewingDetails(true); // Return to details
             } else {
-                await addPurchaseMutation.mutateAsync(purchaseData);
-                toastSuccess('Compra a MSI creada con éxito!');
+                await addMutation.mutateAsync(payload);
+                toastSuccess('Plan MSI creado');
+                navigate('/installments');
             }
-            navigate('/installments');
-        } catch (error: any) {
-            toast.error(`Error: ${error.message || 'Desconocido'}`);
-            console.error(error);
-        }
-    };
-
-    const handleDelete = () => {
-        setShowDeleteConfirmation(true);
+        } catch (e: any) { toastError(e.message); }
     };
 
     const confirmDelete = async () => {
         if (!id) return;
-
         try {
-            await deletePurchaseMutation.mutateAsync(id);
-            toastSuccess('Compra a MSI eliminada con éxito.');
+            await deleteMutation.mutateAsync(id);
+            toastSuccess('Plan eliminado');
             navigate('/installments');
-        } catch (error: any) {
-            toast.error(`Error al eliminar la compra a MSI: ${error.message || 'Desconocido'}`);
-            console.error(error);
-        } finally {
-            setShowDeleteConfirmation(false);
-        }
+        } catch (e: any) { toastError('No se pudo eliminar', e.message); }
     };
 
-    if (isLoadingPurchases || isLoadingAccounts || isLoadingCategories) {
-        return (
-            <div className="flex items-center justify-center min-min-h-full bg-app-bg">
-                <div className="size-8 border-4 border-app-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
-    }
+    // --- Loading & Error ---
+    if (isLoading) return <div className="min-h-dvh flex items-center justify-center text-app-muted animate-pulse">Cargando datos...</div>;
+    if (isError) return <div className="p-8 text-center text-rose-500">Error al cargar la información</div>;
 
-    if (isError || isErrorAccounts || isErrorCategories) {
-        return <div className="p-8 text-center text-app-danger">Error cargando datos. Por favor recarga.</div>;
-    }
-
-    // Details View Mode
+    // =========================================================================
+    // VIEW 1: DETAILS DASHBOARD
+    // =========================================================================
     if (isViewingDetails && existingPurchase) {
-        const paidAmount = existingPurchase.paidAmount;
-        const remainingAmount = existingPurchase.totalAmount - paidAmount;
-        const progressPercentage = (paidAmount / existingPurchase.totalAmount) * 100;
-        const isSettledView = (existingPurchase.totalAmount - existingPurchase.paidAmount) <= 0.05;
+        const paid = existingPurchase.paidAmount;
+        const total = existingPurchase.totalAmount;
+        const remaining = total - paid;
+        const progress = Math.min((paid / total) * 100, 100);
+        const monthly = existingPurchase.monthlyPayment;
 
-        // Get all payment transactions for this installment
-        const paymentTransactions = (existingPurchase.generatedTransactions || [])
-            .filter(tx => tx.type === 'income' || tx.type === 'transfer')
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        // Calculate next payment info
-        const nextPaymentNumber = existingPurchase.paidInstallments + 1;
-        const suggestedAmount = Math.min(existingPurchase.monthlyPayment, remainingAmount);
+        // Next payment logic
+        const txs = (existingPurchase.generatedTransactions || []).filter(tx => ['income', 'transfer'].includes(tx.type)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const nextPaymentNum = existingPurchase.paidInstallments + 1;
+        const nextPaymentAmt = Math.min(monthly, remaining);
 
         return (
-            <div className="flex flex-col min-h-full bg-app-bg text-app-text">
-                <header className="flex items-center justify-between p-4 sticky top-0 bg-app-bg/95 backdrop-blur-md z-10 border-b border-app-border">
-                    <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-app-elevated">
-                        <span className="material-symbols-outlined">arrow_back_ios_new</span>
-                    </button>
-                    <h1 className="text-lg font-bold">Plan MSI</h1>
-                    <div className="w-10"></div>
-                </header>
+            <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
+                <PageHeader
+                    title="Detalle MSI"
+                    showBackButton={true}
+                    onBack={() => navigate('/installments')}
+                    rightAction={
+                        !isSettled && (
+                            <button onClick={() => setIsViewingDetails(false)} className="text-sm font-medium text-app-primary">
+                                Editar
+                            </button>
+                        )
+                    }
+                />
 
-                <main className="flex-1 px-4 pt-4 pb-32 space-y-4 overflow-y-auto">
-                    {/* Summary Card */}
-                    <div className="bg-app-card border border-app-border rounded-2xl p-5 shadow-sm animate-fade-in">
-                        <div className="flex items-start gap-4 mb-4">
-                            <div className="size-14 rounded-full flex items-center justify-center shadow-inner bg-blue-100 dark:bg-blue-900/30 shrink-0">
-                                <span className="material-symbols-outlined text-2xl text-blue-600 dark:text-blue-400">
-                                    credit_card
+                <main className="px-4 py-4 max-w-lg mx-auto space-y-4">
+
+                    {/* Hero Card */}
+                    <div className="bento-card p-5 relative overflow-hidden">
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-2">
+                                <div className="size-10 rounded-xl bg-app-primary/10 flex items-center justify-center text-app-primary">
+                                    <span className="material-symbols-outlined">credit_score</span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isSettled ? 'bg-emerald-100 text-emerald-700' : 'bg-app-subtle text-app-muted'}`}>
+                                    {isSettled ? 'Pagado' : 'Activo'}
                                 </span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-app-muted uppercase font-bold tracking-wider mb-1">
-                                    {isSettledView ? '✓ LIQUIDADO' : 'ACTIVO'}
-                                </p>
-                                <h2 className="text-xl font-bold text-app-text truncate">{existingPurchase.description}</h2>
-                                <p className="text-xs text-app-muted mt-0.5">{existingPurchase.account?.name}</p>
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                            <div className="bg-app-elevated rounded-xl p-3">
-                                <p className="text-xs text-app-muted mb-1">Monto Total</p>
-                                <p className="text-lg font-bold text-app-text">${existingPurchase.totalAmount.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-app-elevated rounded-xl p-3">
-                                <p className="text-xs text-app-muted mb-1">Mensualidad</p>
-                                <p className="text-lg font-bold text-blue-600">${existingPurchase.monthlyPayment.toFixed(2)}</p>
-                            </div>
-                        </div>
+                            <h2 className="text-lg font-bold text-app-text mb-0.5">{existingPurchase.description}</h2>
+                            <p className="text-xs text-app-muted">{existingPurchase.account?.name}</p>
 
-                        <div>
-                            <div className="flex justify-between text-xs text-app-muted mb-1.5">
-                                <span>Pagado: ${paidAmount.toFixed(2)}</span>
-                                <span>Restante: ${remainingAmount.toFixed(2)}</span>
+                            <div className="mt-5 grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-app-muted">Total</p>
+                                    <p className="text-base font-bold">${total.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-app-muted">Restante</p>
+                                    <p className="text-base font-bold text-rose-600 dark:text-rose-400">${remaining.toLocaleString()}</p>
+                                </div>
                             </div>
-                            <div className="w-full bg-app-elevated rounded-full h-2.5">
-                                <div
-                                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-500"
-                                    style={{ width: `${progressPercentage}%` }}
-                                ></div>
+
+                            <div className="mt-4">
+                                <div className="h-2 w-full bg-app-subtle rounded-full overflow-hidden">
+                                    <div className="h-full bg-app-primary transition-all duration-700" style={{ width: `${progress}%` }}></div>
+                                </div>
+                                <div className="flex justify-between mt-1 text-[10px] text-app-muted font-medium">
+                                    <span>{existingPurchase.paidInstallments} de {existingPurchase.installments} pagos</span>
+                                    <span>{(progress).toFixed(0)}%</span>
+                                </div>
                             </div>
-                            <p className="text-center text-xs text-app-muted mt-1.5 font-medium">
-                                {existingPurchase.paidInstallments} de {existingPurchase.installments} pagos realizados
-                            </p>
                         </div>
                     </div>
 
-                    {/* Register Payment Button */}
-                    {!isSettledView && remainingAmount > 0.01 && (
+                    {/* Quick Action: Register Next Payment */}
+                    {!isSettled && (
                         <button
-                            onClick={() => navigate(`/new?type=transfer&destinationAccountId=${existingPurchase.accountId}&amount=${suggestedAmount.toFixed(2)}&description=Pago mensualidad ${encodeURIComponent(existingPurchase.description)}&installmentPurchaseId=${existingPurchase.id}`)}
-                            className="w-full bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold py-4 rounded-2xl shadow-lg shadow-app-primary/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                            onClick={() => navigate(`/new?type=transfer&destinationAccountId=${existingPurchase.accountId}&amount=${nextPaymentAmt.toFixed(2)}&description=${encodeURIComponent(`Pago MSI: ${existingPurchase.description}`)}&installmentPurchaseId=${existingPurchase.id}`)}
+                            className="w-full py-4 rounded-2xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                         >
                             <span className="material-symbols-outlined">payments</span>
-                            Registrar Pago (${suggestedAmount.toFixed(2)})
+                            Registrar Pago de ${nextPaymentAmt.toLocaleString()}
                         </button>
                     )}
 
-                    {/* Payment Timeline */}
-                    <div className="bg-app-card border border-app-border rounded-2xl p-5 shadow-sm">
-                        <h3 className="text-sm font-bold text-app-text mb-4 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-lg">receipt_long</span>
-                            Timeline de Pagos
-                        </h3>
-
-                        <div className="space-y-3">
-                            {Array.from({ length: existingPurchase.installments }).map((_, index) => {
-                                const paymentNumber = index + 1;
-                                const payment = paymentTransactions[index];
+                    {/* Payments List (Timeline) */}
+                    <div>
+                        <h3 className="text-xs font-bold text-app-muted uppercase mb-3 ml-1">Cronograma de Pagos</h3>
+                        <div className="bg-app-surface border border-app-border rounded-2xl divide-y divide-app-subtle">
+                            {Array.from({ length: existingPurchase.installments }).map((_, i) => {
+                                const pNum = i + 1;
+                                const payment = txs[i];
                                 const isPaid = !!payment;
-                                const isCurrent = paymentNumber === nextPaymentNumber && !isSettledView;
+                                const isNext = pNum === nextPaymentNum && !isSettled;
 
-                                // Calculate expected date
-                                const expectedDate = new Date(existingPurchase.purchaseDate);
-                                expectedDate.setMonth(expectedDate.getMonth() + paymentNumber);
+                                // Forecast date
+                                const fDate = new Date(existingPurchase.purchaseDate);
+                                fDate.setMonth(fDate.getMonth() + pNum);
 
                                 return (
-                                    <div
-                                        key={index}
-                                        className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isCurrent
-                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500'
-                                            : isPaid
-                                                ? 'bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800'
-                                                : 'bg-app-elevated border border-app-border'
-                                            }`}
-                                    >
-                                        <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${isPaid
-                                            ? 'bg-green-500 text-white'
-                                            : isCurrent
-                                                ? 'bg-blue-500 text-white'
-                                                : 'bg-app-muted/20 text-app-muted'
-                                            }`}>
-                                            {isPaid ? (
-                                                <span className="material-symbols-outlined text-lg">check</span>
-                                            ) : (
-                                                <span className="font-bold text-sm">{paymentNumber}</span>
-                                            )}
+                                    <div key={i} className={`flex items-center gap-3 p-3.5 ${isNext ? 'bg-app-primary/5' : ''}`}>
+                                        <div className={`
+                                            size-8 rounded-full flex items-center justify-center text-xs font-bold border
+                                            ${isPaid
+                                                ? 'bg-emerald-500 text-white border-emerald-500'
+                                                : isNext
+                                                    ? 'bg-app-surface text-app-primary border-app-primary'
+                                                    : 'bg-app-subtle text-app-muted border-transparent'
+                                            }
+                                        `}>
+                                            {isPaid ? <span className="material-symbols-outlined text-sm">check</span> : pNum}
                                         </div>
 
-                                        <div className="flex-1 min-w-0">
-                                            <p className={`text-sm font-bold ${isPaid ? 'text-green-700 dark:text-green-400' : isCurrent ? 'text-blue-700 dark:text-blue-400' : 'text-app-muted'}`}>
-                                                {isPaid ? `✓ Pago ${paymentNumber} realizado` : isCurrent ? `→ Próximo pago` : `Pago ${paymentNumber} pendiente`}
+                                        <div className="flex-1">
+                                            <p className={`text-sm font-medium ${isPaid ? 'text-app-muted line-through' : 'text-app-text'}`}>
+                                                Mensualidad {pNum}
                                             </p>
-                                            <p className="text-xs text-app-muted">
-                                                {isPaid
-                                                    ? new Date(payment.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
-                                                    : `Vence: ${expectedDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}`
-                                                }
+                                            <p className="text-[10px] text-app-muted">
+                                                {isPaid ? `Pagado el ${new Date(payment.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}` : fDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
                                             </p>
                                         </div>
 
-                                        <p className={`font-bold text-sm ${isPaid ? 'text-green-700 dark:text-green-400' : 'text-app-muted'}`}>
-                                            ${payment ? payment.amount.toFixed(2) : existingPurchase.monthlyPayment.toFixed(2)}
-                                        </p>
+                                        <span className={`text-sm font-bold tabular-nums ${isPaid ? 'text-emerald-600 dark:text-emerald-500' : 'text-app-text'}`}>
+                                            ${(payment?.amount || monthly).toLocaleString()}
+                                        </span>
                                     </div>
-                                );
+                                )
                             })}
                         </div>
                     </div>
 
-                    {/* Payment History */}
-                    {paymentTransactions.length > 0 && (
-                        <div className="bg-app-card border border-app-border rounded-2xl p-5 shadow-sm">
-                            <h3 className="text-sm font-bold text-app-text mb-4 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-lg">history</span>
-                                Historial de Pagos ({paymentTransactions.length})
-                            </h3>
-
-                            <div className="space-y-2">
-                                {paymentTransactions.map((payment, index) => (
-                                    <div
-                                        key={payment.id}
-                                        className="flex items-center justify-between p-3 bg-app-elevated rounded-xl"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="size-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-sm text-green-600 dark:text-green-400">check_circle</span>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-app-text">Pago #{index + 1}</p>
-                                                <p className="text-xs text-app-muted">
-                                                    {new Date(payment.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <p className="font-bold text-sm text-green-600 dark:text-green-400">
-                                            ${payment.amount.toFixed(2)}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Settled Notice */}
-                    {isSettledView && (
-                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800 text-sm text-green-700 dark:text-green-300 flex gap-3 items-start">
-                            <span className="material-symbols-outlined shrink-0">celebration</span>
-                            <p>
-                                <strong>¡Plan completado!</strong><br />
-                                Este plan está totalmente liquidado y forma parte de tu historial financiero.
-                            </p>
-                        </div>
-                    )}
-                </main>
-
-                <footer className="p-4 bg-app-bg border-t border-app-border space-y-2">
-                    <div className="flex gap-3">
+                    {/* Delete Danger Zone */}
+                    <div className="pt-6">
                         <button
-                            onClick={() => {
-                                if (isSettledView) {
-                                    toastInfo('Los planes liquidados no se pueden editar');
-                                    return;
-                                }
-                                setIsViewingDetails(false);
-                            }}
-                            className={`flex-1 py-3.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 ${isSettledView
-                                ? 'bg-app-elevated text-app-muted cursor-not-allowed'
-                                : 'bg-app-primary text-white hover:bg-app-primary/90 shadow-lg shadow-app-primary/20'
-                                }`}
+                            onClick={() => setShowDelete(true)}
+                            className="w-full py-3 rounded-xl border border-app-border text-rose-500 text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20"
                         >
-                            <span className="material-symbols-outlined text-sm">{isSettledView ? 'lock' : 'edit'}</span>
-                            {isSettledView ? 'Bloqueado' : 'Editar Plan'}
+                            Eliminar Plan
                         </button>
                     </div>
 
-                    <button
-                        onClick={() => setShowDeleteConfirmation(true)}
-                        className="btn-modern btn-danger-outline w-full py-3 rounded-2xl flex items-center justify-center gap-2"
-                    >
-                        <span className="material-symbols-outlined text-sm">delete</span>
-                        Eliminar Plan Completo
-                    </button>
-                </footer>
+                </main>
+
+                <DeleteConfirmationSheet
+                    isOpen={showDelete}
+                    onClose={() => setShowDelete(false)}
+                    onConfirm={confirmDelete}
+                    itemName={existingPurchase.description}
+                    warningLevel={isSettled ? 'critical' : 'warning'}
+                    warningMessage={isSettled ? 'Peligro: Plan Liquidado' : '¿Eliminar Plan?'}
+                    warningDetails={isSettled ? ['Esto alterará tu historial contable permanentemente'] : ['Se eliminarán todos los registros asociados']}
+                    requireConfirmation={isSettled}
+                    isDeleting={deleteMutation.isPending}
+                />
             </div>
         );
     }
 
+    // =========================================================================
+    // VIEW 2: EDIT/CREATE FORM
+    // =========================================================================
     return (
-        <div className="min-min-h-full bg-app-bg text-app-text">
-            <PageHeader title={isEditMode ? 'Editar Compra a MSI' : 'Nueva Compra a MSI'} showBackButton={true} />
+        <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
+            <PageHeader
+                title={isEditMode ? 'Editar Plan' : 'Nuevo Plan MSI'}
+                showBackButton={true}
+            />
 
-            <main className="px-5 py-6 pb-10">
-                {isSettled && (
-                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl flex items-center gap-3">
-                        <span className="material-symbols-outlined text-green-500">check_circle</span>
-                        <p className="text-sm text-app-text leading-tight">Esta compra está totalmente liquidada.</p>
-                    </div>
-                )}
+            <main className="px-5 pt-6 max-w-lg mx-auto">
+                <form onSubmit={handleSubmit} className="space-y-6">
 
-                <form id="msi-form" onSubmit={handleSubmit} className="space-y-5">
-                    <fieldset disabled={isSettled} className="space-y-5">
-
-                        {/* Description */}
+                    {/* Basic Info Group */}
+                    <div className="space-y-4">
                         <div>
-                            <label className="text-xs text-app-muted uppercase font-bold">Descripción</label>
+                            <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Descripción de compra</label>
                             <input
                                 type="text"
                                 value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
-                                placeholder="Ej. Laptop, Celular..."
-                                required
+                                onChange={e => setDescription(e.target.value)}
+                                placeholder="Ej. iPhone 15, Vuelos..."
+                                className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none transition-all"
                             />
                         </div>
 
-                        {/* Total Amount */}
-                        <div className="text-center">
-                            <label className="text-xs text-app-muted uppercase font-bold">Monto Total</label>
-                            <div className="flex items-center justify-center mt-2">
-                                <span className="text-2xl text-app-muted font-medium">$</span>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Total ($)</label>
                                 <input
-                                    type="text"
-                                    inputMode="decimal"
+                                    type="number" step="0.01" inputMode="decimal"
                                     value={totalAmount}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) setTotalAmount(val);
-                                    }}
-                                    className="text-3xl font-bold bg-transparent text-center w-32 focus:outline-none text-app-text placeholder-app-muted/30"
+                                    onChange={e => setTotalAmount(e.target.value)}
                                     placeholder="0.00"
-                                    required
+                                    disabled={isEditMode} // Usually total shouldn't change easily to avoid calc errors
+                                    className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-60 outline-none"
                                 />
+                            </div>
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Plazo (Meses)</label>
+                                <select
+                                    value={installments}
+                                    onChange={e => setInstallments(e.target.value)}
+                                    className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm font-bold outline-none"
+                                >
+                                    {[3, 6, 9, 12, 18, 24, 36, 48].map(m => (
+                                        <option key={m} value={m}>{m} Meses</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Configuration Group */}
+                    <div className="space-y-4 pt-2">
+                        <div className="p-1">
+                            <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Tarjeta utilizada</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {creditAccounts.length > 0 ? (
+                                    <select
+                                        value={accountId} onChange={e => setAccountId(e.target.value)}
+                                        className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm outline-none appearance-none"
+                                    >
+                                        {creditAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                    </select>
+                                ) : <div className="text-sm text-rose-500 bg-rose-50 p-3 rounded-lg">Agrega una tarjeta de crédito primero.</div>}
                             </div>
                         </div>
 
-                        {/* Installments */}
                         <div>
-                            <label className="text-xs text-app-muted uppercase font-bold">Meses (Plazo)</label>
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                value={installments}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '' || /^\d+$/.test(val)) setInstallments(val);
-                                }}
-                                className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary font-bold text-xl"
-                                placeholder="12"
-                                required
-                            />
-                        </div>
-
-                        {/* Purchase Date */}
-                        <div>
-                            <label className="text-xs text-app-muted uppercase font-bold">Fecha de Compra</label>
-                            <div className="mt-2">
+                            <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-2 block">Fecha y Categoría</label>
+                            <div className="flex flex-col gap-4 bg-app-surface border border-app-border rounded-2xl p-4">
                                 <DatePicker date={purchaseDate} onDateChange={setPurchaseDate} />
+                                <div className="h-px bg-app-subtle"></div>
+                                <CategorySelector categories={expenseCategories} selectedId={categoryId} onSelect={setCategoryId} isLoading={isLoading} emptyMessage="No hay categorías" />
                             </div>
                         </div>
+                    </div>
 
-                        {/* Credit Card Select */}
-                        <div>
-                            <label className="text-xs text-app-muted uppercase font-bold">Tarjeta de Crédito</label>
-                            <select
-                                value={accountId}
-                                onChange={(e) => setAccountId(e.target.value)}
-                                className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl mt-2 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
-                                required
-                            >
-                                {isLoadingAccounts ? (
-                                    <option value="" disabled>Cargando...</option>
-                                ) : availableCreditAccounts.length > 0 ? (
-                                    availableCreditAccounts.map(account => (
-                                        <option key={account.id} value={account.id}>{account.name}</option>
-                                    ))
-                                ) : (
-                                    <option value="">No hay tarjetas disponibles</option>
-                                )}
-                            </select>
-                        </div>
-
-                        {/* Category Selector */}
-                        <div>
-                            <label className="text-xs text-app-muted uppercase font-bold">Categoría</label>
-                            <div className="mt-2">
-                                <CategorySelector
-                                    categories={availableCategories}
-                                    selectedId={categoryId}
-                                    onSelect={setCategoryId}
-                                    isLoading={isLoadingCategories}
-                                    emptyMessage="No hay categorías disponibles"
-                                />
-                            </div>
-                        </div>
-                    </fieldset>
-
-                    {/* Action Buttons */}
-                    <div className="pt-4 space-y-3">
-                        {(!isSettled || !isEditMode) && (
-                            <button
-                                type="submit"
-                                className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold text-lg rounded-xl shadow-lg shadow-app-primary/25 disabled:opacity-50 active:scale-[0.98] transition-all"
-                                disabled={addPurchaseMutation.isPending || updatePurchaseMutation.isPending}
-                            >
-                                {(addPurchaseMutation.isPending || updatePurchaseMutation.isPending) ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Guardando...
-                                    </span>
-                                ) : isEditMode ? 'Actualizar' : 'Crear Compra a MSI'}
-                            </button>
-                        )}
+                    {/* Actions */}
+                    <div className="pt-4 pb-12">
+                        <button
+                            type="submit"
+                            disabled={addMutation.isPending || updateMutation.isPending}
+                            className="w-full py-3.5 bg-app-primary hover:bg-app-primary-dark text-white font-bold rounded-2xl shadow-lg shadow-app-primary/30 transition-all active:scale-[0.98]"
+                        >
+                            {isEditMode ? 'Guardar Cambios' : 'Crear Plan'}
+                        </button>
 
                         {isEditMode && (
                             <button
                                 type="button"
-                                onClick={handleDelete}
-                                className="w-full py-3.5 bg-red-500/10 text-red-500 font-bold rounded-xl hover:bg-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                disabled={deletePurchaseMutation.isPending}
+                                onClick={() => navigate(`/installments/${id}?mode=view`)}
+                                className="w-full mt-3 py-3 text-app-muted text-sm font-medium hover:text-app-text"
                             >
-                                <span className="material-symbols-outlined text-lg">delete</span>
-                                {deletePurchaseMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+                                Cancelar
                             </button>
                         )}
                     </div>
                 </form>
             </main>
-
-            {/* Delete Confirmation Sheet */}
-            <DeleteConfirmationSheet
-                isOpen={showDeleteConfirmation}
-                onClose={() => setShowDeleteConfirmation(false)}
-                onConfirm={confirmDelete}
-                itemName={existingPurchase?.description || ''}
-                warningLevel={isSettled ? 'critical' : 'warning'}
-                warningMessage={
-                    isSettled
-                        ? 'PELIGRO: INTEGRIDAD HISTÓRICA'
-                        : '¿Estás seguro de eliminar esta compra a MSI?'
-                }
-                warningDetails={
-                    isSettled
-                        ? [
-                            'Estás a punto de borrar un plan totalmente pagado.',
-                            'Esto revertirá TODOS los pagos históricos.',
-                            'Tus saldos actuales dejarán de coincidir con la realidad de tu banco.',
-                            'Solo haz esto si TODA la operación fue un error.',
-                        ]
-                        : [
-                            'Esta acción eliminará la compra.',
-                            'Revertirá la deuda en tu tarjeta.',
-                            'Eliminará todas las transacciones de mensualidad generadas.',
-                        ]
-                }
-                requireConfirmation={isSettled}
-                isDeleting={deletePurchaseMutation.isPending}
-            />
         </div>
     );
 };

@@ -3,9 +3,9 @@ import React from 'react';
 interface IconSelectorProps {
   icons: string[];
   selectedIcon: string;
-  selectedColor: string;
+  selectedColor: string; // Esperamos un valor HEX o Var CSS
   onSelect: (icon: string) => void;
-  columns?: 6 | 7 | 8;
+  className?: string;
 }
 
 export const IconSelector: React.FC<IconSelectorProps> = ({
@@ -13,48 +13,60 @@ export const IconSelector: React.FC<IconSelectorProps> = ({
   selectedIcon,
   selectedColor,
   onSelect,
-  columns = 7,
+  className = '',
 }) => {
-  const gridCols = {
-    6: 'grid-cols-6',
-    7: 'grid-cols-7',
-    8: 'grid-cols-8',
-  };
-
   return (
-    <div className={`grid ${gridCols[columns]} gap-1.5 bg-app-elevated p-2 rounded-xl border border-app-border max-h-48 overflow-y-auto`}>
-      {icons.map(icon => {
-        const isSelected = selectedIcon === icon;
+    <div
+      className={`
+        bg-app-bg border border-app-border rounded-xl p-2
+        max-h-[220px] overflow-y-auto custom-scrollbar
+        ${className}
+      `}
+    >
+      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+        {icons.map((icon) => {
+          const isSelected = selectedIcon === icon;
 
-        return (
-          <button
-            type="button"
-            key={icon}
-            onClick={() => onSelect(icon)}
-            className={`
-              aspect-square rounded-xl flex items-center justify-center
-              transition-all duration-200 ease-out
-              ${isSelected
-                ? 'shadow-lg scale-105 ring-2 ring-white/50'
-                : 'hover:bg-app-card hover:scale-105 active:scale-95'
-              }
-            `}
-            style={{
-              backgroundColor: isSelected ? selectedColor : 'transparent',
-              color: isSelected ? 'white' : undefined,
-            }}
-          >
-            <span
-              className="material-symbols-outlined text-xl"
+          return (
+            <button
+              type="button"
+              key={icon}
+              onClick={() => onSelect(icon)}
+              className={`
+                group relative aspect-square rounded-lg flex items-center justify-center
+                transition-all duration-300
+                outline-none focus-visible:ring-2 focus-visible:ring-offset-1
+                ${isSelected
+                  ? 'shadow-md scale-100 z-10'
+                  : 'hover:bg-app-elevated hover:text-app-text text-app-muted active:scale-95'
+                }
+              `}
               style={{
-                fontVariationSettings: isSelected ? '"FILL" 1, "wght" 500' : '"FILL" 0, "wght" 400'
+                backgroundColor: isSelected ? selectedColor : 'transparent',
+                color: isSelected ? '#FFFFFF' : undefined,
+                // Si está seleccionado, añadimos un anillo del mismo color para dar profundidad
+                boxShadow: isSelected ? `0 4px 10px -2px ${selectedColor}80` : 'none',
               }}
+              aria-label={`Seleccionar icono ${icon}`}
+              aria-pressed={isSelected}
             >
-              {icon}
-            </span>
-          </button>
-        );
-      })}
+              {/* Animación de Material Symbol Fill */}
+              <span
+                className="material-symbols-outlined text-[22px] transition-transform duration-300"
+                style={{
+                  fontVariationSettings: isSelected
+                    ? "'FILL' 1, 'wght' 600" // Más grueso y relleno al seleccionar
+                    : "'FILL' 0, 'wght' 400",
+                  // Pequeño zoom al seleccionar o hacer hover en el grupo
+                  transform: isSelected ? 'scale(1.1)' : 'scale(1)'
+                }}
+              >
+                {icon}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

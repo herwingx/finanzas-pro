@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } from '../hooks/useApi';
-import { SkeletonTransactionList } from '../components/Skeleton';
 import { toastSuccess, toastError, toast } from '../utils/toast';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { SwipeableItem } from '../components/SwipeableItem';
 
 const InstallmentsPage: React.FC = () => {
@@ -13,183 +12,157 @@ const InstallmentsPage: React.FC = () => {
     const navigate = useNavigate();
     const deleteMutation = useDeleteInstallmentPurchase();
 
+    // Helper: Formato de Moneda
+    const formatCurrency = useMemo(() => (value: number) => {
+        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'USD', minimumFractionDigits: 0 }).format(value);
+    }, [profile?.currency]);
+
+    // Lógica de Tabs
+    const activePurchases = useMemo(() => purchases?.filter(p => p.paidAmount < p.totalAmount) || [], [purchases]);
+    const settledPurchases = useMemo(() => purchases?.filter(p => p.paidAmount >= p.totalAmount) || [], [purchases]);
+    const displayedPurchases = useMemo(() => activeTab === 'active' ? activePurchases : settledPurchases, [activeTab, activePurchases, settledPurchases]);
+
+    // Handle Delete (Confirmación Moderna)
     const handleDelete = (purchase: any) => {
         const isSettled = (purchase.totalAmount - purchase.paidAmount) <= 0.05;
 
         toast.custom((t) => (
-            <div className="bg-app-card border border-app-border rounded-xl p-4 flex flex-col gap-3 shadow-lg max-w-sm w-full font-sans">
-                <div className="flex items-start gap-3">
-                    <div className="size-10 rounded-full bg-app-danger/10 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-app-danger">warning</span>
+            <div className="bg-app-surface border border-app-border rounded-xl shadow-xl max-w-sm w-full p-4 font-sans animate-fade-in">
+                <div className="flex gap-4">
+                    <div className="size-10 rounded-full bg-rose-100 dark:bg-rose-900/20 text-rose-600 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined">delete_forever</span>
                     </div>
-                    <div className="flex-1">
-                        <p className="text-app-text font-bold text-sm mb-1">
-                            {isSettled ? '⚠️ ELIMINAR PLAN LIQUIDADO' : '¿Eliminar plan MSI completo?'}
+                    <div>
+                        <h4 className="text-sm font-bold text-app-text">¿Eliminar Plan MSI?</h4>
+                        <p className="text-xs text-app-muted mt-1 leading-relaxed">
+                            Esto eliminará "{purchase.description}" y sus {purchase.paidInstallments} pagos registrados de tu contabilidad.
                         </p>
-                        <p className="text-app-muted text-xs mb-2">"{purchase.description}"</p>
+
+                        {isSettled && (
+                            <div className="mt-2 text-[10px] bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 px-2 py-1 rounded-md font-bold">
+                                ⚠️ Este plan ya estaba liquidado.
+                            </div>
+                        )}
+
+                        <div className="flex gap-2 mt-4">
+                            <button onClick={() => toast.dismiss(t)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-app-muted hover:bg-app-subtle transition-colors">Cancelar</button>
+                            <button onClick={async () => {
+                                toast.dismiss(t);
+                                try {
+                                    await deleteMutation.mutateAsync(purchase.id);
+                                    toastSuccess('Plan eliminado');
+                                } catch (error) { toastError('Error eliminando'); }
+                            }} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-500 text-white hover:bg-rose-600 shadow-sm transition-colors">Confirmar</button>
+                        </div>
                     </div>
-                </div>
-
-                <div className="bg-app-elevated rounded-lg p-3 space-y-1">
-                    <p className="text-xs font-bold text-app-danger mb-1">Se eliminarán:</p>
-                    <ul className="text-xs text-app-muted space-y-0.5 ml-4 list-disc">
-                        <li>El plan MSI completo</li>
-                        <li>Todos los pagos registrados ({purchase.paidInstallments} pagos)</li>
-                        <li>Todas las transacciones asociadas</li>
-                    </ul>
-                    {isSettled && (
-                        <p className="text-xs text-app-danger font-medium mt-2">
-                            ⚠️ Esto afectará tu historial contable
-                        </p>
-                    )}
-                </div>
-
-                <div className="flex gap-2 justify-end">
-                    <button
-                        onClick={() => toast.dismiss(t)}
-                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-elevated text-app-text hover:bg-app-hover transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={async () => {
-                            toast.dismiss(t);
-                            try {
-                                await deleteMutation.mutateAsync(purchase.id);
-                                toastSuccess('Plan MSI eliminado');
-                            } catch (error) {
-                                toastError('Error al eliminar');
-                            }
-                        }}
-                        className="px-4 py-2 text-sm font-medium rounded-lg bg-app-danger text-white hover:bg-app-danger/90 transition-colors"
-                    >
-                        Eliminar Todo
-                    </button>
                 </div>
             </div>
         ), { duration: Infinity });
     };
 
-    const formatCurrency = useMemo(() => (value: number) => {
-        const locales: Record<string, string> = { 'USD': 'en-US', 'EUR': 'de-DE', 'GBP': 'en-GB', 'MXN': 'es-MX' };
-        return new Intl.NumberFormat(locales[profile?.currency || 'USD'] || 'es-MX', { style: 'currency', currency: profile?.currency || 'USD' }).format(value);
-    }, [profile?.currency]);
-
-    const activePurchases = useMemo(() => {
-        return purchases?.filter(p => p.paidAmount < p.totalAmount) || [];
-    }, [purchases]);
-
-    const settledPurchases = useMemo(() => {
-        return purchases?.filter(p => p.paidAmount >= p.totalAmount) || [];
-    }, [purchases]);
-
-    const displayedPurchases = useMemo(() => {
-        return activeTab === 'active' ? activePurchases : settledPurchases;
-    }, [activeTab, activePurchases, settledPurchases]);
-
-    if (isLoading) {
-        return (
-            <div className="pb-28 animate-fade-in bg-app-bg text-app-text font-sans">
-                <PageHeader title="Mis Meses Sin Intereses" />
-                <div className="p-4 space-y-4">
-                    <SkeletonTransactionList count={5} />
-                </div>
-            </div>
-        );
-    }
-
-    if (isError) {
-        return <div className="p-4 text-center text-app-danger">Error al cargar las compras a meses.</div>;
-    }
+    if (isLoading) return <div className="p-8 text-center text-app-muted animate-pulse">Cargando planes...</div>;
+    if (isError) return <div className="p-8 text-center text-rose-500">Error cargando datos.</div>;
 
     return (
-        <div className="bg-app-bg text-app-text font-sans relative overflow-hidden">
-            {/* Ambient Background Glow */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-app-primary/5 rounded-full blur-[120px] animate-pulse-slow"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-app-secondary/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
-            </div>
-            <PageHeader title="Mis Meses Sin Intereses" />
+        <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
+            <PageHeader title="Mis Planes MSI" showBackButton={true} />
 
-            <div className="flex justify-around p-1 bg-app-card rounded-2xl border border-app-border mx-4 mb-4">
-                <button
-                    onClick={() => setActiveTab('active')}
-                    className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'active' ? 'bg-app-primary text-white' : 'text-app-muted'}`}
-                >
-                    Activos
-                </button>
-                <button
-                    onClick={() => setActiveTab('settled')}
-                    className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'settled' ? 'bg-app-primary text-white' : 'text-app-muted'}`}
-                >
-                    Liquidados
-                </button>
-            </div>
+            <div className="max-w-3xl mx-auto px-4 pt-4">
 
-            <div className="p-4 space-y-4">
-                {displayedPurchases.length === 0 ? (
-                    <div className="text-center py-20 text-app-muted">
-                        <span className="material-symbols-outlined text-5xl mb-2">credit_card_off</span>
-                        <p>No tienes compras a MSI {activeTab === 'active' ? 'activas' : 'liquidadas'}.</p>
-                    </div>
-                ) : (
-                    displayedPurchases.map(purchase => {
-                        const paidAmount = purchase.paidAmount;
-                        const remainingAmount = purchase.totalAmount - paidAmount;
-                        const progressPercentage = (paidAmount / purchase.totalAmount) * 100;
+                {/* Section Header with Add Button */}
+                <div className="flex justify-between items-center mb-4 px-1">
+                    <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Planes Activos</h2>
+                    <button
+                        onClick={() => navigate('/installments/new')}
+                        className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                        <span className="hidden sm:inline">Nuevo Plan</span>
+                    </button>
+                </div>
 
-                        return (
-                            <SwipeableItem
-                                key={purchase.id}
-                                onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`)}
-                                rightAction={{
-                                    icon: 'edit',
-                                    color: '#3b82f6',
-                                    label: 'Editar',
-                                }}
-                                onSwipeLeft={() => handleDelete(purchase)}
-                                leftAction={{
-                                    icon: 'delete',
-                                    color: '#ef4444',
-                                    label: 'Eliminar',
-                                }}
-                                className="rounded-2xl"
-                            >
-                                <div
-                                    onClick={() => navigate(`/installments/edit/${purchase.id}`)}
-                                    className="card-modern bg-app-card border border-app-border rounded-2xl p-4 space-y-3 hover:shadow-md transition-premium block cursor-pointer"
+                {/* Modern Tabs (Segmented Control) */}
+                <div className="bg-app-subtle p-1 rounded-xl flex mb-6 mx-auto max-w-xs">
+                    {(['active', 'settled'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab
+                                ? 'bg-app-surface text-app-text shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                : 'text-app-muted hover:text-app-text'}`}
+                        >
+                            {tab === 'active' ? 'Activos' : 'Liquidados'}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="space-y-3">
+                    {displayedPurchases.length === 0 ? (
+                        <div className="py-12 flex flex-col items-center justify-center text-app-muted opacity-60">
+                            <span className="material-symbols-outlined text-4xl mb-3">credit_card_off</span>
+                            <p className="text-sm font-medium">No hay planes {activeTab === 'active' ? 'activos' : 'liquidados'}</p>
+                        </div>
+                    ) : (
+                        displayedPurchases.map(purchase => {
+                            const remaining = purchase.totalAmount - purchase.paidAmount;
+                            const percent = (purchase.paidInstallments / purchase.installments) * 100;
+
+                            return (
+                                <SwipeableItem
+                                    key={purchase.id}
+                                    onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`)}
+                                    rightAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                                    onSwipeLeft={() => handleDelete(purchase)}
+                                    leftAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
+                                    className="mb-3" // Margen para la tarjeta swipeable
                                 >
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="font-bold text-app-text">{purchase.description}</p>
-                                            <p className="text-xs text-app-muted">{purchase.account?.name}</p>
+                                    <div
+                                        onClick={() => navigate(`/installments/edit/${purchase.id}`)}
+                                        className="group bg-app-surface border border-app-border rounded-2xl p-4 md:p-5 hover:border-app-border/80 transition-all active:scale-[0.99] cursor-pointer"
+                                    >
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-start gap-3">
+                                                <div className="mt-1 size-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500">
+                                                    <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-app-text group-hover:text-app-primary transition-colors">{purchase.description}</h3>
+                                                    <p className="text-xs text-app-muted">{purchase.account?.name}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(purchase.monthlyPayment)}</p>
+                                                <p className="text-[10px] text-app-muted font-medium">/ mes</p>
+                                            </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-lg text-app-text">{formatCurrency(purchase.monthlyPayment)}</p>
-                                            <p className="text-xs text-app-muted">mensual</p>
-                                        </div>
-                                    </div>
 
-                                    <div>
-                                        <div className="flex justify-between text-xs text-app-muted mb-1">
-                                            <span>Pagado: {formatCurrency(paidAmount)}</span>
-                                            <span>Restante: {formatCurrency(remainingAmount)}</span>
-                                        </div>
-                                        <div className="w-full bg-app-elevated rounded-full h-2.5">
-                                            <div className="bg-app-primary h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
-                                        </div>
-                                        <div className="text-center text-xs text-app-muted mt-1">
-                                            {purchase.paidInstallments} de {purchase.installments} mensualidades pagadas
+                                        {/* Progress Bar & Stats */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[10px] text-app-muted font-medium uppercase tracking-wide">
+                                                <span>{purchase.paidInstallments} de {purchase.installments} cuotas</span>
+                                                <span>Restante: {formatCurrency(remaining)}</span>
+                                            </div>
+
+                                            <div className="h-1.5 w-full bg-app-subtle rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full transition-all duration-500 ease-out"
+                                                    style={{
+                                                        width: `${percent}%`,
+                                                        backgroundColor: activeTab === 'active' ? 'var(--brand-primary)' : 'var(--text-muted)'
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </SwipeableItem>
-                        );
-                    })
-                )}
+                                </SwipeableItem>
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* Spacer for safe bottom */}
+                <div className="h-16" />
             </div>
-
-
         </div>
     );
 };

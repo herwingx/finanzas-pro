@@ -10,25 +10,21 @@ const FinancialAnalysis: React.FC = () => {
   const chartData = useMemo(() => {
     if (!summary) return [];
 
-    // Combine all events: expenses, income, msi
     let events = [
       ...summary.expectedExpenses.map((e: any) => ({ date: new Date(e.dueDate), amount: -e.amount, type: 'expense', name: e.description })),
       ...summary.expectedIncome.map((e: any) => ({ date: new Date(e.dueDate), amount: e.amount, type: 'income', name: e.description })),
       ...summary.msiPaymentsDue.map((e: any) => ({ date: new Date(e.dueDate), amount: -e.amount, type: 'msi', name: e.description }))
     ];
 
-    // Sort by date
     events.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    // Generate Daily Balance Points
     const points = [];
     let currentBalance = summary.currentBalance;
     const startDate = new Date(summary.periodStart);
     const endDate = new Date(summary.periodEnd);
 
-    // Add initial point
     points.push({
-      fecha: startDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', ''),
+      fecha: startDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
       Saldo: currentBalance,
       fullDate: startDate,
     });
@@ -36,165 +32,152 @@ const FinancialAnalysis: React.FC = () => {
     events.forEach(event => {
       currentBalance += event.amount;
       points.push({
-        fecha: event.date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', ''),
+        fecha: event.date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
         Saldo: currentBalance,
         fullDate: event.date
       });
     });
 
-    // Add final point if last event is before end date
+    // Proyectar hasta el final del periodo si no hay más eventos
     if (points.length > 0 && points[points.length - 1].fullDate < endDate) {
       points.push({
-        fecha: endDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', ''),
+        fecha: endDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
         Saldo: currentBalance,
         fullDate: endDate
       });
     }
 
     return points;
-
   }, [summary]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
 
   const formatAxisValue = (value: number) => {
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-    if (value >= 1000) return `$${(value / 1000).toFixed(0)}k`;
-    if (value <= -1000000) return `-$${(Math.abs(value) / 1000000).toFixed(1)}M`;
-    if (value <= -1000) return `-$${(Math.abs(value) / 1000).toFixed(0)}k`;
+    if (Math.abs(value) >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+    if (Math.abs(value) >= 1000) return `$${(value / 1000).toFixed(0)}k`;
     return `$${value.toFixed(0)}`;
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-app-bg text-app-text">
-        <PageHeader title="Análisis Financiero" />
-        <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-app-primary mx-auto mb-4"></div>
-          <p className="text-app-muted">Cargando análisis...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!summary) {
-    return (
-      <div className="bg-app-bg text-app-text">
-        <PageHeader title="Análisis Financiero" />
-        <div className="p-8 text-center text-app-muted">No hay datos disponibles</div>
-      </div>
-    );
-  }
-
-  const netWorth = summary.netWorth ?? (summary.currentBalance - (summary.currentDebt || 0) - (summary.currentMSIDebt || 0));
-  const totalExpenses = summary.expectedExpenses.reduce((sum: number, e: any) => sum + e.amount, 0) +
-    summary.msiPaymentsDue.reduce((sum: number, e: any) => sum + e.amount, 0);
-  const totalIncome = summary.expectedIncome.reduce((sum: number, e: any) => sum + e.amount, 0);
-
-  // Custom tooltip
+  // Custom Tooltip Minimalista (Estilo Linear)
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-app-card border border-app-border rounded-xl p-3 shadow-lg">
-          <p className="text-xs text-app-muted font-bold mb-1">{label}</p>
-          <p className="text-sm font-bold text-app-primary">
-            Saldo: {formatCurrency(payload[0].value)}
-          </p>
+        <div className="bg-app-surface border border-app-border rounded-lg shadow-lg p-2.5 text-xs">
+          <p className="text-app-muted font-medium mb-1">{label}</p>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-app-primary rounded-full"></span>
+            <span className="font-bold text-app-text tabular-nums text-sm">
+              {formatCurrency(payload[0].value)}
+            </span>
+          </div>
         </div>
       );
     }
     return null;
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-dvh bg-app-bg animate-pulse">
+        <PageHeader title="Análisis Financiero" />
+        <div className="px-4 py-8 grid gap-4">
+          <div className="h-48 rounded-3xl bg-gray-200 dark:bg-zinc-800"></div>
+          <div className="h-32 rounded-3xl bg-gray-200 dark:bg-zinc-800"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!summary) return <div className="text-center p-8 text-app-muted">No hay datos disponibles</div>;
+
+  const totalExpenses = summary.expectedExpenses.reduce((sum: number, e: any) => sum + e.amount, 0) +
+    summary.msiPaymentsDue.reduce((sum: number, e: any) => sum + e.amount, 0);
+  const totalIncome = summary.expectedIncome.reduce((sum: number, e: any) => sum + e.amount, 0);
+
   return (
-    <div className="bg-app-bg text-app-text pb-20">
+    <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
       <PageHeader title="Análisis Financiero" />
 
-      <div className="px-4 space-y-5">
-        {/* Period Selector */}
-        <div className="bg-app-elevated p-1 rounded-xl flex border border-app-border">
-          {(['quincenal', 'mensual'] as const).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriodType(p)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${periodType === p
-                ? 'bg-app-card text-app-primary shadow-sm'
-                : 'text-app-muted'
-                }`}
-            >
-              {p === 'quincenal' ? 'Quincenal' : 'Mensual'}
-            </button>
-          ))}
-        </div>
+      <div className="max-w-4xl mx-auto px-4 md:px-6 space-y-6 pt-2">
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-app-card border border-app-border rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-app-income-bg">
-                <span className="material-symbols-outlined text-app-income text-sm">trending_up</span>
-              </div>
-              <p className="text-[10px] text-app-muted font-bold uppercase">Ingresos Esperados</p>
-            </div>
-            <p className="text-lg font-bold text-app-income">{formatCurrency(totalIncome)}</p>
-          </div>
-
-          <div className="bg-app-card border border-app-border rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-app-expense-bg">
-                <span className="material-symbols-outlined text-app-expense text-sm">trending_down</span>
-              </div>
-              <p className="text-[10px] text-app-muted font-bold uppercase">Gastos Proyectados</p>
-            </div>
-            <p className="text-lg font-bold text-app-expense">-{formatCurrency(totalExpenses)}</p>
+        {/* Top Controls: Period Selector */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-app-subtle p-1 rounded-xl flex gap-1 w-full max-w-sm">
+            {(['quincenal', 'mensual'] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriodType(p)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${periodType === p
+                    ? 'bg-app-surface text-app-text shadow-sm border border-app-border'
+                    : 'text-app-muted hover:text-app-text'
+                  }`}
+              >
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Main Projection Chart */}
-        <div className="bg-app-card p-4 rounded-2xl border border-app-border">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-app-primary/10">
-                <span className="material-symbols-outlined text-app-primary text-lg">show_chart</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-app-text text-sm">Flujo de Caja</h3>
-                <p className="text-[10px] text-app-muted">Proyección del período</p>
-              </div>
+        {/* Financial Flow Overview (Income vs Expenses) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bento-card p-4 flex flex-col items-center text-center justify-center border-emerald-100 dark:border-emerald-900/30">
+            <span className="material-symbols-outlined text-emerald-500 mb-1">trending_up</span>
+            <p className="text-[10px] font-bold text-app-muted uppercase">Ingresos Esperados</p>
+            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(totalIncome)}</p>
+          </div>
+
+          <div className="bento-card p-4 flex flex-col items-center text-center justify-center border-rose-100 dark:border-rose-900/30">
+            <span className="material-symbols-outlined text-rose-500 mb-1">trending_down</span>
+            <p className="text-[10px] font-bold text-app-muted uppercase">Gastos + Deuda</p>
+            <p className="text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums">-{formatCurrency(totalExpenses)}</p>
+          </div>
+        </div>
+
+        {/* Main Chart Card */}
+        <div className="bento-card p-0 overflow-hidden bg-app-surface border border-app-border shadow-sm">
+          <div className="px-5 pt-5 pb-2 flex justify-between items-end border-b border-app-subtle">
+            <div>
+              <h3 className="font-bold text-sm text-app-text">Proyección de Liquidez</h3>
+              <p className="text-xs text-app-muted">Evolución estimada de tu saldo</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-app-muted uppercase">Final</p>
+              <p className={`text-lg font-bold tabular-nums ${summary.disposableIncome >= 0 ? 'text-app-primary' : 'text-app-danger'}`}>
+                {formatCurrency(summary.disposableIncome)}
+              </p>
             </div>
           </div>
 
-          <div className="h-48 w-full">
+          <div className="h-64 w-full mt-2 -ml-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSaldoProj" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="var(--brand-primary)" stopOpacity={0.15} />
+                    <stop offset="90%" stopColor="var(--brand-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-default)" strokeOpacity={0.6} />
                 <XAxis
                   dataKey="fecha"
-                  stroke="var(--color-text-tertiary)"
-                  style={{ fontSize: '9px' }}
+                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
+                  minTickGap={30}
                 />
                 <YAxis
-                  stroke="var(--color-text-tertiary)"
-                  style={{ fontSize: '9px' }}
+                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
-                  width={50}
+                  width={45}
                   tickFormatter={formatAxisValue}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '3 3' }} />
                 <Area
                   type="monotone"
                   dataKey="Saldo"
-                  stroke="var(--color-primary)"
+                  stroke="var(--brand-primary)"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorSaldoProj)"
@@ -202,66 +185,51 @@ const FinancialAnalysis: React.FC = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-
-          {/* Stats Footer */}
-          <div className="mt-4 flex justify-between items-end border-t border-app-border pt-3">
-            <div>
-              <p className="text-[10px] text-app-muted uppercase font-bold">Balance Inicial</p>
-              <p className="font-bold text-app-text">{formatCurrency(summary.currentBalance)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] text-app-muted uppercase font-bold">Disponible al Final</p>
-              <p className={`text-xl font-bold ${summary.disposableIncome >= 0 ? 'text-app-income' : 'text-app-expense'}`}>
-                {summary.disposableIncome >= 0 ? '+' : ''}{formatCurrency(summary.disposableIncome)}
-              </p>
-            </div>
-          </div>
         </div>
 
-        {/* Health Indicators */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className={`p-4 rounded-2xl border ${summary.isSufficient ? 'bg-app-income-bg border-app-income/20' : 'bg-app-expense-bg border-app-expense/20'}`}>
-            <span className={`material-symbols-outlined text-2xl mb-2 ${summary.isSufficient ? 'text-app-income' : 'text-app-expense'}`}>
-              {summary.isSufficient ? 'check_circle' : 'warning'}
-            </span>
-            <p className="text-[10px] font-bold uppercase text-app-muted">Estado</p>
-            <p className={`font-bold ${summary.isSufficient ? 'text-app-income' : 'text-app-expense'}`}>
-              {summary.isSufficient ? 'Saludable' : 'Déficit'}
-            </p>
-          </div>
+        {/* Alerts & Warnings (List Style) */}
+        <div>
+          <h4 className="text-xs font-bold text-app-muted uppercase mb-3 ml-1 tracking-wide">Estado y Alertas</h4>
+          <div className="space-y-3">
 
-          <div className="p-4 rounded-2xl border bg-app-card border-app-border">
-            <span className="material-symbols-outlined text-2xl mb-2 text-app-primary">account_balance</span>
-            <p className="text-[10px] font-bold uppercase text-app-muted">Patrimonio Neto</p>
-            <p className={`font-bold ${netWorth >= 0 ? 'text-app-text' : 'text-app-expense'}`}>
-              {formatCurrency(netWorth)}
-            </p>
-          </div>
-        </div>
+            {/* Main Status */}
+            <div className={`p-4 rounded-2xl border flex gap-3 items-start ${summary.isSufficient ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900' : 'bg-rose-50/50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900'}`}>
+              <div className={`mt-0.5 p-1 rounded-full ${summary.isSufficient ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'}`}>
+                <span className="material-symbols-outlined text-sm block">
+                  {summary.isSufficient ? 'check' : 'close'}
+                </span>
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${summary.isSufficient ? 'text-emerald-800 dark:text-emerald-200' : 'text-rose-800 dark:text-rose-200'}`}>
+                  {summary.isSufficient ? 'Liquidez Saludable' : 'Déficit Proyectado'}
+                </p>
+                <p className="text-xs opacity-80 leading-relaxed mt-1">
+                  {summary.isSufficient
+                    ? 'Tus ingresos cubren todos tus compromisos del período.'
+                    : `Faltan ${formatCurrency(Math.abs(summary.disposableIncome))} para cubrir todo. Revisa tus gastos.`}
+                </p>
+              </div>
+            </div>
 
-        {/* Insights Section */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-app-muted uppercase tracking-wider">Alertas y Consejos</h3>
-          {summary.warnings.length > 0 ? (
-            summary.warnings.map((w: string, i: number) => (
-              <div key={i} className="flex gap-3 bg-amber-500/10 p-4 rounded-xl border border-amber-500/20">
-                <span className="material-symbols-outlined text-amber-500 shrink-0">priority_high</span>
+            {/* Individual Warnings */}
+            {summary.warnings.map((w: string, i: number) => (
+              <div key={i} className="flex gap-3 p-4 bg-app-surface border border-app-border rounded-2xl items-start shadow-sm">
+                <span className="material-symbols-outlined text-amber-500 mt-0.5">priority_high</span>
                 <p className="text-sm text-app-text">{w}</p>
               </div>
-            ))
-          ) : (
-            <div className="flex gap-3 bg-app-income-bg p-4 rounded-xl border border-app-income/20">
-              <span className="material-symbols-outlined text-app-income shrink-0">thumb_up</span>
-              <p className="text-sm text-app-text">
-                ¡Todo se ve excelente! Sigue manteniendo tus gastos bajo control.
-              </p>
-            </div>
-          )}
+            ))}
+
+            {summary.warnings.length === 0 && (
+              <div className="p-6 text-center bg-app-surface border border-app-border border-dashed rounded-2xl">
+                <p className="text-sm text-app-muted">No hay alertas críticas para este período.</p>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
     </div>
   );
 };
 
 export default FinancialAnalysis;
-

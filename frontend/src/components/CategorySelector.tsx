@@ -7,7 +7,7 @@ interface CategorySelectorProps {
   onSelect: (id: string) => void;
   isLoading?: boolean;
   emptyMessage?: string;
-  columns?: 3 | 4 | 5;
+  className?: string;
 }
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
@@ -16,80 +16,71 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   onSelect,
   isLoading = false,
   emptyMessage = 'No hay categorías disponibles',
-  columns = 4,
+  className = '',
 }) => {
+  // Loading Skeleton
   if (isLoading) {
     return (
-      <div className="grid grid-cols-4 gap-3">
-        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-          <div key={i} className="flex flex-col items-center gap-2 p-3 animate-pulse">
-            <div className="size-12 rounded-full bg-app-elevated" />
-            <div className="h-2 w-10 bg-app-elevated rounded" />
+      <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 ${className}`}>
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-3 p-4 bg-app-surface border border-transparent rounded-2xl animate-pulse">
+            <div className="size-10 rounded-full bg-app-subtle" />
+            <div className="h-2 w-16 bg-app-subtle rounded-md" />
           </div>
         ))}
       </div>
     );
   }
 
-  if (categories.length === 0) {
+  // Empty State
+  if (!categories || categories.length === 0) {
     return (
-      <div className="py-8 text-center">
-        <div className="size-16 mx-auto mb-3 rounded-full bg-app-elevated flex items-center justify-center">
-          <span className="material-symbols-outlined text-2xl text-app-muted">category</span>
+      <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-app-border rounded-3xl bg-app-subtle/20">
+        <div className="size-12 mb-3 rounded-xl bg-app-subtle flex items-center justify-center text-app-muted">
+          <span className="material-symbols-outlined text-2xl">category</span>
         </div>
-        <p className="text-sm text-app-muted">{emptyMessage}</p>
+        <p className="text-sm font-medium text-app-muted">{emptyMessage}</p>
       </div>
     );
   }
 
-  const gridCols = {
-    3: 'grid-cols-3',
-    4: 'grid-cols-3 sm:grid-cols-4',
-    5: 'grid-cols-3 sm:grid-cols-5',
-  };
-
   return (
-    <div className={`grid ${gridCols[columns]} gap-2`}>
-      {categories.map(cat => {
+    <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 ${className}`}>
+      {categories.map((cat) => {
         const isSelected = selectedId === cat.id;
 
         return (
           <button
-            type="button"
+            type="button" // Important so it doesn't submit forms
             key={cat.id}
             onClick={() => onSelect(cat.id)}
             className={`
-              relative flex flex-col items-center gap-1.5 p-2.5 rounded-2xl
-              transition-all duration-200 ease-out
+              group relative flex flex-col items-center gap-2 p-3 rounded-2xl
+              transition-all duration-200 outline-none
               ${isSelected
-                ? 'bg-gradient-to-br from-app-primary/15 to-app-secondary/10 ring-2 ring-app-primary shadow-lg scale-[1.02]'
-                : 'bg-app-card hover:bg-app-elevated active:scale-95'
+                ? 'bg-app-primary/5 ring-2 ring-inset ring-app-primary shadow-sm'
+                : 'bg-app-surface border border-app-border hover:bg-app-subtle hover:border-app-border-dark active:scale-95'
               }
             `}
           >
-            {/* Selection indicator */}
-            {isSelected && (
-              <div className="absolute -top-1 -right-1 size-5 bg-app-primary rounded-full flex items-center justify-center shadow-md">
-                <span className="material-symbols-outlined text-white text-xs" style={{ fontSize: '12px' }}>check</span>
-              </div>
-            )}
-
-            {/* Icon container */}
+            {/* Icon Container */}
             <div
               className={`
-                size-11 rounded-xl flex items-center justify-center
-                transition-all duration-200
-                ${isSelected ? 'shadow-md' : 'shadow-sm'}
+                size-12 rounded-xl flex items-center justify-center
+                transition-transform duration-200 group-hover:scale-110
               `}
               style={{
+                // Fondo con opacidad para ambos estados, se ve más nativo
                 backgroundColor: isSelected ? cat.color : `${cat.color}15`,
-                color: isSelected ? 'white' : cat.color,
+                color: isSelected ? '#FFFFFF' : cat.color,
+                boxShadow: isSelected ? `0 4px 12px -2px ${cat.color}60` : 'none'
               }}
             >
               <span
-                className="material-symbols-outlined text-xl"
+                className="material-symbols-outlined text-[22px]"
                 style={{
-                  fontVariationSettings: isSelected ? '"FILL" 1, "wght" 500' : '"FILL" 0, "wght" 400'
+                  // Fill icon when selected for extra visual weight
+                  fontVariationSettings: isSelected ? "'FILL' 1, 'wght' 600" : "'FILL' 0, 'wght' 400"
                 }}
               >
                 {cat.icon}
@@ -99,8 +90,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
             {/* Label */}
             <span
               className={`
-                text-[10px] font-semibold truncate w-full text-center leading-tight
-                ${isSelected ? 'text-app-primary' : 'text-app-muted'}
+                text-[11px] font-medium truncate w-full text-center leading-snug px-1
+                ${isSelected ? 'text-app-primary font-bold' : 'text-app-text group-hover:text-app-text'}
               `}
             >
               {cat.name}

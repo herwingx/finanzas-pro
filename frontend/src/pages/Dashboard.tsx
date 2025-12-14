@@ -1,269 +1,320 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; // Agregamos useLocation
 import { useTransactions, useCategories, useProfile, useAccounts } from '../hooks/useApi';
 import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
-import { toastInfo } from '../utils/toast';
 import { FinancialPlanningWidget } from '../components/FinancialPlanningWidget';
+import { toastInfo } from '../utils/toast';
+
+// --- Sub-components para modularidad visual ---
+
+const DashboardHeader: React.FC<{
+  name?: string;
+  avatar?: string;
+  greeting: string;
+  emoji: string;
+}> = ({ name, avatar, greeting, emoji }) => (
+  <header className="flex items-center justify-between py-4 md:py-6 px-4 md:px-0 gap-3">
+    <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+      {/* Avatar */}
+      <Link
+        to="/profile"
+        className="relative group size-10 md:size-12 rounded-full overflow-hidden ring-2 ring-app-border hover:ring-app-primary transition-all duration-300 shrink-0"
+      >
+        {avatar ? (
+          <img src={avatar} alt="User" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-app-subtle flex items-center justify-center text-app-primary font-bold text-sm md:text-base">
+            {name?.[0]}
+          </div>
+        )}
+      </Link>
+
+      <div className="min-w-0 flex-1">
+        <h1 className="text-base sm:text-lg md:text-2xl font-bold text-app-text tracking-tight flex items-center gap-1.5 truncate">
+          <span className="truncate">{greeting}, {name?.split(' ')[0]}</span>
+          <span className="text-base md:text-xl shrink-0">{emoji}</span>
+        </h1>
+        <p className="text-xs md:text-sm text-app-muted font-medium truncate">Tu resumen financiero</p>
+      </div>
+    </div>
+
+    {/* Botón Notificaciones - Perfectamente circular */}
+    <button
+      onClick={() => toastInfo('Notificaciones')}
+      className="size-10 rounded-full bg-app-surface border border-app-border text-app-text hover:bg-app-subtle active:scale-95 transition-all relative shrink-0 flex items-center justify-center"
+    >
+      <span className="material-symbols-outlined text-[20px]">notifications</span>
+      <span className="absolute top-1 right-1 size-2.5 bg-app-danger rounded-full border-2 border-app-surface"></span>
+    </button>
+  </header>
+);
+
+const BentoCard: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+  action?: React.ReactNode
+}> = ({ children, className = '', title, action }) => (
+  <div className={`bg-app-surface border border-app-border rounded-3xl p-5 md:p-6 shadow-subtle flex flex-col ${className}`}>
+    {(title || action) && (
+      <div className="flex justify-between items-center mb-4 md:mb-6">
+        {title && <h3 className="text-sm font-semibold text-app-muted uppercase tracking-wider">{title}</h3>}
+        {action}
+      </div>
+    )}
+    {children}
+  </div>
+);
+
+const MainBalanceCard: React.FC<{ balance: number; netWorth: number; format: (n: number) => string }> = ({ balance, netWorth, format }) => (
+  <BentoCard className="md:col-span-2 relative overflow-hidden group">
+    <div className="relative z-10 flex flex-col justify-between h-full min-h-[160px]">
+      <div>
+        <div className="flex items-center gap-2 text-app-muted mb-1">
+          <span className="text-sm font-medium">Balance Total Disponible</span>
+          <span className="material-symbols-outlined text-[16px] cursor-help" title="Efectivo + Débito">info</span>
+        </div>
+        <h2 className="text-4xl md:text-5xl font-bold text-app-text tracking-tight font-numbers mt-2">
+          {format(balance)}
+        </h2>
+      </div>
+
+      <div className="flex items-center gap-3 mt-6">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+          <span className="material-symbols-outlined text-[14px]">trending_up</span>
+          +2.4% este mes
+        </div>
+        <span className="text-sm text-app-muted">Patrimonio: {format(netWorth)}</span>
+      </div>
+    </div>
+
+    {/* Decoración sutil abstracta (Estilo Monarch) */}
+    <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 bg-app-primary opacity-[0.03] dark:opacity-[0.1] rounded-full blur-3xl pointer-events-none group-hover:bg-app-primary group-hover:opacity-[0.06] transition-all duration-500" />
+  </BentoCard>
+);
+
+const QuickStat: React.FC<{
+  label: string;
+  amount: number;
+  type: 'income' | 'expense';
+  format: (n: number) => string
+}> = ({ label, amount, type, format }) => {
+  const isIncome = type === 'income';
+  return (
+    <BentoCard className="justify-center">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className={`p-2 w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${isIncome ? 'bg-app-success/10 text-app-success' : 'bg-app-danger/10 text-app-danger'}`}>
+            <span className="material-symbols-outlined">{isIncome ? 'arrow_downward' : 'arrow_upward'}</span>
+          </div>
+          <p className="text-app-muted text-xs font-bold uppercase tracking-wide">{label}</p>
+          <p className={`text-2xl font-bold mt-1 font-numbers ${isIncome ? 'text-app-text' : 'text-app-text'}`}>
+            {format(amount)}
+          </p>
+        </div>
+        <div className="h-full flex items-end opacity-20">
+          <span className="material-symbols-outlined text-4xl">{isIncome ? 'show_chart' : 'waterfall_chart'}</span>
+        </div>
+      </div>
+    </BentoCard>
+  );
+};
+
+// --- Componente Principal ---
 
 const Dashboard: React.FC = () => {
-  const { data: transactions, isLoading: isLoadingTransactions, isError: isErrorTransactions } = useTransactions();
-  const { data: categories, isLoading: isLoadingCategories, isError: isErrorCategories } = useCategories();
-  const { data: profile, isLoading: isLoadingProfile, isError: isErrorProfile } = useProfile();
-  const { data: accounts, isLoading: isLoadingAccounts, isError: isErrorAccounts } = useAccounts();
+  const location = useLocation(); // Hook para saber en qué ruta estamos (para el Sidebar Desktop)
 
-  const userInitials = useMemo(() => {
-    return profile?.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
-  }, [profile?.name]);
+  const { data: transactions, isLoading: isLoadingTx } = useTransactions();
+  const { data: profile, isLoading: isLoadingProfile } = useProfile();
+  const { data: accounts, isLoading: isLoadingAcc } = useAccounts();
+  const { data: categories } = useCategories();
 
-  // Dynamic greeting based on time of day
+  // Configuración de Navegación del Sidebar
+  const navItems = [
+    { label: 'Dashboard', icon: 'dashboard', path: '/' },
+    { label: 'Historial', icon: 'receipt_long', path: '/history' },
+    { label: 'Cuentas', icon: 'account_balance_wallet', path: '/accounts' },
+    { label: 'Más', icon: 'grid_view', path: '/more' }, // O '/settings' si prefieres
+  ];
+
+  // Cálculos...
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return { text: 'Buenos días', emoji: '☀️' };
-    if (hour >= 12 && hour < 19) return { text: 'Buenas tardes', emoji: '🌤️' };
-    return { text: 'Buenas noches', emoji: '🌙' };
+    return hour < 12 ? { text: 'Buenos días', emoji: '☀️' } : hour < 19 ? { text: 'Buenas tardes', emoji: '🌤️' } : { text: 'Buenas noches', emoji: '🌙' };
   }, []);
 
-  // Current date formatted
-  const currentDate = useMemo(() => {
-    return new Date().toLocaleDateString('es-MX', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
-  }, []);
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'USD' }).format(val);
 
-  const formatCurrency = useMemo(() => (value: number) => {
-    const locales: Record<string, string> = { 'USD': 'en-US', 'EUR': 'de-DE', 'GBP': 'en-GB', 'MXN': 'es-MX' };
-    return new Intl.NumberFormat(locales[profile?.currency || 'USD'] || 'es-MX', { style: 'currency', currency: profile?.currency || 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
-  }, [profile?.currency]);
-
-  const { netWorth, availableFunds } = useMemo(() => {
-    if (!accounts) {
-      return { netWorth: 0, availableFunds: 0 };
-    }
-
-    const totalAssets = accounts.filter(acc => acc.type === 'DEBIT' || acc.type === 'CASH').reduce((sum, acc) => sum + acc.balance, 0);
-    const totalDebt = accounts.filter(acc => acc.type === 'CREDIT').reduce((sum, acc) => sum + acc.balance, 0);
-    const netWorth = totalAssets - totalDebt;
-    const availableFunds = totalAssets;
-
-    return { netWorth, availableFunds };
+  const netWorth = useMemo(() => {
+    if (!accounts) return 0;
+    return accounts.reduce((acc, a) => acc + (a.type === 'CREDIT' ? -a.balance : a.balance), 0);
   }, [accounts]);
 
-  // Calculate current month income and expenses
-  const { totalIncome, totalExpenses } = useMemo(() => {
-    if (!transactions) return { totalIncome: 0, totalExpenses: 0 };
+  const availableFunds = useMemo(() => {
+    if (!accounts) return 0;
+    return accounts.filter(a => ['DEBIT', 'CASH'].includes(a.type)).reduce((sum, a) => sum + a.balance, 0);
+  }, [accounts]);
+
+  const monthStats = useMemo(() => {
+    if (!transactions) return { income: 0, expense: 0 };
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const monthTransactions = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
+    // Filtrar transacciones del mes actual
+    const thisMonthTxs = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
 
-    const totalIncome = monthTransactions
-      .filter(tx => tx.type === 'income')
-      .reduce((sum, tx) => sum + tx.amount, 0);
-
-    const totalExpenses = monthTransactions
-      .filter(tx => tx.type === 'expense')
-      .reduce((sum, tx) => sum + tx.amount, 0);
-
-    return { totalIncome, totalExpenses };
+    return {
+      income: thisMonthTxs
+        .filter(tx => tx.type === 'income')
+        .reduce((sum, tx) => sum + tx.amount, 0),
+      expense: thisMonthTxs
+        .filter(tx => tx.type === 'expense')
+        .reduce((sum, tx) => sum + tx.amount, 0),
+    };
   }, [transactions]);
 
-  const getCategoryInfo = (id: string) => {
-    if (!categories) return { name: 'General', icon: 'receipt_long', color: '#999' };
-    const cat = categories.find(c => c.id === id);
-    return { name: cat?.name || 'General', icon: cat?.icon || 'receipt_long', color: cat?.color || '#999' };
-  };
-
-  if (isLoadingTransactions || isLoadingCategories || isLoadingProfile || isLoadingAccounts) {
-    return <SkeletonDashboard />;
-  }
-
-  if (isErrorTransactions || isErrorCategories || isErrorProfile || isErrorAccounts) {
-    return <div className="p-8 text-center text-app-danger">Error cargando datos. Por favor recarga.</div>
-  }
-
+  if (isLoadingTx || isLoadingProfile || isLoadingAcc) return <SkeletonDashboard />;
 
   return (
-    <div className="bg-app-bg text-app-text font-sans pb-20">
-      {/* Ambient Background Glow - Enhanced */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[50%] bg-gradient-to-b from-app-primary/15 to-transparent rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[60%] h-[40%] bg-app-secondary/10 rounded-full blur-[100px]" />
-      </div>
+    <div className="min-h-screen bg-app-bg text-app-text font-sans pb-24 lg:pb-8 lg:pl-0 animate-fade-in">
 
-      {/* Header */}
-      <div className="h-16 flex items-center px-4 sticky top-0 bg-app-bg/80 backdrop-blur-xl z-20 border-b border-app-border/30">
-        <Link to="/profile" className="size-12 rounded-2xl bg-gradient-to-br from-app-primary to-app-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-app-primary/30 overflow-hidden shrink-0 transition-transform hover:scale-105 active:scale-95">
-          {profile?.avatar ? <img src={profile.avatar} alt="User Avatar" className="w-full h-full object-cover" /> : <span className="text-lg">{userInitials}</span>}
-        </Link>
-        <div className="flex-1 px-3 min-w-0">
-          <p className="text-xs text-app-muted capitalize">{currentDate}</p>
-          <h1 className="text-base font-bold tracking-tight truncate text-app-text flex items-center gap-1.5">
-            <span>{greeting.emoji}</span>
-            <span>{greeting.text}, {profile?.name?.split(' ')[0]}</span>
-          </h1>
+      {/* 
+         SIDEBAR DE ESCRITORIO (Fixed Left) 
+         Este bloque reemplaza al BottomNav en pantallas grandes
+      */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-72 lg:flex-col border-r border-app-border bg-app-surface p-6 z-30">
+        <div className="flex items-center gap-2 mb-10 px-2">
+          <div className="size-8 bg-app-primary rounded-lg flex items-center justify-center">
+            <span className="material-symbols-outlined text-white text-lg">spa</span>
+          </div>
+          <div className="text-xl font-black text-app-text tracking-tighter">FINANZAS PRO</div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => toastInfo('Sin notificaciones nuevas')} className="p-2 rounded-xl hover:bg-app-elevated transition-colors text-app-muted hover:text-app-text relative">
-            <span className="material-symbols-outlined">notifications</span>
-            <span className="absolute top-2 right-2 size-2 bg-app-danger rounded-full border-2 border-app-bg"></span>
+
+        <nav className="space-y-1.5 flex-1">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`
+                  w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200
+                  ${isActive
+                    ? 'bg-app-primary text-white shadow-md shadow-app-primary/20'
+                    : 'text-app-muted hover:text-app-text hover:bg-app-subtle'
+                  }
+                `}
+              >
+                <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled-icon' : ''}`} style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
+                  {item.icon}
+                </span>
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {/* Footer Sidebar Desktop */}
+        <div className="mt-auto pt-6 border-t border-app-border">
+          <button className="flex items-center gap-3 px-3 py-2 w-full text-sm text-app-muted hover:text-app-danger transition-colors">
+            <span className="material-symbols-outlined">logout</span>
+            Cerrar Sesión
           </button>
         </div>
       </div>
 
-      {/* Main Balance Hero Card */}
-      <div className="px-4 mt-4">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-app-primary via-app-primary to-app-secondary p-6 shadow-2xl shadow-app-primary/30">
-          {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-xl translate-y-1/2 -translate-x-1/2" />
-          <div className="absolute top-4 right-4 opacity-20">
-            <span className="material-symbols-outlined text-6xl text-white">account_balance_wallet</span>
+      {/* ÁREA DE CONTENIDO */}
+      <main className="lg:pl-72 max-w-7xl mx-auto md:px-8">
+
+        <DashboardHeader
+          name={profile?.name}
+          avatar={profile?.avatar}
+          greeting={greeting.text}
+          emoji={greeting.emoji}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0">
+
+          <div className="lg:col-span-2">
+            <MainBalanceCard
+              balance={availableFunds}
+              netWorth={netWorth}
+              format={formatCurrency}
+            />
           </div>
 
-          <div className="relative z-10">
-            <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Balance Disponible</p>
-            <h2 className="text-4xl font-black text-white tracking-tight mb-4">
-              {formatCurrency(availableFunds)}
-            </h2>
+          <QuickStat label="Ingresos" amount={monthStats.income} type="income" format={formatCurrency} />
+          <QuickStat label="Gastos" amount={monthStats.expense} type="expense" format={formatCurrency} />
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1.5 backdrop-blur-sm">
-                <span className="material-symbols-outlined text-white/70 text-sm">trending_up</span>
-                <span className="text-white/80 text-xs font-bold">Patrimonio: {formatCurrency(netWorth)}</span>
-              </div>
-              <Link to="/accounts" className="flex items-center gap-1 text-white/70 hover:text-white text-xs font-bold transition-colors">
-                <span>Ver cuentas</span>
-                <span className="material-symbols-outlined text-sm">arrow_forward</span>
-              </Link>
-            </div>
+          <div className="lg:col-span-4">
+            <FinancialPlanningWidget />
           </div>
-        </div>
-      </div>
 
-      {/* Quick Stats Row */}
-      <div className="px-4 mt-4 flex gap-3">
-        <div className="flex-1 bg-app-card border border-app-border rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 rounded-lg bg-app-income-bg">
-              <span className="material-symbols-outlined text-app-income text-xs">arrow_upward</span>
-            </div>
-            <p className="text-[9px] text-app-muted font-bold uppercase">Ingresos</p>
-          </div>
-          <p className="text-lg font-bold text-app-income">{formatCurrency(totalIncome)}</p>
-        </div>
-        <div className="flex-1 bg-app-card border border-app-border rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 rounded-lg bg-app-expense-bg">
-              <span className="material-symbols-outlined text-app-expense text-xs">arrow_downward</span>
-            </div>
-            <p className="text-[9px] text-app-muted font-bold uppercase">Gastos</p>
-          </div>
-          <p className="text-lg font-bold text-app-expense">-{formatCurrency(totalExpenses)}</p>
-        </div>
-      </div>
+          <BentoCard title="Tendencia de Gastos" className="lg:col-span-3 min-h-[300px]">
+            {transactions && <SpendingTrendChart transactions={transactions} />}
+          </BentoCard>
 
-      {/* Financial Planning Widget */}
-      <div className="px-4 mt-6">
-        <FinancialPlanningWidget />
-      </div>
+          <BentoCard title="Recientes" className="lg:col-span-1 min-h-[400px]"
+            action={
+              <Link to="/history" className="text-xs font-bold text-app-primary hover:underline">Ver todo</Link>
+            }>
+            <div className="space-y-4">
+              {transactions?.slice(0, 5).map(tx => {
+                const isExpense = tx.type === 'expense';
+                const colorClass = isExpense ? 'text-app-text' : 'text-app-success';
 
-      {/* Spending Trend Chart */}
-      {transactions && transactions.length > 0 && (
-        <div className="px-4 mt-6">
-          <SpendingTrendChart transactions={transactions} />
-        </div>
-      )}
-
-      {/* Recent Transactions */}
-      <div className="px-4 mt-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-app-primary/10">
-              <span className="material-symbols-outlined text-app-primary text-lg">receipt_long</span>
-            </div>
-            <h3 className="text-sm font-bold text-app-text">Transacciones Recientes</h3>
-          </div>
-          <Link to="/history" className="text-app-primary text-xs font-bold hover:bg-app-primary/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-            Ver todo
-            <span className="material-symbols-outlined text-sm">chevron_right</span>
-          </Link>
-        </div>
-
-        <div className="bg-app-card border border-app-border rounded-2xl overflow-hidden divide-y divide-app-border">
-          {transactions && transactions
-            .filter(tx => {
-              // Filter out MSI payment transactions (income/transfer with installmentPurchaseId)
-              const isMsiPayment = tx.installmentPurchaseId && (tx.type === 'income' || tx.type === 'transfer');
-              return !isMsiPayment;
-            })
-            .slice(0, 5)
-            .map((tx) => {
-              if (tx.type === 'transfer') {
-                const sourceAccount = accounts?.find(a => a.id === tx.accountId)?.name;
-                const destAccount = accounts?.find(a => a.id === tx.destinationAccountId)?.name;
                 return (
-                  <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
-                    if (tx.installmentPurchaseId && tx.type === 'expense') {
-                      e.preventDefault();
-                      toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
-                    }
-                  }} className="flex items-center gap-3 p-3 hover:bg-app-elevated/50 transition-colors">
-                    <div className="size-10 rounded-xl flex items-center justify-center shrink-0 bg-app-transfer-bg">
-                      <span className="material-symbols-outlined text-lg text-app-transfer">swap_horiz</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-app-text truncate text-sm">Transferencia</p>
-                      <span className="text-[11px] text-app-muted truncate">{sourceAccount} → {destAccount}</span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-bold text-sm text-app-text">{formatCurrency(tx.amount)}</p>
-                    </div>
-                  </Link>
-                )
-              }
-              const category = getCategoryInfo(tx.categoryId);
-              return (
-                <Link key={tx.id} to={`/new?editId=${tx.id}`} onClick={(e) => {
-                  if (tx.installmentPurchaseId && tx.type === 'expense') {
-                    e.preventDefault();
-                    toastInfo('Administra esta compra desde la sección "Meses Sin Intereses"');
-                  }
-                }} className="flex items-center gap-3 p-3 hover:bg-app-elevated/50 transition-colors">
-                  <div className="size-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${category.color}15` }}>
-                    <span className="material-symbols-outlined text-lg" style={{ color: category.color }}>{category.icon}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-app-text truncate text-sm">{tx.description}</p>
-                    <div className="flex items-center gap-2">
-                      {tx.installmentPurchaseId && (
-                        <span className="text-[9px] font-bold text-app-msi bg-app-msi-bg px-1.5 py-0.5 rounded">
-                          MSI
+                  <Link key={tx.id} to={`/new?editId=${tx.id}`} className="group flex items-center justify-between p-2 rounded-xl hover:bg-app-subtle transition-colors -mx-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`size-10 rounded-full flex items-center justify-center text-lg shadow-sm border border-app-border ${isExpense ? 'bg-white dark:bg-zinc-800' : 'bg-app-success/10'}`}>
+                        <span className="material-symbols-outlined text-[20px]">
+                          {isExpense ? 'local_cafe' : 'monetization_on'}
                         </span>
-                      )}
-                      <span className="text-[11px] text-app-muted">{category.name}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-app-text truncate group-hover:text-app-primary transition-colors">{tx.description}</p>
+                        <p className="text-xs text-app-muted truncate">Hace 2 horas</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className={`font-bold text-sm ${tx.type === 'income' ? 'text-app-income' : 'text-app-text'}`}>
-                      {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}
-                    </p>
-                  </div>
-                </Link>
-              )
-            })}
+                    <span className={`text-sm font-bold font-numbers ${colorClass}`}>
+                      {isExpense ? '-' : '+'}{formatCurrency(tx.amount)}
+                    </span>
+                  </Link>
+                );
+              })}
 
-          {(!transactions || transactions.length === 0) && (
-            <div className="p-8 text-center text-app-muted">
-              <span className="material-symbols-outlined text-3xl mb-2 opacity-30">receipt_long</span>
-              <p className="text-sm">Sin transacciones recientes</p>
+              {!transactions?.length && (
+                <div className="flex flex-col items-center justify-center h-40 text-app-muted">
+                  <span className="material-symbols-outlined text-4xl opacity-20 mb-2">savings</span>
+                  <span className="text-sm">Sin movimientos</span>
+                </div>
+              )}
             </div>
-          )}
+          </BentoCard>
+
         </div>
-      </div>
+      </main>
+
+      {/* FAB Mobile Only (Optional if relying on BottomNav FAB) */}
+      {/* 
+           NOTA: Como el nuevo BottomNav YA tiene el botón "+", 
+           probablemente no quieras duplicarlo aquí en vista móvil,
+           así que he comentado esto o lo dejo oculto en lg 
+           pero visible solo si no usas el BottomNav.
+       */}
+      {/* 
+      <Link 
+        to="/new" 
+        className="lg:hidden fixed bottom-24 right-4 size-14 bg-app-text text-app-bg rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40"
+      >
+        <span className="material-symbols-outlined text-3xl">add</span>
+      </Link>
+      */}
+
     </div>
   );
 };

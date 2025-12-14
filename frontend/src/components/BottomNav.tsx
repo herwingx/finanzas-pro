@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 
+// --- Interfaces & Constants ---
+
 interface NavItemProps {
   to: string;
   icon: string;
@@ -8,184 +10,183 @@ interface NavItemProps {
   isActive: boolean;
 }
 
+const QUICK_ACTIONS = [
+  { icon: 'shopping_bag', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense' },
+  { icon: 'monetization_on', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income' },
+  { icon: 'sync_alt', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer' },
+  { icon: 'calendar_month', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
+  { icon: 'credit_card', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
+];
+
+const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
+
+// --- Sub-components ---
+
 const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isActive }) => (
   <Link
     to={to}
-    className="relative flex flex-col items-center justify-center h-full flex-1 group"
+    className="flex flex-col items-center justify-center flex-1 h-full py-1 group select-none touch-manipulation active:scale-95 transition-transform"
   >
     <div className={`
-      relative rounded-xl p-1.5 transition-all duration-300 ease-out
-      ${isActive ? '-translate-y-0.5' : 'group-hover:-translate-y-0.5'}
+       rounded-xl p-1 mb-0.5 transition-colors duration-200
+       ${isActive ? 'text-app-primary' : 'text-app-muted group-hover:text-app-text'}
     `}>
-      {isActive && (
-        <div className="absolute inset-0 bg-app-primary/15 rounded-xl blur-sm" />
-      )}
-      <span
-        className={`material-symbols-outlined text-2xl transition-all duration-300 ${isActive ? 'text-app-primary font-bold' : 'text-app-muted group-hover:text-app-text'
-          }`}
-        style={{ fontVariationSettings: isActive ? '"FILL" 1, "wght" 700' : '"FILL" 0, "wght" 400' }}
-      >
+      <span className={`material-symbols-outlined text-[26px] ${isActive ? 'filled-icon' : ''}`}
+        style={{ fontVariationSettings: isActive ? "'FILL' 1, 'wght' 600" : "'FILL' 0, 'wght' 400" }}>
         {icon}
       </span>
     </div>
 
     <span
-      className={`text-[10px] font-medium transition-all duration-300 ${isActive ? 'text-app-primary opacity-100' : 'text-app-muted opacity-70'
-        }`}
-    >
+      className={`text-[10px] font-medium leading-none tracking-wide transition-colors duration-200 
+      ${isActive ? 'text-app-primary font-semibold' : 'text-app-muted'}
+    `}>
       {label}
     </span>
-
-    {/* Active indicator line */}
-    {isActive && (
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-app-primary rounded-full" />
-    )}
   </Link>
 );
 
-interface QuickActionProps {
-  icon: string;
-  label: string;
-  bgClass: string;
-  textClass: string;
-  onClick: () => void;
-}
-
-const QuickAction: React.FC<QuickActionProps> = ({ icon, label, bgClass, textClass, onClick }) => (
+const QuickActionButton: React.FC<{
+  action: typeof QUICK_ACTIONS[0],
+  onClick: () => void
+}> = ({ action, onClick }) => (
   <button
     onClick={onClick}
     className="flex flex-col items-center gap-2 group w-full"
   >
     <div
-      className={`size-12 rounded-2xl flex items-center justify-center shadow-md transition-all duration-200 group-hover:scale-105 group-active:scale-95 ${bgClass} ${textClass}`}
+      className={`size-14 rounded-2xl flex items-center justify-center shadow-sm border border-transparent hover:border-black/5 dark:hover:border-white/10 active:scale-95 transition-all duration-200 ${action.colorClass}`}
     >
-      <span className="material-symbols-outlined text-2xl">{icon}</span>
+      <span className="material-symbols-outlined text-2xl">{action.icon}</span>
     </div>
-    <span className="text-[10px] font-semibold text-app-text text-center leading-tight max-w-[60px]">{label}</span>
+    <span className="text-[11px] font-medium text-app-text tracking-tight">{action.label}</span>
   </button>
 );
 
-const FAB: React.FC<{ onClick: () => void; isOpen: boolean }> = ({ onClick, isOpen }) => (
-  <div className="relative -top-4 flex justify-center items-center size-14">
-    <button
-      onClick={onClick}
-      className={`
-        relative size-14 rounded-full flex items-center justify-center
-        bg-app-primary text-white
-        shadow-lg shadow-app-primary/30
-        transition-all duration-300 ease-out z-20
-        ${isOpen ? 'rotate-45 bg-app-muted shadow-none' : 'hover:scale-105 hover:shadow-xl hover:shadow-app-primary/40'}
-      `}
-    >
-      <span className="material-symbols-outlined text-3xl font-medium">add</span>
-    </button>
-  </div>
-);
 
-// Pages that show the bottom navigation (main tabs only)
-const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
+// --- Main Component ---
 
 const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [location.pathname]);
+  // Close menu on route change
+  useEffect(() => setIsMenuOpen(false), [location.pathname]);
 
-  // Only show BottomNav on main navigation pages
+  // Logic: Only render on mobile/tablet (hidden lg) and allowed pages
   const shouldShow = MAIN_NAV_PAGES.includes(location.pathname);
-
   if (!shouldShow) return null;
 
-  const quickActions = [
-    { icon: 'shopping_bag', label: 'Gasto', bgClass: 'bg-app-expense-bg', textClass: 'text-app-expense', path: '/new?type=expense' },
-    { icon: 'attach_money', label: 'Ingreso', bgClass: 'bg-app-income-bg', textClass: 'text-app-income', path: '/new?type=income' },
-    { icon: 'sync_alt', label: 'Transfer', bgClass: 'bg-app-transfer-bg', textClass: 'text-app-transfer', path: '/new?type=transfer' },
-    { icon: 'update', label: 'Recurrente', bgClass: 'bg-app-recurring-bg', textClass: 'text-app-recurring', path: '/recurring/new' },
-    { icon: 'credit_card', label: 'MSI', bgClass: 'bg-app-msi-bg', textClass: 'text-app-msi', path: '/installments/new' },
-  ];
-
   const handleQuickAction = (path: string) => {
-    setIsMenuOpen(false);
-    navigate(path);
+    // Small delay to allow ripple/active state to show before navigation
+    setTimeout(() => {
+      setIsMenuOpen(false);
+      navigate(path);
+    }, 50);
   };
 
   return (
     <>
-      {/* Backdrop for Menu */}
+      {/* 
+         DIMMED BACKDROP 
+         Solo visible en Mobile para evitar clics accidentales fuera 
+      */}
       {isMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-fade-in"
+          className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] animate-fade-in touch-none"
           onClick={() => setIsMenuOpen(false)}
         />
       )}
 
-      {/* Quick Actions Menu - Positioned above FAB */}
+      {/* 
+         QUICK ACTIONS SHEET (Floating) 
+      */}
       <div
-        className={`fixed left-0 right-0 z-50 flex justify-center px-4 transition-all duration-300 ease-out ${isMenuOpen
-          ? 'opacity-100 scale-100'
-          : 'opacity-0 scale-95 pointer-events-none'
+        className={`lg:hidden fixed left-4 right-4 z-50 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isMenuOpen
+          ? 'opacity-100 translate-y-0 scale-100'
+          : 'opacity-0 translate-y-8 scale-95 pointer-events-none'
           }`}
         style={{
-          bottom: 'calc(72px + env(safe-area-inset-bottom) + 16px)'
+          bottom: 'calc(70px + env(safe-area-inset-bottom) + 20px)'
         }}
       >
-        <div className="w-full max-w-sm bg-app-card backdrop-blur-xl p-4 rounded-2xl border border-app-border shadow-2xl">
-          <p className="text-[10px] font-bold text-app-muted uppercase mb-3 text-center tracking-widest">Nueva Transacción</p>
-          <div className="grid grid-cols-5 gap-2">
-            {quickActions.map(action => (
-              <QuickAction
+        <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl p-5 rounded-[28px] border border-black/5 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+          <div className="flex justify-between items-center mb-5 px-1">
+            <span className="text-xs font-bold text-app-muted uppercase tracking-wider">Nueva Transacción</span>
+            <button onClick={() => setIsMenuOpen(false)} className="size-6 rounded-full bg-app-subtle flex items-center justify-center text-app-muted">
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-5 gap-1 place-items-center">
+            {QUICK_ACTIONS.map(action => (
+              <QuickActionButton
                 key={action.label}
-                icon={action.icon}
-                label={action.label}
-                bgClass={action.bgClass}
-                textClass={action.textClass}
+                action={action}
                 onClick={() => handleQuickAction(action.path)}
               />
             ))}
           </div>
         </div>
+
+        {/* Triángulo indicador (opcional, estilo popover) */}
+        <div className={`absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-white/95 dark:bg-zinc-900/95 rotate-45 border-b border-r border-black/5 dark:border-white/10 rounded-br transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`}></div>
       </div>
 
-      {/* Bottom Nav Bar - Always Fixed */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        <div className="relative bg-app-card border-t border-app-border shadow-[0_-4px_24px_rgba(0,0,0,0.08)] h-[72px]">
-          <div className="flex items-center justify-around h-full px-2 max-w-lg mx-auto">
-            <NavItem
-              to="/"
-              icon="dashboard"
-              label="Panel"
-              isActive={location.pathname === '/'}
-            />
-            <NavItem
-              to="/history"
-              icon="history"
-              label="Historial"
-              isActive={location.pathname === '/history'}
-            />
 
-            <div className="w-14 shrink-0 flex justify-center">
-              <FAB onClick={() => setIsMenuOpen(!isMenuOpen)} isOpen={isMenuOpen} />
-            </div>
+      {/* 
+         MAIN NAVIGATION BAR 
+         Class lg:hidden -> Desaparece automáticamente en pantallas grandes
+      */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-950 border-t border-app-border pb-safe">
+        <div className="h-[60px] relative flex items-center justify-around px-2 w-full max-w-md mx-auto">
 
-            <NavItem
-              to="/accounts"
-              icon="account_balance_wallet"
-              label="Cuentas"
-              isActive={location.pathname.startsWith('/accounts')}
-            />
-            <NavItem
-              to="/more"
-              icon="apps"
-              label="Más"
-              isActive={location.pathname === '/more'}
-            />
+          <NavItem
+            to="/"
+            icon="dashboard"
+            label="Inicio"
+            isActive={location.pathname === '/'}
+          />
+
+          <NavItem
+            to="/history"
+            icon="receipt_long"
+            label="Historial"
+            isActive={location.pathname === '/history'}
+          />
+
+          {/* CENTRAL FAB CONTAINER */}
+          <div className="relative -top-5 w-14 shrink-0 flex justify-center z-10">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className={`
+                    size-14 rounded-full flex items-center justify-center
+                    shadow-[0_8px_20px_-4px_rgba(37,99,235,0.5)] dark:shadow-[0_8px_20px_-4px_rgba(37,99,235,0.3)]
+                    border-[3px] border-white dark:border-zinc-950
+                    transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+                    active:scale-90
+                    ${isMenuOpen ? 'bg-app-text text-app-bg rotate-45' : 'bg-app-primary text-white'}
+                 `}
+            >
+              <span className="material-symbols-outlined text-[32px] font-medium leading-none">add</span>
+            </button>
           </div>
+
+          <NavItem
+            to="/accounts"
+            icon="wallet"
+            label="Cartera"
+            isActive={location.pathname.startsWith('/accounts')}
+          />
+
+          <NavItem
+            to="/more"
+            icon="grid_view"
+            label="Menú"
+            isActive={location.pathname === '/more'}
+          />
+
         </div>
       </nav>
     </>

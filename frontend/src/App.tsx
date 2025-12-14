@@ -18,7 +18,32 @@ const App: React.FC = () => {
       }}
     >
       <ScrollToTop />
-      <Toaster richColors position="top-center" />
+
+      {/* 
+        🎨 TOASTER GLOBAL (Sonner)
+        Estilos premium aplicados via classNames 
+      */}
+      <Toaster
+        position="top-center"
+        richColors={false}
+        expand={false}
+        closeButton
+        theme="system"
+        toastOptions={{
+          classNames: {
+            toast: 'bg-app-surface dark:bg-[#1C1C1E] border border-app-border rounded-2xl shadow-lg backdrop-blur-xl',
+            title: 'text-app-text font-bold text-sm',
+            description: 'text-app-muted text-xs mt-0.5',
+            actionButton: 'bg-app-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity',
+            cancelButton: 'bg-app-subtle text-app-text text-xs font-medium px-3 py-1.5 rounded-lg',
+            error: '!border-l-4 !border-l-rose-500',
+            success: '!border-l-4 !border-l-emerald-500',
+            warning: '!border-l-4 !border-l-amber-500',
+            info: '!border-l-4 !border-l-blue-500',
+          }
+        }}
+      />
+
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

@@ -1,1133 +1,284 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-/* Tailwind CSS directives - processed by PostCSS */
-/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind base;
-/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind components;
-/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind utilities;
 
 /* ==========================================================================
-   1. Cyber-Premium Design System - "Future Fintech"
+   1. Clean SaaS Design System (The "Monarch/Linear" Look)
    ========================================================================== */
+
 :root {
-  /* 🎨 LIGHT MODE - Clean, High-End Tech */
+  /* --- 🎨 LIGHT MODE (Default) --- */
 
-  /* Brand Colors - Electric & Vivid */
-  --color-primary: hsl(225, 100%, 55%);
-  /* Electric Blue */
-  --color-primary-light: hsl(225, 100%, 65%);
-  --color-primary-dark: hsl(225, 100%, 45%);
-  --color-primary-glow: hsla(225, 100%, 55%, 0.25);
+  /* Backgrounds */
+  --bg-canvas: #F9FAFB;
+  /* Gray 50 - Fondo general suave */
+  --bg-surface: #FFFFFF;
+  /* Blanco puro - Tarjetas */
+  --bg-subtle: #F3F4F6;
+  /* Gray 100 - Hovers / Ítems secundarios */
+  --bg-elevated: #FFFFFF;
+  /* Modales / Dropdowns */
 
-  --color-secondary: hsl(280, 100%, 60%);
-  /* Neon Purple */
-  --color-secondary-light: hsl(280, 100%, 70%);
-  --color-secondary-glow: hsla(280, 100%, 60%, 0.25);
+  /* Text */
+  --text-main: #111827;
+  /* Gray 900 - Contraste alto pero no negro puro */
+  --text-muted: #6B7280;
+  /* Gray 500 */
+  --text-inverted: #FFFFFF;
 
-  --color-accent: hsl(180, 100%, 45%);
-  /* Cyan */
-  --color-accent-light: hsl(180, 100%, 55%);
-  --color-accent-glow: hsla(180, 100%, 45%, 0.3);
+  /* Borders & Dividers (Sutiles) */
+  --border-default: #E5E7EB;
+  /* Gray 200 */
+  --border-strong: #D1D5DB;
+  /* Gray 300 */
 
-  /* Status - Vibrant & Clear */
-  --color-success: hsl(150, 100%, 40%);
+  /* Brand Colors - Azul Profesional (Inter/Stripe blue) */
+  --brand-primary: #2563EB;
+  --brand-primary-dark: #1D4ED8;
+  --color-primary-glow: rgba(37, 99, 235, 0.15);
+  /* Mucho más suave */
+
+  /* Semantic - Clean Status Colors */
+  --semantic-success: #10B981;
   /* Emerald */
-  --color-success-light: hsl(150, 100%, 50%);
-  --color-success-bg: hsla(150, 100%, 40%, 0.1);
-
-  --color-danger: hsl(340, 90%, 55%);
-  /* Pink-Red */
-  --color-danger-light: hsl(340, 90%, 65%);
-  --color-danger-bg: hsla(340, 90%, 55%, 0.1);
-
-  --color-warning: hsl(35, 100%, 55%);
+  --semantic-danger: #EF4444;
+  /* Red */
+  --semantic-warning: #F59E0B;
   /* Amber */
-  --color-warning-light: hsl(35, 100%, 65%);
-  --color-warning-bg: hsla(35, 100%, 55%, 0.1);
+  --semantic-info: #0EA5E9;
+  /* Sky */
 
-  --color-info: hsl(200, 100%, 50%);
-  /* Azure */
-  --color-info-light: hsl(200, 100%, 60%);
-  --color-info-bg: hsla(200, 100%, 50%, 0.1);
+  /* === Transaction/Account Categories (Refinados para no ser neón) === */
+  /* Credit Card -> Rose matizado */
+  --color-account-credit: #E11D48;
+  --color-account-credit-bg: #FFE4E6;
 
-  /* Light Backgrounds - Crystal Clear */
-  --color-bg-primary: hsl(220, 30%, 98%);
-  --color-bg-secondary: hsl(0, 0%, 100%);
-  --color-bg-tertiary: hsl(220, 20%, 96%);
-  --color-bg-elevated: hsl(0, 0%, 100%);
-  --color-bg-overlay: hsla(220, 30%, 98%, 0.85);
-  --color-bg-hover: hsl(220, 20%, 95%);
-  --color-bg-active: hsl(220, 20%, 92%);
+  /* Debit -> Blue standard */
+  --color-account-debit: #2563EB;
+  --color-account-debit-bg: #DBEAFE;
 
-  /* Light Text */
-  --color-text-primary: hsl(220, 40%, 10%);
-  --color-text-secondary: hsl(220, 20%, 40%);
-  --color-text-tertiary: hsl(220, 15%, 60%);
-  --color-text-quaternary: hsl(220, 10%, 80%);
-  --color-text-inverted: hsl(0, 0%, 100%);
+  /* Cash -> Emerald */
+  --color-account-cash: #059669;
+  --color-account-cash-bg: #D1FAE5;
 
-  /* Borders - Subtle */
-  --color-border: hsla(220, 30%, 10%, 0.08);
-  --color-border-light: hsla(220, 30%, 10%, 0.04);
-  --color-border-medium: hsla(220, 30%, 10%, 0.12);
-  --color-border-strong: hsla(220, 30%, 10%, 0.18);
-
-  /* Shadows - Colored & Diffused */
-  --shadow-xs: 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 10px 15px -3px rgba(30, 41, 59, 0.08), 0 4px 6px -2px rgba(30, 41, 59, 0.04);
-  --shadow-lg: 0 20px 25px -5px rgba(30, 41, 59, 0.1), 0 10px 10px -5px rgba(30, 41, 59, 0.04);
-  --shadow-xl: 0 25px 50px -12px rgba(30, 41, 59, 0.25);
-  --shadow-2xl: 0 35px 60px -15px rgba(30, 41, 59, 0.3);
-
-  /* === SEMANTIC COLORS - Account Types === */
-  --color-account-credit: hsl(340, 85%, 55%);
-  /* Credit Card - Pink/Rose */
-  --color-account-credit-bg: hsla(340, 85%, 55%, 0.12);
-  --color-account-debit: hsl(210, 90%, 52%);
-  /* Debit Card - Blue */
-  --color-account-debit-bg: hsla(210, 90%, 52%, 0.12);
-  --color-account-cash: hsl(145, 75%, 42%);
-  /* Cash - Green */
-  --color-account-cash-bg: hsla(145, 75%, 42%, 0.12);
-  --color-account-savings: hsl(195, 85%, 45%);
-  /* Savings - Teal */
-  --color-account-savings-bg: hsla(195, 85%, 45%, 0.12);
-  --color-account-investment: hsl(45, 90%, 48%);
-  /* Investment - Gold */
-  --color-account-investment-bg: hsla(45, 90%, 48%, 0.12);
-
-  /* === SEMANTIC COLORS - Transaction Types === */
-  --color-income: hsl(145, 80%, 40%);
-  /* Income - Green */
-  --color-income-bg: hsla(145, 80%, 40%, 0.12);
-  --color-expense: hsl(0, 75%, 55%);
-  /* Expense - Red */
-  --color-expense-bg: hsla(0, 75%, 55%, 0.12);
-  --color-transfer: hsl(210, 85%, 55%);
-  /* Transfer - Blue */
-  --color-transfer-bg: hsla(210, 85%, 55%, 0.12);
-  --color-recurring: hsl(270, 70%, 55%);
-  /* Recurring - Purple */
-  --color-recurring-bg: hsla(270, 70%, 55%, 0.12);
-  --color-msi: hsl(35, 90%, 50%);
-  /* MSI/Installments - Orange */
-  --color-msi-bg: hsla(35, 90%, 50%, 0.12);
-
-  /* === SEMANTIC COLORS - Actions === */
-  --color-action-pay: hsl(145, 75%, 42%);
-  /* Pay/Confirm - Green */
-  --color-action-edit: hsl(45, 90%, 48%);
-  /* Edit - Amber */
-  --color-action-delete: hsl(0, 75%, 55%);
-  /* Delete - Red */
-  --color-action-add: hsl(210, 90%, 52%);
-  /* Add - Blue */
-  --color-action-cancel: hsl(0, 0%, 50%);
-  /* Cancel - Gray */
+  /* MSI / Installments -> Orange/Indigo mix */
+  --color-msi: #4F46E5;
+  --color-msi-bg: #E0E7FF;
 }
 
 .dark {
-  /* 🌙 DARK MODE - Deep Space / Cyberpunk */
+  /* --- 🌙 DARK MODE (Luxury Slate/Zinc) --- */
 
-  /* Brand Colors - Neon & Glowing */
-  --color-primary: hsl(230, 100%, 65%);
-  /* Neon Blue */
-  --color-primary-light: hsl(230, 100%, 75%);
-  --color-primary-dark: hsl(230, 100%, 55%);
-  --color-primary-glow: hsla(230, 100%, 65%, 0.35);
+  /* Backgrounds - No usamos negro puro #000 */
+  --bg-canvas: #09090B;
+  /* Zinc 950 */
+  --bg-surface: #18181B;
+  /* Zinc 900 */
+  --bg-subtle: #27272A;
+  /* Zinc 800 */
+  --bg-elevated: #27272A;
+  /* Para modales que resalten */
 
-  --color-secondary: hsl(270, 100%, 65%);
-  /* Electric Purple */
-  --color-secondary-light: hsl(270, 100%, 75%);
-  --color-secondary-glow: hsla(270, 100%, 65%, 0.35);
+  /* Text */
+  --text-main: #FAFAFA;
+  /* Zinc 50 */
+  --text-muted: #A1A1AA;
+  /* Zinc 400 */
+  --text-inverted: #000000;
 
-  --color-accent: hsl(170, 100%, 50%);
-  /* Cyber Cyan */
-  --color-accent-light: hsl(170, 100%, 60%);
-  --color-accent-glow: hsla(170, 100%, 50%, 0.35);
+  /* Borders */
+  --border-default: #27272A;
+  /* Zinc 800 */
+  --border-strong: #3F3F46;
+  /* Zinc 700 */
 
-  /* Status Colors on Dark */
-  --color-success: hsl(150, 100%, 45%);
-  --color-success-light: hsl(150, 100%, 55%);
-  --color-success-bg: hsla(150, 100%, 45%, 0.15);
+  /* Brand - Un poco más claro para contraste en oscuro */
+  --brand-primary: #3B82F6;
+  --brand-primary-dark: #60A5FA;
+  --color-primary-glow: rgba(59, 130, 246, 0.1);
 
-  --color-danger: hsl(340, 95%, 60%);
-  --color-danger-light: hsl(340, 95%, 70%);
-  --color-danger-bg: hsla(340, 95%, 60%, 0.15);
+  /* Semantic Overrides for Dark Mode (Pasteles saturados para legibilidad) */
+  --semantic-success: #34D399;
+  --semantic-danger: #F87171;
+  --semantic-warning: #FBBF24;
 
-  --color-warning: hsl(40, 100%, 55%);
-  --color-warning-light: hsl(40, 100%, 65%);
-  --color-warning-bg: hsla(40, 100%, 55%, 0.15);
-
-  --color-info: hsl(200, 100%, 55%);
-  --color-info-light: hsl(200, 100%, 65%);
-  --color-info-bg: hsla(200, 100%, 55%, 0.15);
-
-  /* Dark Backgrounds - Void Black */
-  --color-bg-primary: hsl(230, 25%, 6%);
-  /* Deepest Blue/Black */
-  --color-bg-secondary: hsl(230, 20%, 10%);
-  /* Subtle Contrast */
-  --color-bg-tertiary: hsl(230, 18%, 14%);
-  --color-bg-elevated: hsl(230, 20%, 12%);
-  --color-bg-overlay: hsla(230, 25%, 6%, 0.85);
-  /* Glass base */
-
-  --color-bg-hover: hsla(230, 20%, 20%, 0.4);
-  --color-bg-active: hsla(230, 20%, 25%, 0.4);
-
-  /* Dark Text */
-  --color-text-primary: hsl(230, 10%, 98%);
-  --color-text-secondary: hsl(230, 10%, 70%);
-  --color-text-tertiary: hsl(230, 8%, 50%);
-  --color-text-quaternary: hsl(230, 5%, 35%);
-  --color-text-inverted: hsl(230, 25%, 6%);
-
-  /* Dark Borders - Glowing Edges */
-  --color-border: hsla(230, 30%, 60%, 0.12);
-  --color-border-light: hsla(230, 30%, 60%, 0.06);
-  --color-border-medium: hsla(230, 30%, 60%, 0.18);
-  --color-border-strong: hsla(230, 30%, 60%, 0.25);
-
-  /* Dark Shadows - Neon Glows */
-  --shadow-xs: 0 0 2px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 16px -2px rgba(0, 0, 0, 0.6), 0 4px 8px -2px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 16px 24px -4px rgba(0, 0, 0, 0.7), 0 8px 12px -4px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
-  --shadow-2xl: 0 32px 64px -12px rgba(0, 0, 0, 0.9);
-
-  /* Special Glows */
-  --shadow-glow-sm: 0 0 15px hsla(230, 100%, 65%, 0.15);
-  --shadow-glow-md: 0 0 25px hsla(230, 100%, 65%, 0.2);
-  --shadow-glow-lg: 0 0 40px hsla(230, 100%, 65%, 0.3);
-
-  /* === SEMANTIC COLORS - Account Types (Dark Mode) === */
-  --color-account-credit: hsl(340, 90%, 65%);
-  /* Credit Card - Pink Neon */
-  --color-account-credit-bg: hsla(340, 90%, 65%, 0.18);
-  --color-account-debit: hsl(210, 100%, 65%);
-  /* Debit Card - Blue Neon */
-  --color-account-debit-bg: hsla(210, 100%, 65%, 0.18);
-  --color-account-cash: hsl(145, 85%, 50%);
-  /* Cash - Green Neon */
-  --color-account-cash-bg: hsla(145, 85%, 50%, 0.18);
-  --color-account-savings: hsl(195, 90%, 55%);
-  /* Savings - Teal Neon */
-  --color-account-savings-bg: hsla(195, 90%, 55%, 0.18);
-  --color-account-investment: hsl(45, 100%, 55%);
-  /* Investment - Gold Neon */
-  --color-account-investment-bg: hsla(45, 100%, 55%, 0.18);
-
-  /* === SEMANTIC COLORS - Transaction Types (Dark Mode) === */
-  --color-income: hsl(145, 90%, 50%);
-  /* Income - Green Neon */
-  --color-income-bg: hsla(145, 90%, 50%, 0.18);
-  --color-expense: hsl(0, 85%, 62%);
-  /* Expense - Red Neon */
-  --color-expense-bg: hsla(0, 85%, 62%, 0.18);
-  --color-transfer: hsl(210, 100%, 65%);
-  /* Transfer - Blue Neon */
-  --color-transfer-bg: hsla(210, 100%, 65%, 0.18);
-  --color-recurring: hsl(270, 85%, 65%);
-  /* Recurring - Purple Neon */
-  --color-recurring-bg: hsla(270, 85%, 65%, 0.18);
-  --color-msi: hsl(35, 100%, 55%);
-  /* MSI/Installments - Orange Neon */
-  --color-msi-bg: hsla(35, 100%, 55%, 0.18);
-
-  /* === SEMANTIC COLORS - Actions (Dark Mode) === */
-  --color-action-pay: hsl(145, 85%, 50%);
-  /* Pay/Confirm - Green */
-  --color-action-edit: hsl(45, 100%, 55%);
-  /* Edit - Amber */
-  --color-action-delete: hsl(0, 85%, 62%);
-  /* Delete - Red */
-  --color-action-add: hsl(210, 100%, 65%);
-  /* Add - Blue */
-  --color-action-cancel: hsl(0, 0%, 55%);
-  /* Cancel - Gray */
+  /* Backgrounds para categorías (Transparentes tintados) */
+  --color-account-credit-bg: rgba(225, 29, 72, 0.15);
+  --color-account-debit-bg: rgba(37, 99, 235, 0.15);
+  --color-account-cash-bg: rgba(5, 150, 105, 0.15);
+  --color-msi-bg: rgba(79, 70, 229, 0.15);
 }
 
-.light {
-  /* Light Mode Variables (same as :root for explicit class) */
-  --color-primary: hsl(198, 93%, 48%);
-  --color-primary-light: hsl(198, 93%, 58%);
-  --color-primary-dark: hsl(198, 93%, 38%);
-  --color-primary-glow: hsla(198, 93%, 48%, 0.15);
+/* ⚠️ ELIMINADO: .light class. (Usamos :root como default para menor complejidad) */
 
-  --color-secondary: hsl(174, 72%, 45%);
-  --color-secondary-light: hsl(174, 72%, 55%);
-  --color-secondary-glow: hsla(174, 72%, 45%, 0.15);
-
-  --color-accent: hsl(215, 85%, 55%);
-  --color-accent-light: hsl(215, 85%, 65%);
-  --color-accent-glow: hsla(215, 85%, 55%, 0.15);
-
-  --color-success: hsl(142, 76%, 45%);
-  --color-success-light: hsl(142, 76%, 55%);
-  --color-success-bg: hsla(142, 76%, 45%, 0.1);
-
-  --color-danger: hsl(0, 84%, 60%);
-  --color-danger-light: hsl(0, 84%, 70%);
-  --color-danger-bg: hsla(0, 84%, 60%, 0.1);
-
-  --color-warning: hsl(38, 92%, 50%);
-  --color-warning-light: hsl(38, 92%, 60%);
-  --color-warning-bg: hsla(38, 92%, 50%, 0.1);
-
-  --color-info: hsl(199, 89%, 48%);
-  --color-info-light: hsl(199, 89%, 58%);
-  --color-info-bg: hsla(199, 89%, 48%, 0.1);
-
-  --color-bg-primary: hsl(0, 0%, 100%);
-  --color-bg-secondary: hsl(240, 20%, 99%);
-  --color-bg-tertiary: hsl(240, 25%, 97%);
-  --color-bg-elevated: hsl(0, 0%, 100%);
-  --color-bg-overlay: hsla(0, 0%, 100%, 0.8);
-  --color-bg-hover: hsl(240, 25%, 96%);
-  --color-bg-active: hsl(240, 25%, 94%);
-
-  --color-text-primary: hsl(240, 25%, 8%);
-  --color-text-secondary: hsl(240, 10%, 40%);
-  --color-text-tertiary: hsl(240, 8%, 60%);
-  --color-text-quaternary: hsl(240, 5%, 75%);
-  --color-text-inverted: hsl(0, 0%, 100%);
-
-  --color-border: hsla(240, 20%, 0%, 0.08);
-  --color-border-light: hsla(240, 20%, 0%, 0.04);
-  --color-border-medium: hsla(240, 20%, 0%, 0.12);
-  --color-border-strong: hsla(240, 20%, 0%, 0.16);
-
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-
-  /* === SEMANTIC COLORS - Account Types (Light Mode) === */
-  --color-account-credit: hsl(340, 80%, 50%);
-  /* Credit Card - Rose */
-  --color-account-credit-bg: hsla(340, 80%, 50%, 0.10);
-  --color-account-debit: hsl(210, 85%, 48%);
-  /* Debit Card - Blue */
-  --color-account-debit-bg: hsla(210, 85%, 48%, 0.10);
-  --color-account-cash: hsl(145, 70%, 38%);
-  /* Cash - Green */
-  --color-account-cash-bg: hsla(145, 70%, 38%, 0.10);
-  --color-account-savings: hsl(195, 80%, 42%);
-  /* Savings - Teal */
-  --color-account-savings-bg: hsla(195, 80%, 42%, 0.10);
-  --color-account-investment: hsl(45, 85%, 45%);
-  /* Investment - Gold */
-  --color-account-investment-bg: hsla(45, 85%, 45%, 0.10);
-
-  /* === SEMANTIC COLORS - Transaction Types (Light Mode) === */
-  --color-income: hsl(145, 75%, 35%);
-  /* Income - Green */
-  --color-income-bg: hsla(145, 75%, 35%, 0.10);
-  --color-expense: hsl(0, 70%, 50%);
-  /* Expense - Red */
-  --color-expense-bg: hsla(0, 70%, 50%, 0.10);
-  --color-transfer: hsl(210, 85%, 48%);
-  /* Transfer - Blue */
-  --color-transfer-bg: hsla(210, 85%, 48%, 0.10);
-  --color-recurring: hsl(270, 65%, 50%);
-  /* Recurring - Purple */
-  --color-recurring-bg: hsla(270, 65%, 50%, 0.10);
-  --color-msi: hsl(35, 85%, 45%);
-  /* MSI/Installments - Orange */
-  --color-msi-bg: hsla(35, 85%, 45%, 0.10);
-
-  /* === SEMANTIC COLORS - Actions (Light Mode) === */
-  --color-action-pay: hsl(145, 70%, 38%);
-  /* Pay/Confirm - Green */
-  --color-action-edit: hsl(45, 85%, 45%);
-  /* Edit - Amber */
-  --color-action-delete: hsl(0, 70%, 50%);
-  /* Delete - Red */
-  --color-action-add: hsl(210, 85%, 48%);
-  /* Add - Blue */
-  --color-action-cancel: hsl(0, 0%, 45%);
-  /* Cancel - Gray */
-}
-
-/* Fallback for system preference */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --color-primary: hsl(198, 93%, 55%);
-    --color-primary-light: hsl(198, 93%, 65%);
-    --color-bg-primary: hsl(220, 25%, 7%);
-    --color-bg-secondary: hsl(220, 22%, 10%);
-    --color-bg-elevated: hsl(220, 20%, 14%);
-    --color-text-primary: hsl(220, 20%, 98%);
-    --color-text-secondary: hsl(220, 15%, 70%);
-    --color-border: hsla(220, 20%, 35%, 0.4);
-  }
-}
 
 /* ==========================================================================
-   2. Base & Global Styles
+   2. Base Global
    ========================================================================== */
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
 
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow-x: hidden;
-  /* Prevent horizontal scroll */
-}
-
-/* ==========================================================================
-   2.1 Form Element Reset & Standardization
-   ========================================================================== */
-input,
-select,
-textarea {
-  font-family: inherit;
-  font-size: 1rem;
-  /* Standardize font size to prevent zooming on mobile */
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-elevated);
-  border-color: var(--color-border);
-  accent-color: var(--color-primary);
-
-  /* CRITICAL: Force inputs to respect container width */
-  box-sizing: border-box;
-  max-width: 100%;
-  min-width: 0;
-}
-
-/* Force dark color scheme on inputs in dark mode to fix native pickers */
-.dark input,
-.dark select,
-.dark textarea {
-  color-scheme: dark;
-}
-
-::placeholder {
-  color: var(--color-text-tertiary);
-  opacity: 1;
-}
-
-/* Remove default focus styles and handle with Tailwind classes or custom vars */
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-}
-
-/* ==========================================================================
-   2.2 Prevent Horizontal Scroll - Global Safety Net
-   ========================================================================== */
 html,
 body {
+  @apply bg-app-bg text-app-text antialiased;
+  /* Font Inter aplicada vía Tailwind config 'font-sans' */
   overflow-x: hidden;
   max-width: 100vw;
 }
 
-/* Force all containers to respect viewport */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* Scrollbar minimalista */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Prevent flex children from overflowing */
-.flex>* {
-  min-width: 0;
-}
-
-/* Prevent grid children from overflowing */
-.grid>* {
-  min-width: 0;
-}
-
-/* ==========================================================================
-   2.3 Consistent Form Elements - Inputs, Selects, Buttons
-   ========================================================================== */
-
-/* Base Input/Select Style */
-.form-input,
-.form-select {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  background-color: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  color: var(--color-text-primary);
-  transition: all 0.2s ease;
-}
-
-.form-input:focus,
-.form-select:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-glow);
-  outline: none;
-}
-
-.form-input::placeholder {
-  color: var(--color-text-tertiary);
-}
-
-.form-label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-/* === Semantic Button Styles === */
-
-/* Base Button */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border-radius: 0.75rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Primary Action Button */
-.btn-primary {
-  background-color: var(--color-primary);
-  color: var(--color-text-inverted);
-  box-shadow: 0 2px 8px var(--color-primary-glow);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--color-primary-glow);
-}
-
-.btn-primary:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-/* Pay/Confirm Action (Green) */
-.btn-pay {
-  background-color: var(--color-action-pay);
-  color: var(--color-text-inverted);
-  box-shadow: 0 2px 8px hsla(145, 75%, 42%, 0.25);
-}
-
-.btn-pay:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px hsla(145, 75%, 42%, 0.35);
-}
-
-/* Edit Action (Amber) */
-.btn-edit {
-  background-color: var(--color-action-edit);
-  color: var(--color-text-inverted);
-  box-shadow: 0 2px 8px hsla(45, 90%, 48%, 0.25);
-}
-
-.btn-edit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px hsla(45, 90%, 48%, 0.35);
-}
-
-/* Delete Action (Red) */
-.btn-delete {
-  background-color: var(--color-action-delete);
-  color: var(--color-text-inverted);
-  box-shadow: 0 2px 8px hsla(0, 75%, 55%, 0.25);
-}
-
-.btn-delete:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px hsla(0, 75%, 55%, 0.35);
-}
-
-/* Add Action (Blue) */
-.btn-add {
-  background-color: var(--color-action-add);
-  color: var(--color-text-inverted);
-  box-shadow: 0 2px 8px hsla(210, 90%, 52%, 0.25);
-}
-
-.btn-add:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px hsla(210, 90%, 52%, 0.35);
-}
-
-/* Cancel/Secondary Action (Gray/Outlined) */
-.btn-cancel {
-  background-color: var(--color-bg-elevated);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-}
-
-.btn-cancel:hover:not(:disabled) {
-  background-color: var(--color-bg-hover);
-}
-
-/* Small Button Variant */
-.btn-sm {
-  padding: 0.5rem 0.875rem;
-  font-size: 0.75rem;
-}
-
-/* Large Button Variant */
-.btn-lg {
-  padding: 1rem 1.5rem;
-  font-size: 1rem;
-}
-
-/* Full Width Button */
-.btn-block {
-  width: 100%;
-}
-
-/* Icon-only Button */
-.btn-icon {
-  padding: 0.625rem;
-  width: 2.5rem;
-  height: 2.5rem;
-}
-
-.btn-icon-sm {
-  padding: 0.375rem;
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-/* Custom Scrollbar for internal containers */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 4px;
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 10px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-tertiary);
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* ==========================================================================
-   3. Premium Animations & Transitions
+   3. Reset de Formularios Limpio (Estilo Stripe/Linear)
    ========================================================================== */
 
-/* Smooth fade-in animation */
-.animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+/* Eliminamos los fondos hardcoded y usas Tailwind classes en los componentes */
+/* Ej: <input className="bg-app-surface border border-app-border focus:ring-2..." /> */
+
+input,
+select,
+textarea {
+  color-scheme: light dark;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  /* Focus ring debe ser manejado por Tailwind focus:ring */
 }
 
-/* Slide up animation */
-.animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+/* ==========================================================================
+   4. Clases Utilitarias "Opinionated" (Reducidas)
+   ========================================================================== */
+
+/* Botón base limpio, sin brillos raros */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.btn-primary {
+  background-color: var(--brand-primary);
+  color: #fff;
+  /* Sombra suave "offset" en lugar de glow neón */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
-/* Scale in animation */
-.animate-scale-in {
-  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.btn-primary:hover {
+  @apply opacity-90;
+  transform: translateY(-1px);
 }
 
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.btn-secondary {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+  border: 1px solid var(--border-default);
 }
 
-/* Shimmer loading effect */
+.btn-secondary:hover {
+  background-color: var(--bg-subtle);
+}
+
+/* Card Estándar estilo Bento */
+.bento-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 1.5rem;
+  /* Bordes muy redondeados modernos */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  /* Casi imperceptible */
+  @apply overflow-hidden transition-all duration-300;
+}
+
+/* Efecto hover elegante para escritorio */
+.bento-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+}
+
+
+/* ==========================================================================
+   5. Animations
+   ========================================================================== */
+
+/* Shimmer simplificado */
 .animate-shimmer {
-  background: linear-gradient(90deg,
-      var(--color-bg-secondary) 0%,
-      var(--color-bg-elevated) 50%,
-      var(--color-bg-secondary) 100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.5s infinite linear;
 }
 
 @keyframes shimmer {
   0% {
-    background-position: -200% 0;
-  }
-
-  100% {
     background-position: 200% 0;
   }
-}
 
-/* Pulse animation for important elements */
-.animate-pulse-glow {
-  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulseGlow {
-
-  0%,
   100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.7;
+    background-position: -200% 0;
   }
 }
 
-/* ==========================================================================
-   4. Modern Utility Classes & Components
-   ========================================================================== */
-
-/* Glassmorphism effect - Updated */
-.glass-effect {
-  background: var(--color-bg-overlay);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
-/* Premium gradient backgrounds - Updated */
-.gradient-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
-}
-
-.gradient-secondary {
-  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%);
-}
-
-.gradient-success {
-  background: linear-gradient(135deg, var(--color-success) 0%, hsl(142, 76%, 55%) 100%);
-}
-
-.gradient-danger {
-  background: linear-gradient(135deg, var(--color-danger) 0%, hsl(0, 84%, 70%) 100%);
-}
-
-/* Modern card with subtle gradient overlay */
-.card-modern {
-  position: relative;
-  overflow: hidden;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-modern::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg,
-      var(--color-primary-glow) 0%,
-      var(--color-secondary-glow) 100%);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-modern:hover::before {
-  opacity: 1;
-}
-
-.card-modern:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-border-medium);
-}
-
-/* Skeleton Loading States */
-.skeleton {
-  background: linear-gradient(90deg,
-      var(--color-bg-secondary) 0%,
-      var(--color-bg-tertiary) 50%,
-      var(--color-bg-secondary) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite ease-in-out;
-  border-radius: 0.5rem;
-}
-
-.skeleton-text {
-  height: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.skeleton-title {
-  height: 1.5rem;
-  width: 60%;
-  margin-bottom: 0.75rem;
-}
-
-.skeleton-avatar {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-}
-
-.skeleton-card {
-  height: 8rem;
-  border-radius: 1rem;
-}
-
-/* Premium shadow utilities - Updated */
-.shadow-premium {
-  box-shadow: var(--shadow-lg);
-}
-
-.shadow-premium-xl {
-  box-shadow: var(--shadow-xl);
-}
-
-.shadow-glow {
-  box-shadow: var(--shadow-glow-md);
-}
-
-.dark .shadow-glow {
-  box-shadow: var(--shadow-glow-md);
-}
-
-/* Smooth hover transitions */
-.transition-premium {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Interactive element states - Updated */
-.interactive {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.interactive:hover {
-  transform: translateY(-1px);
-  background: var(--color-bg-hover);
-}
-
-.interactive:active {
-  transform: translateY(0);
-  background: var(--color-bg-active);
-}
-
-/* Button Modern Styles */
-.btn-modern {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  border-radius: 0.75rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
-}
-
-.btn-primary {
-  background: var(--color-primary);
-  color: var(--color-text-inverted);
-  box-shadow: 0 2px 8px var(--color-primary-glow);
-}
-
-.btn-primary:hover {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--color-primary-glow);
-}
-
-.btn-secondary {
-  background: var(--color-bg-elevated);
-  color: var(--color-text-primary);
-  border-color: var(--color-border);
-}
-
-.btn-secondary:hover {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border-medium);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--color-text-secondary);
-}
-
-.btn-ghost:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
-}
-
-/* Danger/Delete Button Styles - Clear and Professional */
-.btn-danger {
-  background: var(--color-danger);
-  color: white;
-  border: 1px solid var(--color-danger);
-  box-shadow: 0 2px 8px var(--color-danger-bg);
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: var(--color-danger-light);
-  border-color: var(--color-danger-light);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--color-danger-bg);
-}
-
-.btn-danger:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px var(--color-danger-bg);
-}
-
-/* Danger Outline Button - Subtle but visible */
-.btn-danger-outline {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-  font-weight: 600;
-}
-
-.btn-danger-outline:hover:not(:disabled) {
-  background: var(--color-danger);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--color-danger-bg);
-}
-
-.btn-danger-outline:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-/* Disabled state for all buttons */
-.btn-modern:disabled,
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-danger:disabled,
-.btn-danger-outline:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-}
 
 /* ==========================================================================
-   5. Scrollbar Styling
-   ========================================================================== */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-tertiary);
-}
-
-/* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) var(--color-bg-primary);
-}
-
-/* ==========================================================================
-   6. Mobile Safe Area Support & Dynamic Viewport
+   6. PWA & iOS Safety Net (IMPORTANTE: Esto sí lo mantuve y pulí)
    ========================================================================== */
 
-/* 
-  Modern viewport units with fallbacks:
-  - svh: Small viewport height (excludes browser chrome)
-  - lvh: Large viewport height (includes browser chrome)
-  - dvh: Dynamic viewport height (adapts to browser chrome visibility)
-*/
-
-/* Safe area padding utilities for iOS devices */
-.safe-area-pt {
-  padding-top: max(env(safe-area-inset-top), 0.5rem);
-}
-
-.safe-area-pb {
-  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
-}
-
-.safe-area-pl {
-  padding-left: max(env(safe-area-inset-left), 0.5rem);
-}
-
-.safe-area-pr {
-  padding-right: max(env(safe-area-inset-right), 0.5rem);
-}
-
-/* Pages without bottom nav - just safe area padding */
-.pb-safe {
-  padding-bottom: max(env(safe-area-inset-bottom), 1rem);
-}
-
-/* === Dynamic Viewport Height Classes === */
-
-/* Full height with dvh fallback */
-.h-screen-dynamic {
-  height: 100vh;
-  /* Fallback */
+/* Dynamic Viewport para móviles */
+.h-dvh {
   height: 100dvh;
 }
 
-.min-h-screen-dynamic {
-  min-height: 100vh;
-  /* Fallback */
+.min-h-dvh {
   min-height: 100dvh;
 }
 
-/* Small viewport (useful when keyboard is open) */
-.h-screen-small {
-  height: 100vh;
-  height: 100svh;
+/* Safe Areas */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
 }
 
-.min-h-screen-small {
-  min-height: 100vh;
-  min-height: 100svh;
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* === Root & HTML Setup === */
-html {
-  /* Use dvh if supported, fallback to -webkit-fill-available, then vh */
-  height: 100%;
-  height: -webkit-fill-available;
+.pl-safe {
+  padding-left: env(safe-area-inset-left);
 }
 
-body {
-  /* Inherit height from html */
-  min-height: 100%;
-  min-height: -webkit-fill-available;
+.pr-safe {
+  padding-right: env(safe-area-inset-right);
 }
 
-/* Root container setup */
-#root {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
+/* Prevent Rubber Banding en iOS PWA */
+@supports (-webkit-touch-callout: none) {
+  body {
+    overscroll-behavior-y: none;
+  }
 }
 
-/* === App Shell Layout === */
-
-/* Main app container - flexible height, allows content to grow */
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
-}
-
-/* Scrollable main content area */
-.app-content {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* When content should grow naturally */
-.app-content-grow {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Hide scrollbar but keep functionality */
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
+/* Ocultar scrollbar visual pero mantener función */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-/* Smooth scrolling */
-.scroll-smooth {
-  scroll-behavior: smooth;
-}
-
-/* Prevent body scroll when modal is open */
-body.modal-open {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-}
-
-/* iOS Safari specific fixes */
-@supports (-webkit-touch-callout: none) {
-
-  /* Prevent rubber-band scrolling on body */
-  body {
-    overscroll-behavior-y: none;
-  }
-
-  /* Fix for iOS standalone mode */
-  @media (display-mode: standalone) {
-    #root {
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
-    }
-  }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -20,6 +20,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/prisma:/usr/src/app/prisma
+    ports:
+      - "4000:4000"
     networks:
       - finanzas-pro-network
     healthcheck:

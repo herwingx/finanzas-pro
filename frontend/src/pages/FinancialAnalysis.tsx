@@ -5,62 +5,39 @@ import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatDateUTC } from '../utils/dateUtils';
 
+import { SkeletonFinancialAnalysis } from '../components/Skeleton';
+
 const FinancialAnalysis: React.FC = () => {
   const [periodType, setPeriodType] = useState<'quincenal' | 'mensual' | 'bimestral' | 'semestral' | 'anual'>('mensual');
   // Use 'projection' mode for analysis - shows future projections from today
   const { data: summary, isLoading } = useFinancialPeriodSummary(periodType, 'projection');
 
   const chartData = useMemo(() => {
+    // ... (rest of memo, omitted for brevity, logic remains same)
     if (!summary) return [];
-
     let events = [
       ...summary.expectedExpenses.map((e: any) => ({ date: new Date(e.dueDate), amount: -e.amount, type: 'expense', name: e.description })),
       ...summary.expectedIncome.map((e: any) => ({ date: new Date(e.dueDate), amount: e.amount, type: 'income', name: e.description })),
       ...summary.msiPaymentsDue.map((e: any) => ({ date: new Date(e.dueDate), amount: -e.amount, type: 'msi', name: e.description }))
     ];
-
     events.sort((a, b) => a.date.getTime() - b.date.getTime());
-
     const points = [];
     let currentBalance = summary.currentBalance;
     const startDate = new Date(summary.periodStart);
     const endDate = new Date(summary.periodEnd);
-
-    points.push({
-      fecha: formatDateUTC(startDate, { style: 'short' }),
-      Saldo: currentBalance,
-      fullDate: startDate,
-    });
-
-    events.forEach(event => {
-      currentBalance += event.amount;
-      points.push({
-        fecha: formatDateUTC(event.date, { style: 'short' }),
-        Saldo: currentBalance,
-        fullDate: event.date
-      });
-    });
-
-    if (points.length > 0 && points[points.length - 1].fullDate < endDate) {
-      points.push({
-        fecha: formatDateUTC(endDate, { style: 'short' }),
-        Saldo: currentBalance,
-        fullDate: endDate
-      });
-    }
-
+    points.push({ fecha: formatDateUTC(startDate, { style: 'short' }), Saldo: currentBalance, fullDate: startDate });
+    events.forEach(event => { currentBalance += event.amount; points.push({ fecha: formatDateUTC(event.date, { style: 'short' }), Saldo: currentBalance, fullDate: event.date }); });
+    if (points.length > 0 && points[points.length - 1].fullDate < endDate) { points.push({ fecha: formatDateUTC(endDate, { style: 'short' }), Saldo: currentBalance, fullDate: endDate }); }
     return points;
   }, [summary]);
 
   // Upcoming payments grouped
   const upcomingPayments = useMemo(() => {
     if (!summary) return { expenses: [], msi: [], income: [], msiEnding: [] };
-
     const expenses = summary.expectedExpenses.slice(0, 5);
     const msi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment).slice(0, 5);
     const msiEnding = summary.msiPaymentsDue.filter((m: any) => m.isLastInstallment);
     const income = summary.expectedIncome.slice(0, 3);
-
     return { expenses, msi, income, msiEnding };
   }, [summary]);
 
@@ -98,18 +75,7 @@ const FinancialAnalysis: React.FC = () => {
     anual: 'Próximo año'
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-dvh bg-app-bg animate-pulse">
-        <PageHeader title="Análisis Financiero" showBackButton />
-        <div className="px-4 py-8 grid gap-4 max-w-4xl mx-auto">
-          <div className="h-20 rounded-2xl bg-gray-200 dark:bg-zinc-800"></div>
-          <div className="h-64 rounded-3xl bg-gray-200 dark:bg-zinc-800"></div>
-          <div className="h-32 rounded-2xl bg-gray-200 dark:bg-zinc-800"></div>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <SkeletonFinancialAnalysis />;
 
   if (!summary) return <div className="text-center p-8 text-app-muted">No hay datos disponibles</div>;
 

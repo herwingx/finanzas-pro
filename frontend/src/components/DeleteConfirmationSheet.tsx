@@ -215,7 +215,7 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
                  ${!canConfirm || isDeleting ? 'opacity-50 cursor-not-allowed bg-zinc-500' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}
               `}
           >
-            {isDeleting && <span className="animate-spin text-lg">sync</span>}
+            {isDeleting && <span className="material-symbols-outlined animate-spin text-lg">sync</span>}
             {isDeleting ? 'Procesando...' : 'Eliminar Permanentemente'}
           </button>
         </div>

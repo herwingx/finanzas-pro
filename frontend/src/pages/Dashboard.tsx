@@ -318,10 +318,10 @@ const Dashboard: React.FC = () => {
 
       {/* Grid principal con layout responsive */}
       <div className="px-4 md:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
 
-          {/* Balance Card - Ocupa 2 columnas en tablet+ */}
-          <div className="md:col-span-2">
+          {/* Balance Card - Ocupa 2 columnas siempre (full width en mobile/tablet) */}
+          <div className="col-span-2">
             <MainBalanceCard
               balance={availableFunds}
               netWorth={netWorth}
@@ -330,24 +330,24 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          {/* Stats Cards - Lado a lado */}
+          {/* Stats Cards - Lado a lado (1 columna cada uno) */}
           <QuickStat label="Ingresos del Mes" amount={monthStats.income} type="income" format={formatCurrency} />
           <QuickStat label="Gastos del Mes" amount={monthStats.expense} type="expense" format={formatCurrency} />
 
           {/* Financial Planning Widget - Ancho completo */}
-          <div className="md:col-span-2 xl:col-span-4">
+          <div className="col-span-2 xl:col-span-4">
             <FinancialPlanningWidget />
           </div>
 
           {/* Trend Chart - 2 columnas en md, 3 en xl */}
-          <BentoCard title="Tendencia de Gastos" className="md:col-span-2 xl:col-span-3 min-h-[280px] lg:min-h-[320px]">
+          <BentoCard title="Tendencia de Gastos" className="col-span-2 xl:col-span-3 min-h-[280px] lg:min-h-[320px]">
             {transactions && <SpendingTrendChart transactions={transactions} />}
           </BentoCard>
 
-          {/* Top 5 Categories - 1 columna */}
+          {/* Top 5 Categories - 2 columnas en mobile (full width), 1 en xl */}
           <BentoCard
             title="Top Categorías"
-            className="xl:col-span-1"
+            className="col-span-2 xl:col-span-1"
             action={
               <Link to="/reports" className="text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
                 Ver más
@@ -367,7 +367,7 @@ const Dashboard: React.FC = () => {
           {/* Recent Transactions */}
           <BentoCard
             title="Últimos Movimientos"
-            className="md:col-span-2 xl:col-span-4"
+            className="col-span-2 xl:col-span-4"
             action={
               <Link to="/history" className="text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
                 Ver todo

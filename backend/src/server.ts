@@ -10,6 +10,7 @@ import accountsRoutes from './routes/accounts';
 import installmentsRoutes from './routes/installments';
 import financialPlanningRoutes from './routes/financialPlanningRoutes';
 import creditCardPaymentsRoutes from './routes/creditCardPayments';
+import loansRoutes from './routes/loans';
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/accounts', accountsRoutes);
 app.use('/api/installments', installmentsRoutes);
 app.use('/api/financial-planning', financialPlanningRoutes);
 app.use('/api/credit-card', creditCardPaymentsRoutes);
+app.use('/api/loans', loansRoutes);
 
 const PORT = process.env.PORT || 4000;
 

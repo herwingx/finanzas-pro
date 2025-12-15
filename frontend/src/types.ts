@@ -14,6 +14,7 @@ export interface Transaction {
   date: string;
   recurringTransactionId?: string;
   installmentPurchaseId?: string;
+  loanId?: string;
   deletedAt?: string; // Soft delete timestamp
 }
 
@@ -86,4 +87,42 @@ export interface Profile {
   email: string;
   currency: 'USD' | 'EUR' | 'GBP' | 'MXN';
   avatar?: string;
+}
+
+export type LoanStatus = 'active' | 'partial' | 'paid';
+export type LoanType = 'lent' | 'borrowed'; // lent = presté (me deben), borrowed = me prestaron (debo)
+
+export interface Loan {
+  id: string;
+  borrowerName: string;
+  borrowerPhone?: string;
+  borrowerEmail?: string;
+  reason?: string;
+  loanType: LoanType;
+  originalAmount: number;
+  remainingAmount: number;
+  loanDate: string;
+  expectedPayDate?: string;
+  status: LoanStatus;
+  notes?: string;
+  userId: string;
+  accountId?: string;
+  account?: Account;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoanSummary {
+  totalLoans: number;
+  activeLoansCount: number;
+  paidLoansCount: number;
+  // Lo que me deben (presté)
+  totalOwedToMe: number;
+  lentLoansCount: number;
+  // Lo que debo (me prestaron)
+  totalIOwe: number;
+  borrowedLoansCount: number;
+  // Balance neto (positivo = me deben más, negativo = debo más)
+  netBalance: number;
+  totalRecovered: number;
 }

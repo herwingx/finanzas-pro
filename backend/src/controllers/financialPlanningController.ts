@@ -600,7 +600,23 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     // We already filtered `expectedIncome` and `expectedExpenses` by Period Date Range.
     // We should treat them as "projected for this period".
 
+    // Calculate Total Actual Income received in this period (for display purposes)
+    const actualIncome = await prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        userId,
+        type: 'income',
+        date: {
+          gte: periodStart,
+          lte: periodEnd
+        },
+        deletedAt: null
+      }
+    });
+
+    const totalReceivedIncome = actualIncome._sum.amount || 0;
     const totalExpectedIncome = expectedIncome.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalPeriodIncome = totalReceivedIncome + totalExpectedIncome;
     const totalRecurringExpenses = expectedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
     const totalMsiPayments = msiPaymentsDue.reduce((acc, curr: any) => acc + curr.amount, 0);
 
@@ -617,9 +633,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
     // 5. 50/30/20 Analysis (Projected)
     const budgetAnalysis = {
-      needs: { projected: 0, ideal: (totalExpectedIncome + (totalExpectedIncome === 0 ? currentBalance : 0)) * 0.5 }, // Fallback to balance if income 0
-      wants: { projected: 0, ideal: (totalExpectedIncome + (totalExpectedIncome === 0 ? currentBalance : 0)) * 0.3 },
-      savings: { projected: 0, ideal: (totalExpectedIncome + (totalExpectedIncome === 0 ? currentBalance : 0)) * 0.2 }
+      needs: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.5 },
+      wants: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.3 },
+      savings: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.2 }
     };
 
     // Helper to categorize (normalize to uppercase for comparison)
@@ -672,6 +688,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       expectedExpenses,
       msiPaymentsDue,
       totalExpectedIncome,
+      totalReceivedIncome,
+      totalPeriodIncome,
       totalCommitments,
       disposableIncome,
       isSufficient,

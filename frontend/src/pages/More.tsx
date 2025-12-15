@@ -53,6 +53,7 @@ const More: React.FC = () => {
         { path: '/reports', icon: 'bar_chart', title: 'Reportes y Análisis', description: null, colorClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-50 dark:bg-blue-900/20' },
         { path: '/recurring', icon: 'update', title: 'Recurrentes', description: 'Suscripciones y fijos', colorClass: 'text-purple-600 dark:text-purple-400', bgClass: 'bg-purple-50 dark:bg-purple-900/20' },
         { path: '/installments', icon: 'credit_card_clock', title: 'Meses Sin Intereses', description: null, colorClass: 'text-pink-600 dark:text-pink-400', bgClass: 'bg-pink-50 dark:bg-pink-900/20' },
+        { path: '/loans', icon: 'handshake', title: 'Préstamos', description: 'Dinero que te deben', colorClass: 'text-violet-600 dark:text-violet-400', bgClass: 'bg-violet-50 dark:bg-violet-900/20' },
       ]
     },
     {

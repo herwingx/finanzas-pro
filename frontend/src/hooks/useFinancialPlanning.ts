@@ -20,6 +20,8 @@ export interface FinancialPeriodSummary {
     type: string;
   }>;
   totalExpectedIncome: number;
+  totalReceivedIncome: number;
+  totalPeriodIncome: number;
 
   // Expected expenses
   expectedExpenses: Array<{

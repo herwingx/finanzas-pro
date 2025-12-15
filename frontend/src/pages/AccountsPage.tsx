@@ -2,16 +2,10 @@ import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { PageHeader } from '../components/PageHeader';
+import { SkeletonAccountList } from '../components/Skeleton';
 import { useAccounts, useProfile, useDeleteAccount } from '../hooks/useApi';
 import { toastSuccess, toastError, toast } from '../utils/toast';
 import { AccountType } from '../types';
-
-// Skeleton muy simple (Inline por simplicidad si no se exporta)
-const SkeletonAccounts = () => (
-    <div className="space-y-4">
-        {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-100 dark:bg-zinc-800 rounded-2xl animate-pulse" />)}
-    </div>
-);
 
 const AccountsPage: React.FC = () => {
     const navigate = useNavigate();
@@ -88,7 +82,7 @@ const AccountsPage: React.FC = () => {
             <div className="min-h-dvh bg-app-bg animate-pulse">
                 <PageHeader title="Mis Cuentas" showBackButton={false} />
                 <div className="px-4 py-6">
-                    <SkeletonAccounts />
+                    <SkeletonAccountList />
                 </div>
             </div>
         );

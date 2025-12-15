@@ -1,4 +1,4 @@
-import { Transaction, Category, Budget, Profile, RecurringTransaction, Account, InstallmentPurchase } from '../types';
+import { Transaction, Category, Budget, Profile, RecurringTransaction, Account, InstallmentPurchase, Loan, LoanSummary } from '../types';
 
 const API_URL = '/api';
 
@@ -339,6 +339,8 @@ export interface FinancialPeriodSummary {
     currentMSIDebt: number;
     expectedIncome: any[];
     totalExpectedIncome: number;
+    totalReceivedIncome: number;
+    totalPeriodIncome: number;
     expectedExpenses: any[];
     msiPaymentsDue: any[];
     totalExpectedExpenses: number;
@@ -497,4 +499,112 @@ export const revertStatementPayment = async (transactionId: string): Promise<any
         throw new Error(errorData.error || 'Failed to revert payment');
     }
     return response.json();
+};
+
+// ============== LOANS API ==============
+
+export const getLoans = async (): Promise<Loan[]> => {
+    const response = await fetch(`${API_URL}/loans`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch loans');
+    return response.json();
+};
+
+export const getLoanSummary = async (): Promise<LoanSummary> => {
+    const response = await fetch(`${API_URL}/loans/summary`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch loan summary');
+    return response.json();
+};
+
+export const getLoan = async (id: string): Promise<Loan> => {
+    const response = await fetch(`${API_URL}/loans/${id}`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch loan');
+    return response.json();
+};
+
+export const addLoan = async (loan: {
+    borrowerName: string;
+    borrowerPhone?: string;
+    borrowerEmail?: string;
+    reason?: string;
+    loanType?: 'lent' | 'borrowed';
+    originalAmount: number;
+    loanDate: string;
+    expectedPayDate?: string;
+    notes?: string;
+    accountId?: string;
+    affectBalance?: boolean;
+}): Promise<Loan> => {
+    const response = await fetch(`${API_URL}/loans`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(loan),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add loan');
+    }
+    return response.json();
+};
+
+export const updateLoan = async (id: string, loan: {
+    borrowerName?: string;
+    borrowerPhone?: string;
+    borrowerEmail?: string;
+    reason?: string;
+    expectedPayDate?: string;
+    notes?: string;
+}): Promise<Loan> => {
+    const response = await fetch(`${API_URL}/loans/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(loan),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update loan');
+    }
+    return response.json();
+};
+
+export const registerLoanPayment = async (id: string, payment: {
+    amount: number;
+    paymentDate?: string;
+    notes?: string;
+    accountId?: string;
+}): Promise<Loan> => {
+    const response = await fetch(`${API_URL}/loans/${id}/payment`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payment),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to register payment');
+    }
+    return response.json();
+};
+
+export const markLoanAsPaid = async (id: string, accountId?: string): Promise<Loan> => {
+    const response = await fetch(`${API_URL}/loans/${id}/mark-paid`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ accountId }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to mark loan as paid');
+    }
+    return response.json();
+};
+
+export const deleteLoan = async (id: string, revertBalance: boolean = false): Promise<void> => {
+    const url = revertBalance ? `${API_URL}/loans/${id}?revert=true` : `${API_URL}/loans/${id}`;
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete loan');
+    }
 };

@@ -16,6 +16,7 @@ const QUICK_ACTIONS = [
   { icon: 'sync_alt', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer' },
   { icon: 'calendar_month', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
   { icon: 'credit_card', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
+  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new' },
 ];
 
 const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
@@ -119,7 +120,7 @@ const BottomNav: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-5 gap-1 place-items-center">
+          <div className="grid grid-cols-3 gap-y-4 gap-x-2 place-items-center">
             {QUICK_ACTIONS.map(action => (
               <QuickActionButton
                 key={action.label}

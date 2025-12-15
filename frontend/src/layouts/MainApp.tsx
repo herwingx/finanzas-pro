@@ -19,6 +19,8 @@ import InstallmentsPage from '../pages/InstallmentsPage';
 import UpsertInstallmentPage from '../pages/Installments/UpsertInstallmentPage';
 import TrashPage from '../pages/TrashPage';
 import FinancialAnalysis from '../pages/FinancialAnalysis';
+import LoansPage from '../pages/LoansPage';
+import LoanFormPage from '../pages/LoanFormPage';
 
 // Components
 import BottomNav from '../components/BottomNav';
@@ -36,6 +38,7 @@ const DesktopSidebar = () => {
     { to: '/analysis', label: 'Análisis', icon: 'monitoring' },
     { to: '/installments', label: 'Meses (MSI)', icon: 'credit_card_clock' },
     { to: '/recurring', label: 'Fijos', icon: 'update' },
+    { to: '/loans', label: 'Préstamos', icon: 'handshake' },
   ];
 
   const bottomLinks = [
@@ -149,6 +152,10 @@ const MainApp: React.FC = () => {
             <Route path="/installments" element={<InstallmentsPage />} />
             <Route path="/installments/new" element={<UpsertInstallmentPage />} />
             <Route path="/installments/edit/:id" element={<UpsertInstallmentPage />} />
+
+            <Route path="/loans" element={<LoansPage />} />
+            <Route path="/loans/new" element={<LoanFormPage />} />
+            <Route path="/loans/:id" element={<LoanFormPage />} />
 
             <Route path="/trash" element={<TrashPage />} />
           </Routes>

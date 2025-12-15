@@ -4,6 +4,7 @@ import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } fro
 import { toastSuccess, toastError, toast } from '../utils/toast';
 import { useNavigate } from 'react-router-dom';
 import { SwipeableItem } from '../components/SwipeableItem';
+import { SkeletonAccountList } from '../components/Skeleton';
 
 const InstallmentsPage: React.FC = () => {
     const { data: purchases, isLoading, isError } = useInstallmentPurchases();
@@ -60,7 +61,17 @@ const InstallmentsPage: React.FC = () => {
         ), { duration: Infinity });
     };
 
-    if (isLoading) return <div className="p-8 text-center text-app-muted animate-pulse">Cargando planes...</div>;
+    if (isLoading) {
+        return (
+            <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
+                <PageHeader title="Mis Planes MSI" showBackButton={true} />
+                <div className="max-w-3xl mx-auto px-4 pt-4">
+                    <SkeletonAccountList />
+                </div>
+            </div>
+        );
+    }
+
     if (isError) return <div className="p-8 text-center text-rose-500">Error cargando datos.</div>;
 
     return (

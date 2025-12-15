@@ -52,8 +52,19 @@ const History: React.FC = () => {
     const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
     const isAdjustment = tx.description.toLowerCase().includes('ajuste');
 
+    const isLoan = tx.loanId;
+
     if (isInitialMsi) {
       toast.info('Bloqueado', { description: 'Edita esta compra desde la sección MSI' });
+      return;
+    }
+
+    if (isLoan) {
+      toast.info('Gestionar Préstamo', {
+        description: 'Redirigiendo al detalle del préstamo...',
+        duration: 1500
+      });
+      navigate(`/loans`);
       return;
     }
 
@@ -68,8 +79,21 @@ const History: React.FC = () => {
   // Deletion Logic
   const handleDeleteClick = (tx: Transaction) => {
     const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
+    const isLoan = tx.loanId;
+
     if (isInitialMsi) {
       toast.info('Bloqueado', { description: 'Administra esta compra desde MSI' });
+      return;
+    }
+
+    if (isLoan) {
+      toast.warning('Acción requerida', {
+        description: 'Debes eliminar el préstamo desde la sección de Préstamos para asegurar la integridad de los datos.',
+        action: {
+          label: 'Ir a Préstamos',
+          onClick: () => navigate('/loans')
+        }
+      });
       return;
     }
     setItemToDelete(tx);

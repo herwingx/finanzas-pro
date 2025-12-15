@@ -4,6 +4,7 @@ import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
 import { usePayRecurringTransaction, useAccounts, usePayFullStatement, usePayMsiInstallment } from '../hooks/useApi';
 import { toast } from 'sonner';
 import { formatDateUTC } from '../utils/dateUtils';
+import { SkeletonPlanningWidget } from './Skeleton';
 
 // --- Sub-components ---
 
@@ -127,6 +128,103 @@ const SwipeableExpenseRow = ({
           >
             <span className="material-symbols-outlined text-[14px]">check</span>
           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SwipeableIncomeRow = ({
+  item,
+  onReceive,
+  formatCurrency,
+  formatDate
+}: {
+  item: any,
+  onReceive: () => void,
+  formatCurrency: (val: number) => string,
+  formatDate: (date: string) => string
+}) => {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startX = useRef(0);
+  const threshold = 100;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - startX.current;
+    if (diff > 0) setOffsetX(Math.min(diff, 150));
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    if (offsetX > threshold) {
+      onReceive();
+      setOffsetX(0);
+    } else {
+      setOffsetX(0);
+    }
+  };
+
+  const opacity = Math.min(offsetX / threshold, 1);
+
+  return (
+    <div className="relative border-b border-emerald-100 dark:border-emerald-900/50 last:border-0 group select-none overflow-hidden">
+      <div
+        className="absolute inset-y-0 left-0 bg-emerald-500 flex items-center pl-5 transition-opacity duration-200"
+        style={{ width: '100%', opacity: offsetX > 0 ? opacity : 0 }}
+      >
+        <div className="flex items-center gap-2 text-white font-bold" style={{ transform: `translateX(${opacity * 20 - 20}px)` }}>
+          <span className="material-symbols-outlined text-lg">check</span>
+          <span className="text-xs">RECIBIDO</span>
+        </div>
+      </div>
+
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className="relative flex items-center justify-between transition-transform duration-200"
+        style={{ transform: `translateX(${offsetX}px)` }}
+      >
+        <div className="absolute inset-0 bg-app-surface" />
+        <div className="absolute inset-0 bg-emerald-50/30 dark:bg-emerald-900/10 transition-colors group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20" />
+
+        <div className="relative flex-1 flex items-center justify-between px-3 py-2.5">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="size-8 rounded-lg flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+            >
+              <span className="material-symbols-outlined text-[16px]">{item.category?.icon || 'payments'}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-app-text truncate">{item.description}</p>
+              <div className="flex items-center gap-1.5">
+                {item.isOverdue && (
+                  <span className="text-[9px] font-bold text-white bg-amber-500 px-1 py-0.5 rounded">PENDIENTE</span>
+                )}
+                <span className={`text-[11px] ${item.isOverdue ? 'text-amber-600' : 'text-app-muted'}`}>
+                  {formatDate(item.dueDate)}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{formatCurrency(item.amount)}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onReceive(); }}
+              className="hidden md:flex size-7 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-500 hover:text-white"
+              title="Marcar como recibido"
+            >
+              <span className="material-symbols-outlined text-[14px]">check</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -372,10 +470,17 @@ export const FinancialPlanningWidget: React.FC = () => {
     return summary.msiPaymentsDue.filter((m: any) => m.isLastInstallment).length;
   }, [summary]);
 
-  const handlePay = (id: string, amount: number, desc: string, date: string) => {
+  const handlePay = (id: string, amount: number, desc: string) => {
     toast(`¿Confirmar pago de ${desc}?`, {
       description: `Monto: ${formatCurrency(amount)}`,
-      action: { label: 'Pagar', onClick: async () => { await payRecurring({ id, data: { amount, date } }); toast.success('Pagado'); } }
+      action: { label: 'Pagar', onClick: async () => { await payRecurring({ id, data: { amount } }); toast.success('Pagado'); } }
+    });
+  };
+
+  const handleReceive = (id: string, amount: number, desc: string) => {
+    toast(`¿Confirmar ingreso de ${desc}?`, {
+      description: `Monto: ${formatCurrency(amount)}`,
+      action: { label: 'Confirmar', onClick: async () => { await payRecurring({ id, data: { amount } }); toast.success('Ingreso registrado'); } }
     });
   };
 
@@ -400,12 +505,7 @@ export const FinancialPlanningWidget: React.FC = () => {
     }
   };
 
-  if (isLoading) return (
-    <div className="bento-card h-64 p-6 animate-pulse flex items-center justify-center text-app-muted">
-      <span className="material-symbols-outlined text-3xl animate-spin mr-2">autorenew</span>
-      Cargando...
-    </div>
-  );
+  if (isLoading) return <SkeletonPlanningWidget />;
 
   if (isError || !summary) return (
     <div className="bento-card p-6 text-center">
@@ -490,7 +590,24 @@ export const FinancialPlanningWidget: React.FC = () => {
             <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[14px]">trending_up</span>
             <p className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400">Ingresos</p>
           </div>
-          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(summary.totalExpectedIncome)}</p>
+          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(summary.totalPeriodIncome ?? 0)}</p>
+          {/* Breakdown: Received vs Pending - only show if there's activity */}
+          {((summary.totalReceivedIncome ?? 0) > 0 || (summary.totalExpectedIncome ?? 0) > 0) && (
+            <div className="mt-1.5 pt-1.5 border-t border-emerald-200/50 dark:border-emerald-800/30 grid grid-cols-2 gap-1 text-[10px]">
+              <div className="flex flex-col">
+                <span className="text-emerald-600/70 dark:text-emerald-400/70">Recibido</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  {formatCurrency(summary.totalReceivedIncome ?? 0)}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-amber-600/70 dark:text-amber-400/70">Por recibir</span>
+                <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                  {formatCurrency(summary.totalExpectedIncome ?? 0)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/50">
@@ -525,48 +642,55 @@ export const FinancialPlanningWidget: React.FC = () => {
       </div>
 
       {/* 50/30/20 Budget Bar */}
-      {summary.budgetAnalysis && summary.totalExpectedIncome > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-[10px] text-app-muted mb-1">
-            <span className="font-bold uppercase">Distribución de Gastos</span>
-            <Link to="/categories" className="text-app-primary hover:underline">Configurar</Link>
-          </div>
-          <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-app-border/30">
-            <div
-              className="bg-emerald-500 h-full transition-all"
-              style={{ width: `${Math.min((summary.budgetAnalysis.needs.projected / summary.totalExpectedIncome) * 100, 100)}%` }}
-            />
-            <div
-              className="bg-purple-500 h-full transition-all"
-              style={{ width: `${Math.min((summary.budgetAnalysis.wants.projected / summary.totalExpectedIncome) * 100, 100)}%` }}
-            />
-            <div
-              className="bg-amber-500 h-full transition-all"
-              style={{ width: `${Math.min((summary.budgetAnalysis.savings.projected / summary.totalExpectedIncome) * 100, 100)}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-[10px]">
-            <div className="flex flex-col items-center p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/10">
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                {((summary.budgetAnalysis.needs.projected / summary.totalExpectedIncome) * 100).toFixed(0)}%
-              </span>
-              <span className="text-app-muted">Necesidades</span>
+      {summary.budgetAnalysis && summary.totalCommitments > 0 && (() => {
+        // Use income if available, fallback to commitments for percentage calculation
+        const baseAmount = (summary.totalPeriodIncome ?? 0) > 0
+          ? summary.totalPeriodIncome
+          : summary.totalCommitments;
+
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-[10px] text-app-muted mb-1">
+              <span className="font-bold uppercase">Distribución de Gastos</span>
+              <Link to="/categories" className="text-app-primary hover:underline">Configurar</Link>
             </div>
-            <div className="flex flex-col items-center p-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/10">
-              <span className="text-purple-700 dark:text-purple-400 font-bold">
-                {((summary.budgetAnalysis.wants.projected / summary.totalExpectedIncome) * 100).toFixed(0)}%
-              </span>
-              <span className="text-app-muted">Deseos</span>
+            <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-app-border/30">
+              <div
+                className="bg-emerald-500 h-full transition-all"
+                style={{ width: `${Math.min((summary.budgetAnalysis.needs.projected / baseAmount) * 100, 100)}%` }}
+              />
+              <div
+                className="bg-purple-500 h-full transition-all"
+                style={{ width: `${Math.min((summary.budgetAnalysis.wants.projected / baseAmount) * 100, 100)}%` }}
+              />
+              <div
+                className="bg-amber-500 h-full transition-all"
+                style={{ width: `${Math.min((summary.budgetAnalysis.savings.projected / baseAmount) * 100, 100)}%` }}
+              />
             </div>
-            <div className="flex flex-col items-center p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/10">
-              <span className="text-amber-700 dark:text-amber-400 font-bold">
-                {((summary.budgetAnalysis.savings.projected / summary.totalExpectedIncome) * 100).toFixed(0)}%
-              </span>
-              <span className="text-app-muted">Ahorro</span>
+            <div className="grid grid-cols-3 gap-2 text-[10px]">
+              <div className="flex flex-col items-center p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/10">
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                  {((summary.budgetAnalysis.needs.projected / baseAmount) * 100).toFixed(0)}%
+                </span>
+                <span className="text-app-muted">Necesidades</span>
+              </div>
+              <div className="flex flex-col items-center p-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/10">
+                <span className="text-purple-700 dark:text-purple-400 font-bold">
+                  {((summary.budgetAnalysis.wants.projected / baseAmount) * 100).toFixed(0)}%
+                </span>
+                <span className="text-app-muted">Deseos</span>
+              </div>
+              <div className="flex flex-col items-center p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/10">
+                <span className="text-amber-700 dark:text-amber-400 font-bold">
+                  {((summary.budgetAnalysis.savings.projected / baseAmount) * 100).toFixed(0)}%
+                </span>
+                <span className="text-app-muted">Ahorro</span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Warning Alert */}
       {summary.warnings?.length > 0 && (
@@ -593,41 +717,15 @@ export const FinancialPlanningWidget: React.FC = () => {
               Añadir
             </Link>
           </div>
-          <div className="border border-emerald-200 dark:border-emerald-900 rounded-xl bg-emerald-50/30 dark:bg-emerald-900/10 divide-y divide-emerald-100 dark:divide-emerald-900/50 overflow-hidden">
+          <div className="border border-emerald-200 dark:border-emerald-900 rounded-xl bg-emerald-50/30 dark:bg-emerald-900/10 overflow-hidden">
             {(showAllIncome ? summary.expectedIncome : summary.expectedIncome.slice(0, 3)).map((income: any) => (
-              <div
+              <SwipeableIncomeRow
                 key={income.uniqueId || income.id}
-                className="px-3 py-2.5 flex items-center justify-between hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group"
-              >
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div
-                    className="size-8 rounded-lg flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">{income.category?.icon || 'payments'}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-app-text truncate">{income.description}</p>
-                    <div className="flex items-center gap-1.5">
-                      {income.isOverdue && (
-                        <span className="text-[9px] font-bold text-white bg-amber-500 px-1 py-0.5 rounded">PENDIENTE</span>
-                      )}
-                      <span className={`text-[11px] ${income.isOverdue ? 'text-amber-600' : 'text-app-muted'}`}>
-                        {formatDate(income.dueDate)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{formatCurrency(income.amount)}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handlePay(income.id, income.amount, income.description, income.dueDate); }}
-                    className="hidden md:flex size-7 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-500 hover:text-white"
-                    title="Marcar como recibido"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">check</span>
-                  </button>
-                </div>
-              </div>
+                item={income}
+                onReceive={() => handleReceive(income.id, income.amount, income.description)}
+                formatCurrency={formatCurrency}
+                formatDate={formatDate}
+              />
             ))}
             {summary.expectedIncome.length > 3 && (
               <button
@@ -688,7 +786,7 @@ export const FinancialPlanningWidget: React.FC = () => {
               <SwipeableExpenseRow
                 key={expense.uniqueId || expense.id}
                 item={expense}
-                onPay={() => handlePay(expense.id, expense.amount, expense.description, expense.dueDate)}
+                onPay={() => handlePay(expense.id, expense.amount, expense.description)}
                 formatCurrency={formatCurrency}
                 formatDate={formatDate}
               />

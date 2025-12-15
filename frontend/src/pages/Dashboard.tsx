@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom'; // Agregamos useLocation
+import { Link } from 'react-router-dom';
 import { useTransactions, useCategories, useProfile, useAccounts } from '../hooks/useApi';
 import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
@@ -14,7 +14,7 @@ const DashboardHeader: React.FC<{
   greeting: string;
   emoji: string;
 }> = ({ name, avatar, greeting, emoji }) => (
-  <header className="flex items-center justify-between py-4 md:py-6 px-4 md:px-0 gap-3">
+  <header className="flex items-center justify-between py-4 md:py-6 px-4 md:px-6 lg:px-8 gap-3">
     <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
       {/* Avatar */}
       <Link
@@ -124,20 +124,10 @@ const QuickStat: React.FC<{
 // --- Componente Principal ---
 
 const Dashboard: React.FC = () => {
-  const location = useLocation(); // Hook para saber en qué ruta estamos (para el Sidebar Desktop)
-
   const { data: transactions, isLoading: isLoadingTx } = useTransactions();
   const { data: profile, isLoading: isLoadingProfile } = useProfile();
   const { data: accounts, isLoading: isLoadingAcc } = useAccounts();
   const { data: categories } = useCategories();
-
-  // Configuración de Navegación del Sidebar
-  const navItems = [
-    { label: 'Dashboard', icon: 'dashboard', path: '/' },
-    { label: 'Historial', icon: 'receipt_long', path: '/history' },
-    { label: 'Cuentas', icon: 'account_balance_wallet', path: '/accounts' },
-    { label: 'Más', icon: 'grid_view', path: '/more' }, // O '/settings' si prefieres
-  ];
 
   // Cálculos...
   const greeting = useMemo(() => {
@@ -180,66 +170,21 @@ const Dashboard: React.FC = () => {
   if (isLoadingTx || isLoadingProfile || isLoadingAcc) return <SkeletonDashboard />;
 
   return (
-    <div className="min-h-screen bg-app-bg text-app-text font-sans pb-24 lg:pb-8 lg:pl-0 animate-fade-in">
+    <div className="w-full">
+      {/* Header del Dashboard */}
+      <DashboardHeader
+        name={profile?.name}
+        avatar={profile?.avatar}
+        greeting={greeting.text}
+        emoji={greeting.emoji}
+      />
 
-      {/* 
-         SIDEBAR DE ESCRITORIO (Fixed Left) 
-         Este bloque reemplaza al BottomNav en pantallas grandes
-      */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-72 lg:flex-col border-r border-app-border bg-app-surface p-6 z-30">
-        <div className="flex items-center gap-2 mb-10 px-2">
-          <div className="size-8 bg-app-primary rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-lg">spa</span>
-          </div>
-          <div className="text-xl font-black text-app-text tracking-tighter">FINANZAS PRO</div>
-        </div>
+      {/* Grid principal con layout responsive */}
+      <div className="px-4 md:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
 
-        <nav className="space-y-1.5 flex-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200
-                  ${isActive
-                    ? 'bg-app-primary text-white shadow-md shadow-app-primary/20'
-                    : 'text-app-muted hover:text-app-text hover:bg-app-subtle'
-                  }
-                `}
-              >
-                <span className={`material-symbols-outlined text-[20px] ${isActive ? 'filled-icon' : ''}`} style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
-                  {item.icon}
-                </span>
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-
-        {/* Footer Sidebar Desktop */}
-        <div className="mt-auto pt-6 border-t border-app-border">
-          <button className="flex items-center gap-3 px-3 py-2 w-full text-sm text-app-muted hover:text-app-danger transition-colors">
-            <span className="material-symbols-outlined">logout</span>
-            Cerrar Sesión
-          </button>
-        </div>
-      </div>
-
-      {/* ÁREA DE CONTENIDO */}
-      <main className="lg:pl-72 max-w-7xl mx-auto md:px-8">
-
-        <DashboardHeader
-          name={profile?.name}
-          avatar={profile?.avatar}
-          greeting={greeting.text}
-          emoji={greeting.emoji}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0">
-
-          <div className="lg:col-span-2">
+          {/* Balance Card - Ocupa 2 columnas en tablet+ */}
+          <div className="md:col-span-2">
             <MainBalanceCard
               balance={availableFunds}
               netWorth={netWorth}
@@ -247,74 +192,82 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          <QuickStat label="Ingresos" amount={monthStats.income} type="income" format={formatCurrency} />
-          <QuickStat label="Gastos" amount={monthStats.expense} type="expense" format={formatCurrency} />
+          {/* Stats Cards - Lado a lado */}
+          <QuickStat label="Ingresos del Mes" amount={monthStats.income} type="income" format={formatCurrency} />
+          <QuickStat label="Gastos del Mes" amount={monthStats.expense} type="expense" format={formatCurrency} />
 
-          <div className="lg:col-span-4">
+          {/* Financial Planning Widget - Ancho completo */}
+          <div className="md:col-span-2 xl:col-span-4">
             <FinancialPlanningWidget />
           </div>
 
-          <BentoCard title="Tendencia de Gastos" className="lg:col-span-3 min-h-[300px]">
+          {/* Trend Chart - 3 columnas en xl */}
+          <BentoCard title="Tendencia de Gastos" className="md:col-span-2 xl:col-span-3 min-h-[280px] lg:min-h-[320px]">
             {transactions && <SpendingTrendChart transactions={transactions} />}
           </BentoCard>
 
-          <BentoCard title="Recientes" className="lg:col-span-1 min-h-[400px]"
+          {/* Recent Transactions - 1 columna en xl */}
+          <BentoCard
+            title="Últimos Movimientos"
+            className="md:col-span-2 xl:col-span-1"
             action={
-              <Link to="/history" className="text-xs font-bold text-app-primary hover:underline">Ver todo</Link>
-            }>
-            <div className="space-y-4">
-              {transactions?.slice(0, 5).map(tx => {
+              <Link to="/history" className="text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
+                Ver todo
+                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </Link>
+            }
+          >
+            <div className="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar">
+              {transactions?.slice(0, 6).map(tx => {
                 const isExpense = tx.type === 'expense';
-                const colorClass = isExpense ? 'text-app-text' : 'text-app-success';
+                const isTransfer = tx.type === 'transfer';
+                const cat = categories?.find(c => c.id === tx.categoryId);
+                const colorClass = isExpense ? 'text-app-text' : isTransfer ? 'text-blue-500' : 'text-app-success';
 
                 return (
-                  <Link key={tx.id} to={`/new?editId=${tx.id}`} className="group flex items-center justify-between p-2 rounded-xl hover:bg-app-subtle transition-colors -mx-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`size-10 rounded-full flex items-center justify-center text-lg shadow-sm border border-app-border ${isExpense ? 'bg-white dark:bg-zinc-800' : 'bg-app-success/10'}`}>
-                        <span className="material-symbols-outlined text-[20px]">
-                          {isExpense ? 'local_cafe' : 'monetization_on'}
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between p-2 rounded-xl transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div
+                        className="size-8 rounded-lg flex items-center justify-center text-sm shrink-0"
+                        style={{
+                          backgroundColor: cat?.color ? `${cat.color}15` : 'var(--bg-subtle)',
+                          color: cat?.color || 'var(--text-muted)'
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          {isTransfer ? 'swap_horiz' : cat?.icon || 'payments'}
                         </span>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-app-text truncate group-hover:text-app-primary transition-colors">{tx.description}</p>
-                        <p className="text-xs text-app-muted truncate">Hace 2 horas</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-app-text truncate group-hover:text-app-primary transition-colors">
+                          {tx.description}
+                        </p>
+                        <p className="text-[10px] text-app-muted truncate">
+                          {cat?.name || 'Sin categoría'}
+                        </p>
                       </div>
                     </div>
-                    <span className={`text-sm font-bold font-numbers ${colorClass}`}>
-                      {isExpense ? '-' : '+'}{formatCurrency(tx.amount)}
+                    <span className={`text-xs font-bold font-numbers shrink-0 ml-2 ${colorClass}`}>
+                      {isExpense ? '-' : isTransfer ? '' : '+'}{formatCurrency(tx.amount)}
                     </span>
-                  </Link>
+                  </div>
                 );
               })}
 
               {!transactions?.length && (
-                <div className="flex flex-col items-center justify-center h-40 text-app-muted">
-                  <span className="material-symbols-outlined text-4xl opacity-20 mb-2">savings</span>
-                  <span className="text-sm">Sin movimientos</span>
+                <div className="flex flex-col items-center justify-center h-24 text-app-muted">
+                  <span className="material-symbols-outlined text-2xl opacity-20 mb-1">savings</span>
+                  <span className="text-xs">Sin movimientos</span>
                 </div>
               )}
             </div>
           </BentoCard>
 
         </div>
-      </main>
-
-      {/* FAB Mobile Only (Optional if relying on BottomNav FAB) */}
-      {/* 
-           NOTA: Como el nuevo BottomNav YA tiene el botón "+", 
-           probablemente no quieras duplicarlo aquí en vista móvil,
-           así que he comentado esto o lo dejo oculto en lg 
-           pero visible solo si no usas el BottomNav.
-       */}
-      {/* 
-      <Link 
-        to="/new" 
-        className="lg:hidden fixed bottom-24 right-4 size-14 bg-app-text text-app-bg rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40"
-      >
-        <span className="material-symbols-outlined text-3xl">add</span>
-      </Link>
-      */}
-
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -9,11 +9,13 @@ const ResetPasswordPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+
   const token = searchParams.get('token');
 
+  // Validate Token existence immediately
   useEffect(() => {
     if (!token) {
-      setError('Token de reseteo no válido');
+      setError('El enlace de recuperación no es válido o ha expirado.');
     }
   }, [token]);
 
@@ -43,13 +45,13 @@ const ResetPasswordPage: React.FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to reset password');
+        throw new Error(data.message || 'Error al restablecer la contraseña');
       }
 
       setSuccess(true);
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      // Auto-redirect removed to let user see success message clearly, 
+      // or handled inside the success view.
+      setTimeout(() => navigate('/login'), 3000);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -59,47 +61,57 @@ const ResetPasswordPage: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-app-bg flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center animate-fade-in">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-app-success/20 mb-6 animate-scale-in">
-            <span className="material-symbols-outlined text-app-success text-5xl">check_circle</span>
+      <div className="min-h-dvh bg-app-bg flex items-center justify-center p-4">
+        <div className="w-full max-w-sm text-center animate-fade-in bg-app-surface border border-app-border rounded-3xl p-8 shadow-xl">
+          <div className="inline-flex items-center justify-center size-20 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 mb-6 animate-scale-in">
+            <span className="material-symbols-outlined text-5xl">check_circle</span>
           </div>
-          <h1 className="text-3xl font-bold text-app-text mb-2">¡Contraseña Actualizada!</h1>
-          <p className="text-app-muted mb-4">Tu contraseña ha sido cambiada exitosamente.</p>
-          <p className="text-sm text-app-muted">Redirigiendo al login...</p>
+          <h1 className="text-2xl font-bold text-app-text mb-2 tracking-tight">¡Contraseña Actualizada!</h1>
+          <p className="text-app-muted text-sm mb-6">
+            Has recuperado el acceso a tu cuenta exitosamente.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => navigate('/login')} className="btn btn-primary w-full py-3 rounded-xl shadow-lg">
+              Iniciar Sesión
+            </button>
+            <p className="text-xs text-app-muted animate-pulse">Redirigiendo automáticamente...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-app-bg flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background Gradient */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-app-primary/10 via-transparent to-transparent rounded-full blur-3xl animate-pulse-glow"></div>
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-app-secondary/10 via-transparent to-transparent rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '1s' }}></div>
+    <div className="min-h-dvh flex items-center justify-center relative overflow-hidden bg-app-bg text-app-text p-4 font-sans">
+
+      {/* Decoration */}
+      <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-primary/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[100px]" />
       </div>
 
-      <div className="w-full max-w-md relative z-10 animate-fade-in">
-        {/* Logo/Brand Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-app-primary to-app-secondary shadow-premium mb-4">
-            <span className="material-symbols-outlined text-white text-3xl">vpn_key</span>
+      <div className="w-full max-w-[400px] animate-fade-in">
+
+        <div className="flex flex-col items-center mb-8">
+          <div className="size-16 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-brand-primary shadow-xl shadow-black/5 mb-4">
+            <span className="material-symbols-outlined text-[32px]">vpn_key</span>
           </div>
-          <h1 className="text-3xl font-bold text-app-text mb-2">Nueva Contraseña</h1>
-          <p className="text-app-muted">Ingresa tu nueva contraseña</p>
+          <h1 className="text-2xl font-bold text-app-text text-center tracking-tight">Nueva Contraseña</h1>
+          <p className="text-sm text-app-muted mt-1 text-center">
+            Crea una contraseña segura para tu cuenta
+          </p>
         </div>
 
-        {/* Reset Card */}
-        <div className="bg-app-card border border-app-border rounded-3xl p-8 shadow-premium-xl card-gradient">
+        <div className="bg-app-surface border border-app-border rounded-3xl p-6 md:p-8 shadow-2xl shadow-black/5 dark:shadow-black/20">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Password Input */}
-            <div className="space-y-2 group">
-              <label htmlFor="password" className="block text-sm font-bold text-app-text tracking-wide transition-colors group-focus-within:text-app-primary">
-                Nueva Contraseña
+
+            {/* Password Field */}
+            <div>
+              <label className="block text-xs font-bold uppercase text-app-muted tracking-wider mb-1.5 ml-1">
+                Contraseña Nueva
               </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-app-muted text-xl transition-colors group-focus-within:text-app-primary">
+              <div className="relative group">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
                   lock
                 </span>
                 <input
@@ -107,91 +119,74 @@ const ResetPasswordPage: React.FC = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-app-bg/50 border border-app-border rounded-xl text-app-text placeholder-app-muted/50 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary focus:bg-app-elevated transition-all duration-300"
                   placeholder="••••••••"
                   required
-                  disabled={!token}
+                  disabled={!token || isLoading}
+                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface disabled:opacity-50"
                 />
               </div>
             </div>
 
-            {/* Confirm Password Input */}
-            <div className="space-y-2 group">
-              <label htmlFor="confirmPassword" className="block text-sm font-bold text-app-text tracking-wide transition-colors group-focus-within:text-app-primary">
-                Confirmar Contraseña
+            {/* Confirm Password Field */}
+            <div>
+              <label className="block text-xs font-bold uppercase text-app-muted tracking-wider mb-1.5 ml-1">
+                Confirmar
               </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-app-muted text-xl transition-colors group-focus-within:text-app-primary">
-                  lock_check
+              <div className="relative group">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
+                  lock_reset
                 </span>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-app-bg/50 border border-app-border rounded-xl text-app-text placeholder-app-muted/50 focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary focus:bg-app-elevated transition-all duration-300"
                   placeholder="••••••••"
                   required
-                  disabled={!token}
+                  disabled={!token || isLoading}
+                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface disabled:opacity-50"
                 />
               </div>
             </div>
 
-            {/* Error Message */}
+            {/* Error Banner */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-app-danger/10 border border-app-danger/20 rounded-xl animate-scale-in">
-                <span className="material-symbols-outlined text-app-danger text-sm">error</span>
-                <p className="text-sm text-app-danger font-medium">{error}</p>
+              <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 rounded-xl animate-scale-in">
+                <span className="material-symbols-outlined text-rose-500 text-[20px]">error</span>
+                <p className="text-xs font-bold text-rose-600 dark:text-rose-400">{error}</p>
               </div>
             )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading || !token}
-              className="w-full py-4 bg-gradient-to-r from-app-primary to-app-secondary text-white font-bold rounded-xl shadow-lg shadow-app-primary/25 hover:shadow-xl hover:shadow-app-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Actualizando...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined">check</span>
-                  <span>Cambiar Contraseña</span>
-                </>
-              )}
-            </button>
+            {/* Action */}
+            <div className="space-y-3 pt-2">
+              <button
+                type="submit"
+                disabled={isLoading || !token}
+                className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-dark text-white font-bold rounded-xl shadow-lg shadow-brand-primary/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <span>Actualizar Contraseña</span>
+                )}
+              </button>
+
+              <div className="flex justify-center pt-2">
+                <Link to="/login" className="text-xs font-bold text-app-muted hover:text-app-text transition-colors">
+                  Cancelar
+                </Link>
+              </div>
+            </div>
+
           </form>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-app-divider"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-app-card text-app-muted">o</span>
-            </div>
-          </div>
-
-          {/* Back to Login */}
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="w-full py-3.5 bg-app-elevated border border-app-border text-app-text font-semibold rounded-xl hover:bg-app-bg hover:border-app-primary/50 transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined">arrow_back</span>
-              <span>Volver al Login</span>
-            </button>
-          </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-app-muted">
-          <p>© 2024 Finanzas Pro. Todos los derechos reservados.</p>
-        </div>
+        <p className="mt-8 text-center text-[10px] text-app-muted/50">
+          Finanzas Pro Security
+        </p>
       </div>
     </div>
   );

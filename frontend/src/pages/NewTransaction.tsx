@@ -17,7 +17,10 @@ const NewTransaction: React.FC = () => {
 
   // Edit / Pre-fill logic
   const editId = searchParams.get('editId');
-  const initialType = (state?.type || searchParams.get('type') as TransactionType) || 'expense';
+  const preselectedType = state?.type || searchParams.get('type');
+  const initialType = (preselectedType as TransactionType) || 'expense';
+  // Si el tipo viene preseleccionado, no mostramos el toggle
+  const showTypeToggle = !editId && !preselectedType;
 
   // Queries
   const { data: categories } = useCategories();
@@ -167,8 +170,8 @@ const NewTransaction: React.FC = () => {
       />
 
       <main className="px-5 pt-6 pb-20 w-full max-w-lg mx-auto">
-        {/* Toggle Type */}
-        {!editId && (
+        {/* Toggle Type - Solo mostrar si NO hay tipo preseleccionado */}
+        {showTypeToggle && (
           <div className="mb-8 px-2">
             <ToggleButtonGroup
               value={type}

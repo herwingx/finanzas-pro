@@ -357,7 +357,7 @@ export interface FinancialPeriodSummary {
     warnings: string[];
 }
 
-export const getFinancialPeriodSummary = async (periodType: 'quincenal' | 'mensual' | 'semanal' = 'quincenal'): Promise<FinancialPeriodSummary> => {
+export const getFinancialPeriodSummary = async (periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual' = 'quincenal'): Promise<FinancialPeriodSummary> => {
     const response = await fetch(`${API_URL}/financial-planning/summary?period=${periodType}`, {
         headers: getAuthHeaders()
     });

@@ -5,35 +5,43 @@ import { AuthRequest } from '../middleware/auth';
 
 
 
-// Calculate period dates based on type
-function calculatePeriod(type: 'quincenal' | 'mensual' | 'semanal') {
+// Calculate period dates based on type - RELATIVE to current date
+function calculatePeriod(type: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual') {
   const now = new Date();
   const currentDay = now.getDate();
 
-  let periodStart: Date;
+  let periodStart: Date = startOfDay(now);
   let periodEnd: Date;
 
   switch (type) {
+    case 'semanal':
+      // Today + 7 days
+      periodEnd = endOfDay(addDays(now, 7));
+      break;
+
     case 'quincenal':
-      // If we're in first half (1-15), period is 1-15
-      // If we're in second half (16-31), period is 16-end of month
-      if (currentDay <= 15) {
-        periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        periodEnd = new Date(now.getFullYear(), now.getMonth(), 15, 23, 59, 59);
-      } else {
-        periodStart = new Date(now.getFullYear(), now.getMonth(), 16);
-        periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // Last day of month
-      }
+      // Today + 15 days
+      periodEnd = endOfDay(addDays(now, 15));
       break;
 
     case 'mensual':
-      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      // Today + 1 month (same day next month)
+      periodEnd = endOfDay(addMonths(now, 1));
       break;
 
-    case 'semanal':
-      periodStart = startOfDay(now);
-      periodEnd = endOfDay(addDays(now, 6));
+    case 'bimestral':
+      // Today + 2 months
+      periodEnd = endOfDay(addMonths(now, 2));
+      break;
+
+    case 'semestral':
+      // Today + 6 months
+      periodEnd = endOfDay(addMonths(now, 6));
+      break;
+
+    case 'anual':
+      // Today + 12 months (same day next year)
+      periodEnd = endOfDay(addMonths(now, 12));
       break;
 
     default:
@@ -70,7 +78,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const periodType = (req.query.period as 'quincenal' | 'mensual' | 'semanal') || 'quincenal';
+    const periodType = (req.query.period as 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual') || 'quincenal';
     const { periodStart, periodEnd } = calculatePeriod(periodType);
 
     // Get all active recurring transactions
@@ -90,6 +98,17 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
     // 2. Process Expenses (Recurrent Expenses - Multi-instance Projection)
     const expectedExpenses: any[] = [];
+
+    // Dynamic limit based on period type (ensures we project enough instances)
+    const maxInstances: Record<string, number> = {
+      semanal: 7,
+      quincenal: 15,
+      mensual: 31,
+      bimestral: 62,
+      semestral: 185,
+      anual: 370
+    };
+    const projectionLimit = maxInstances[periodType] || 50;
 
     // Helper to calculate next date for projection
     const getNextDate = (date: Date, freq: string): Date => {
@@ -135,7 +154,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       // No "overdue" logic applies to future dates
       if (projectionDate > todayEnd) {
         // Future date - project if within period
-        while (isWithinInterval(projectionDate, { start: periodStart, end: periodEnd }) && instanceCount < 10) {
+        while (isWithinInterval(projectionDate, { start: periodStart, end: periodEnd }) && instanceCount < projectionLimit) {
           const projDateStr = projectionDate.toISOString().split('T')[0];
           if (!paidDates.has(projDateStr)) {
             const item = {
@@ -186,8 +205,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         projectionDate = getNextDate(projectionDate, rt.frequency);
       }
 
-      // Now project current and future instances within period (Safe limit 10)
-      while (isWithinInterval(projectionDate, { start: periodStart, end: periodEnd }) && instanceCount < 10) {
+      // Now project current and future instances within period
+      while (isWithinInterval(projectionDate, { start: periodStart, end: periodEnd }) && instanceCount < projectionLimit) {
         const projDateStr = projectionDate.toISOString().split('T')[0];
 
         // Skip if already paid
@@ -417,6 +436,66 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       }
     }
 
+    // 3.5 For LONG periods (bimestral+), project ALL future MSI payments
+    // This ensures we see all upcoming installments, not just the next billing cycle
+    if (['bimestral', 'semestral', 'anual'].includes(periodType)) {
+      console.log(`Processing extended MSI projection for ${periodType} period...`);
+
+      for (const account of creditAccounts) {
+        for (const msi of account.installmentPurchases) {
+          // Calculate remaining installments
+          const paidInstallments = Math.floor(msi.paidAmount / msi.monthlyPayment);
+          const remainingInstallments = msi.installments - paidInstallments;
+
+          if (remainingInstallments <= 0) continue;
+
+          const purchaseDate = new Date(msi.purchaseDate);
+          const purchaseDay = purchaseDate.getDate();
+
+          // Project each remaining installment
+          for (let i = 0; i < remainingInstallments; i++) {
+            // Calculate the installment date (same day of month as purchase, but months forward)
+            const installmentDate = new Date(purchaseDate);
+            installmentDate.setMonth(installmentDate.getMonth() + paidInstallments + i + 1);
+
+            // Ensure we're within the period and haven't already added this payment
+            if (installmentDate >= periodStart && installmentDate <= periodEnd) {
+              // Check if this specific payment was already added in the regular cycle logic
+              const alreadyAdded = msiPaymentsDue.some(
+                (p: any) => p.id === msi.id &&
+                  new Date(p.dueDate).getMonth() === installmentDate.getMonth() &&
+                  new Date(p.dueDate).getFullYear() === installmentDate.getFullYear()
+              );
+
+              if (!alreadyAdded) {
+                const isLastInstallment = (i === remainingInstallments - 1);
+
+                msiPaymentsDue.push({
+                  id: `${msi.id}-proj-${i}`,
+                  originalId: msi.id,
+                  description: isLastInstallment
+                    ? `ÚLTIMA cuota ${msi.description}`
+                    : `Cuota ${paidInstallments + i + 1}/${msi.installments} ${msi.description}`,
+                  amount: msi.monthlyPayment,
+                  dueDate: installmentDate,
+                  category: msi.category,
+                  accountId: account.id,
+                  accountName: account.name,
+                  isMsi: true,
+                  isProjection: true,
+                  isLastInstallment,
+                  installmentNumber: paidInstallments + i + 1,
+                  totalInstallments: msi.installments,
+                  msiTotal: msi.totalAmount,
+                  paidAmount: msi.paidAmount,
+                  remainingAmount: msi.totalAmount - msi.paidAmount - (msi.monthlyPayment * (i + 1))
+                });
+              }
+            }
+          }
+        }
+      }
+    }
 
     // 4. Calculate Balances & Totals - CORRECTED
     const accounts = await prisma.account.findMany({ where: { userId } });

@@ -8,6 +8,7 @@ import { DeleteConfirmationSheet, WarningLevel, ImpactDetail } from '../componen
 import { SwipeableItem } from '../components/SwipeableItem';
 import { SkeletonTransactionList } from '../components/Skeleton';
 import { formatDateUTC } from '../utils/dateUtils';
+import { TransactionDetailSheet } from '../components/TransactionDetailSheet';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const History: React.FC = () => {
 
   // State
   const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   // Helpers
@@ -180,8 +182,8 @@ const History: React.FC = () => {
                         onSwipeLeft={() => handleDeleteClick(tx)}
                       >
                         <div
-                          onClick={() => navigate(`/new?editId=${tx.id}`)}
-                          className="flex items-center gap-3 p-3.5 hover:bg-app-subtle cursor-pointer transition-colors"
+                          onClick={() => setSelectedTx(tx)}
+                          className="flex items-center gap-3 p-3.5 transition-colors cursor-pointer hover:bg-app-subtle/50"
                         >
                           <div
                             className={`size-10 rounded-full flex items-center justify-center shrink-0 border`}
@@ -233,6 +235,25 @@ const History: React.FC = () => {
           {...deletionImpact}
         />
       )}
+
+      {/* Transaction Detail Sheet */}
+      <TransactionDetailSheet
+        transaction={selectedTx}
+        category={selectedTx ? getCategoryInfo(selectedTx.categoryId) : undefined}
+        account={selectedTx ? getAccount(selectedTx.accountId) : undefined}
+        destinationAccount={selectedTx?.destinationAccountId ? getAccount(selectedTx.destinationAccountId) : undefined}
+        isOpen={!!selectedTx}
+        onClose={() => setSelectedTx(null)}
+        onEdit={(tx) => {
+          setSelectedTx(null);
+          handleEditClick(tx);
+        }}
+        onDelete={(tx) => {
+          setSelectedTx(null);
+          handleDeleteClick(tx);
+        }}
+        formatCurrency={formatCurrency}
+      />
     </div>
   );
 };

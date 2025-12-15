@@ -5,6 +5,7 @@ import { toastSuccess, toastError, toastInfo } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { SkeletonTransactionList } from '../components/Skeleton';
 import { SwipeableItem } from '../components/SwipeableItem';
+import { formatDateUTC } from '../utils/dateUtils';
 
 const TrashPage: React.FC = () => {
   const { data: deletedTransactions, isLoading } = useDeletedTransactions();
@@ -84,9 +85,9 @@ const TrashPage: React.FC = () => {
                   <SwipeableItem
                     key={tx.id}
                     onSwipeRight={() => !msiPlanDead && handleRestore(tx)}
-                    rightAction={msiPlanDead ? undefined : { icon: 'restore_from_trash', color: 'var(--brand-primary)', label: 'Restaurar' }}
+                    leftAction={msiPlanDead ? undefined : { icon: 'restore_from_trash', color: 'var(--brand-primary)', label: 'Restaurar' }}
                     onSwipeLeft={() => handlePermanentDelete(tx)}
-                    leftAction={{ icon: 'delete_forever', color: '#ef4444', label: 'Eliminar Ya' }}
+                    rightAction={{ icon: 'delete_forever', color: '#ef4444', label: 'Eliminar Ya' }}
                     className="mb-3"
                   >
                     <div className="flex items-center gap-3 p-3 bg-app-surface border border-app-border rounded-xl opacity-75 hover:opacity-100 transition-opacity">
@@ -107,7 +108,7 @@ const TrashPage: React.FC = () => {
 
                       <div className="text-right">
                         <p className="text-sm font-bold text-app-muted line-through">{formatCurrency(tx.amount)}</p>
-                        <p className="text-[10px] text-app-muted">{new Date(tx.deletedAt!).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-app-muted">{formatDateUTC(tx.deletedAt!, { style: 'short' })}</p>
                       </div>
                     </div>
                   </SwipeableItem>

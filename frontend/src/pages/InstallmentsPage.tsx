@@ -111,9 +111,9 @@ const InstallmentsPage: React.FC = () => {
                                 <SwipeableItem
                                     key={purchase.id}
                                     onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`)}
-                                    rightAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                                    leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
-                                    leftAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
+                                    rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
                                     className="mb-3" // Margen para la tarjeta swipeable
                                 >
                                     <div

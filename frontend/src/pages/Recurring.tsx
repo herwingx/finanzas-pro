@@ -6,6 +6,7 @@ import { toastSuccess, toastError } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SkeletonTransactionList } from '../components/Skeleton';
+import { formatDateUTC, isDateBeforeUTC, getTodayUTC } from '../utils/dateUtils';
 
 const Recurring: React.FC = () => {
     // --- Routing ---
@@ -103,14 +104,16 @@ const Recurring: React.FC = () => {
                                 const category = getCategory(tx.categoryId);
                                 const account = getAccount(tx.accountId);
                                 const nextDue = new Date(tx.nextDueDate);
-                                const isOverdue = nextDue < new Date();
+                                // Usar función centralizada para comparar fechas en UTC
+                                const isOverdue = isDateBeforeUTC(nextDue, new Date());
 
                                 return (
                                     <SwipeableItem
                                         key={tx.id}
                                         onSwipeLeft={() => setDeletingId(tx.id)}
-                                        leftAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
-                                        // TODO: Add onSwipeRight for edit when supported
+                                        rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
+                                        onSwipeRight={() => handleEdit(tx.id)}
+                                        leftAction={{ icon: 'edit', color: '#3b82f6', label: 'Editar' }}
                                         className="mb-3"
                                     >
                                         <div className={`
@@ -140,10 +143,10 @@ const Recurring: React.FC = () => {
                                                 </div>
 
                                                 {isOverdue && (
-                                                    <p className="text-[10px] text-rose-500 font-bold mt-1.5">VENCIDO: {nextDue.toLocaleDateString()}</p>
+                                                    <p className="text-[10px] text-rose-500 font-bold mt-1.5">VENCIDO: {formatDateUTC(nextDue, { style: 'short' })}</p>
                                                 )}
                                                 {!isOverdue && (
-                                                    <p className="text-[10px] text-app-muted/80 mt-1">Próximo: {nextDue.toLocaleDateString()}</p>
+                                                    <p className="text-[10px] text-app-muted/80 mt-1">Próximo: {formatDateUTC(nextDue, { style: 'short' })}</p>
                                                 )}
                                             </div>
 

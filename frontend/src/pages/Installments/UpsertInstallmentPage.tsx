@@ -6,6 +6,7 @@ import { useInstallmentPurchases, useAddInstallmentPurchase, useUpdateInstallmen
 import { toastSuccess, toastError, toast } from '../../utils/toast';
 import { DatePicker } from '../../components/DatePicker';
 import { CategorySelector } from '../../components/CategorySelector';
+import { formatDateUTC } from '../../utils/dateUtils';
 
 const UpsertInstallmentPage: React.FC = () => {
     // --- Routing & State ---
@@ -225,7 +226,7 @@ const UpsertInstallmentPage: React.FC = () => {
                                                 Mensualidad {pNum}
                                             </p>
                                             <p className="text-[10px] text-app-muted">
-                                                {isPaid ? `Pagado el ${new Date(payment.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}` : fDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+                                                {isPaid ? `Pagado el ${formatDateUTC(payment.date, { style: 'dayMonth' })}` : formatDateUTC(fDate, { style: 'monthYear' })}
                                             </p>
                                         </div>
 

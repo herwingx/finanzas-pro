@@ -277,6 +277,12 @@ export const getRecurringTransactions = async (): Promise<RecurringTransaction[]
     return response.json();
 };
 
+export const getRecurringTransaction = async (id: string): Promise<RecurringTransaction> => {
+    const response = await fetch(`${API_URL}/recurring/${id}`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch recurring transaction');
+    return response.json();
+};
+
 export const addRecurringTransaction = async (transaction: Omit<RecurringTransaction, 'id'>): Promise<RecurringTransaction> => {
     const response = await fetch(`${API_URL}/recurring`, {
         method: 'POST',

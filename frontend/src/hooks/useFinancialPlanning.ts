@@ -4,7 +4,7 @@ import * as apiService from '../services/apiService';
 export interface FinancialPeriodSummary {
   periodStart: string;
   periodEnd: string;
-  periodType: 'quincenal' | 'mensual' | 'semanal';
+  periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual';
 
   // Current state
   currentBalance: number;
@@ -76,7 +76,7 @@ export interface FinancialPeriodSummary {
   warnings: string[];
 }
 
-export const useFinancialPeriodSummary = (periodType: 'quincenal' | 'mensual' | 'semanal' = 'quincenal') => {
+export const useFinancialPeriodSummary = (periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual' = 'quincenal') => {
   return useQuery<FinancialPeriodSummary>({
     queryKey: ['financialPeriodSummary', periodType],
     queryFn: () => apiService.getFinancialPeriodSummary(periodType),

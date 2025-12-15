@@ -84,6 +84,17 @@ const CategoryForm: React.FC<any> = ({ category, setCategory, onSubmit, isSaving
                     </div>
                 </div>
 
+                {/* Icon Selector */}
+                <div>
+                    <label className="text-[10px] font-bold text-app-muted uppercase mb-2 block pl-1">Icono</label>
+                    <IconSelector
+                        icons={ICONS}
+                        selectedIcon={category.icon}
+                        onSelect={(icon) => setCategory({ ...category, icon: icon })}
+                        selectedColor={category.color}
+                    />
+                </div>
+
                 {/* Budget 50/30/20 (Expenses Only) */}
                 {category.type === 'expense' && (
                     <div>

@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatDateUTC } from '../utils/dateUtils';
 
 const FinancialAnalysis: React.FC = () => {
-  const [periodType, setPeriodType] = useState<'quincenal' | 'mensual'>('mensual');
+  const [periodType, setPeriodType] = useState<'quincenal' | 'mensual' | 'bimestral' | 'semestral' | 'anual'>('mensual');
   const { data: summary, isLoading } = useFinancialPeriodSummary(periodType);
 
   const chartData = useMemo(() => {
@@ -24,7 +25,7 @@ const FinancialAnalysis: React.FC = () => {
     const endDate = new Date(summary.periodEnd);
 
     points.push({
-      fecha: startDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
+      fecha: formatDateUTC(startDate, { style: 'short' }),
       Saldo: currentBalance,
       fullDate: startDate,
     });
@@ -32,7 +33,7 @@ const FinancialAnalysis: React.FC = () => {
     events.forEach(event => {
       currentBalance += event.amount;
       points.push({
-        fecha: event.date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
+        fecha: formatDateUTC(event.date, { style: 'short' }),
         Saldo: currentBalance,
         fullDate: event.date
       });
@@ -41,7 +42,7 @@ const FinancialAnalysis: React.FC = () => {
     // Proyectar hasta el final del periodo si no hay más eventos
     if (points.length > 0 && points[points.length - 1].fullDate < endDate) {
       points.push({
-        fecha: endDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
+        fecha: formatDateUTC(endDate, { style: 'short' }),
         Saldo: currentBalance,
         fullDate: endDate
       });
@@ -103,13 +104,13 @@ const FinancialAnalysis: React.FC = () => {
         {/* Top Controls: Period Selector */}
         <div className="flex justify-center mb-6">
           <div className="bg-app-subtle p-1 rounded-xl flex gap-1 w-full max-w-sm">
-            {(['quincenal', 'mensual'] as const).map(p => (
+            {(['quincenal', 'mensual', 'bimestral', 'semestral', 'anual'] as const).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriodType(p)}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${periodType === p
-                    ? 'bg-app-surface text-app-text shadow-sm border border-app-border'
-                    : 'text-app-muted hover:text-app-text'
+                  ? 'bg-app-surface text-app-text shadow-sm border border-app-border'
+                  : 'text-app-muted hover:text-app-text'
                   }`}
               >
                 {p.charAt(0).toUpperCase() + p.slice(1)}

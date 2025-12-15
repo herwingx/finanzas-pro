@@ -3,6 +3,7 @@ import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
 import { usePayRecurringTransaction, useAccounts, usePayFullStatement, usePayMsiInstallment } from '../hooks/useApi';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { formatDateUTC } from '../utils/dateUtils';
 
 // --- Sub-components (Visuals Updated) ---
 
@@ -248,7 +249,7 @@ const CreditCardBill = ({
 
 export const FinancialPlanningWidget: React.FC = () => {
   const navigate = useNavigate();
-  const [periodType, setPeriodType] = useState<'quincenal' | 'mensual' | 'semanal'>('quincenal');
+  const [periodType, setPeriodType] = useState<'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual'>('quincenal');
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [selectedSourceAccounts, setSelectedSourceAccounts] = useState<Record<string, string>>({});
 
@@ -268,9 +269,7 @@ export const FinancialPlanningWidget: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    const parts = dateString.split('T')[0].split('-');
-    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+    return formatDateUTC(dateString, { style: 'short' });
   };
 
   // Logic: Grouping (Same as before)
@@ -353,6 +352,9 @@ export const FinancialPlanningWidget: React.FC = () => {
             <option value="semanal">Semana</option>
             <option value="quincenal">Quincena</option>
             <option value="mensual">Mes</option>
+            <option value="bimestral">Bimestre</option>
+            <option value="semestral">Semestre</option>
+            <option value="anual">Año</option>
           </select>
           <span className="pointer-events-none absolute right-2 top-1.5 material-symbols-outlined text-[16px] text-app-muted">expand_more</span>
         </div>

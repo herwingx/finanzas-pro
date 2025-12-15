@@ -228,6 +228,17 @@ export const useRecurringTransactions = () => {
     });
 };
 
+export const useRecurringTransaction = (id: string | null, options?: { enabled?: boolean }) => {
+    return useQuery<RecurringTransaction, Error>({
+        queryKey: ['recurring', id],
+        queryFn: () => {
+            if (!id) throw new Error('No id provided');
+            return apiService.getRecurringTransaction(id)
+        },
+        enabled: !!id && (options?.enabled ?? true),
+    });
+};
+
 export const useAddRecurringTransaction = () => {
     const queryClient = useQueryClient();
     return useMutation({
@@ -244,7 +255,8 @@ export const useUpdateRecurringTransaction = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: ({ id, transaction }: { id: string; transaction: Partial<Omit<RecurringTransaction, 'id'>> }) => apiService.updateRecurringTransaction(id, transaction),
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['recurring', variables.id] });
             queryClient.invalidateQueries({ queryKey: ['recurring'] });
             queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },

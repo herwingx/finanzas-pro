@@ -7,6 +7,7 @@ import {
   Tooltip, ResponsiveContainer
 } from 'recharts';
 import { Transaction, Category } from '../types';
+import { formatDateUTC } from '../utils/dateUtils';
 
 // --- Shared: Modern Tooltip (Linear Style) ---
 const ModernTooltip = ({ active, payload, label }: any) => {
@@ -42,9 +43,9 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
     const monthlyData = transactions.reduce((acc, tx) => {
       const date = new Date(tx.date);
       // Sort Key: YYYY-MM
-      const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      // Display Key: Ene
-      const monthName = date.toLocaleDateString('es-MX', { month: 'short' });
+      const sortKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+      // Display Key: Ene (usando UTC)
+      const monthName = formatDateUTC(date, { style: 'chart' });
       const displayKey = monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', '');
 
       if (!acc[sortKey]) acc[sortKey] = { mes: displayKey, Ingresos: 0, Gastos: 0 };
@@ -222,7 +223,7 @@ export const BalanceOverTimeChart: React.FC<{ transactions: Transaction[] }> = (
       if (tx.type === 'income') balance += tx.amount;
       else if (tx.type === 'expense') balance -= tx.amount;
 
-      const d = new Date(tx.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+      const d = formatDateUTC(tx.date, { style: 'dayMonth' });
       daily[d] = balance;
     });
 

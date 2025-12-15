@@ -7,6 +7,7 @@ import { PageHeader } from '../components/PageHeader';
 import { DeleteConfirmationSheet, WarningLevel, ImpactDetail } from '../components/DeleteConfirmationSheet';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { SkeletonTransactionList } from '../components/Skeleton';
+import { formatDateUTC } from '../utils/dateUtils';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ const History: React.FC = () => {
   }, [transactions, filterType]);
 
   const grouped = sortedTxs.reduce((groups, tx) => {
-    const date = new Date(tx.date).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const date = formatDateUTC(tx.date, { style: 'long' });
     if (!groups[date]) groups[date] = [];
     groups[date].push(tx);
     return groups;

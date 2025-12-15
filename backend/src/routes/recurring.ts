@@ -20,6 +20,24 @@ router.get('/', async (req: AuthRequest, res) => {
   }
 });
 
+// Get a single recurring transaction by ID
+router.get('/:id', async (req: AuthRequest, res) => {
+  const userId = req.user!.userId;
+  const { id } = req.params;
+  try {
+    const recurring = await prisma.recurringTransaction.findFirst({
+      where: { id, userId },
+      include: { category: true },
+    });
+    if (!recurring) {
+      return res.status(404).json({ message: 'Recurring transaction not found' });
+    }
+    res.json(recurring);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch recurring transaction' });
+  }
+});
+
 // Create recurring transaction
 router.post('/', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;

@@ -300,80 +300,71 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
     try {
         await prisma.$transaction(async (tx: any) => {
+            // Step 1: Find the purchase, its account, and all related non-deleted transactions.
             const purchase = await tx.installmentPurchase.findFirst({
                 where: { id, userId },
-                include: { account: true },
+                include: {
+                    account: true,
+                    generatedTransactions: { where: { deletedAt: null } },
+                },
             });
 
             if (!purchase) {
                 throw new Error('Installment purchase not found or you do not have permission to delete it.');
             }
+            console.log(`[DELETE MSI] Found purchase to delete: ${purchase.description}`);
 
-            console.log(`[DELETE MSI] Found purchase to delete:`, JSON.stringify(purchase, null, 2));
+            // Step 2: For every payment made from a different account (transfers), refund the source account.
+            const paymentTransactions = purchase.generatedTransactions.filter(
+                (trx: any) => trx.type === 'transfer' && trx.destinationAccountId === purchase.accountId
+            );
 
-            // Revert the balance changes from all associated transactions
-            const relatedTransactions = await tx.transaction.findMany({
-                where: { installmentPurchaseId: id },
-                include: { account: true, destinationAccount: true }
-            });
-
-            console.log(`[DELETE MSI] Found ${relatedTransactions.length} related transactions to revert:`, JSON.stringify(relatedTransactions, null, 2));
-
-            for (const trx of relatedTransactions) {
-                const { account, destinationAccount, amount, type } = trx;
-
-                if (account) {
-                    if (type === 'expense') {
-                        if (account.type === 'CREDIT') {
-                            console.log(`[DELETE MSI] Reverting EXPENSE on CREDIT account ${account.id}. Decrementing balance by ${amount}.`);
-                            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
-                        } else { // DEBIT/CASH
-                            console.log(`[DELETE MSI] Reverting EXPENSE on DEBIT/CASH account ${account.id}. Incrementing balance by ${amount}.`);
-                            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
-                        }
-                    } else if (type === 'income') {
-                        if (account.type === 'CREDIT') {
-                            console.log(`[DELETE MSI] Reverting INCOME on CREDIT account ${account.id}. Incrementing balance by ${amount}.`);
-                            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
-                        } else { // DEBIT/CASH
-                            console.log(`[DELETE MSI] Reverting INCOME on DEBIT/CASH account ${account.id}. Decrementing balance by ${amount}.`);
-                            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
-                        }
-                    } else if (type === 'transfer') {
-                        // Revert Source
-                        console.log(`[DELETE MSI] Reverting TRANSFER source account ${account.id}.`);
-                        if (account.type === 'CREDIT') {
-                            console.log(`[DELETE MSI] Reverting TRANSFER on CREDIT source ${account.id}. Decrementing balance by ${amount}.`);
-                            await tx.account.update({ where: { id: account.id }, data: { balance: { decrement: amount } } });
-                        } else {
-                            console.log(`[DELETE MSI] Reverting TRANSFER on DEBIT/CASH source ${account.id}. Incrementing balance by ${amount}.`);
-                            await tx.account.update({ where: { id: account.id }, data: { balance: { increment: amount } } });
-                        }
-
-                        // Revert Destination
-                        if (destinationAccount) {
-                            console.log(`[DELETE MSI] Reverting TRANSFER destination account ${destinationAccount.id}.`);
-                            if (destinationAccount.type === 'CREDIT') {
-                                console.log(`[DELETE MSI] Reverting TRANSFER on CREDIT destination ${destinationAccount.id}. Incrementing balance by ${amount}.`);
-                                await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { increment: amount } } });
-                            } else { // DEBIT/CASH
-                                console.log(`[DELETE MSI] Reverting TRANSFER on DEBIT/CASH destination ${destinationAccount.id}. Decrementing balance by ${amount}.`);
-                                await tx.account.update({ where: { id: destinationAccount.id }, data: { balance: { decrement: amount } } });
-                            }
-                        }
+            if (paymentTransactions.length > 0) {
+                console.log(`[DELETE MSI] Found ${paymentTransactions.length} payment transactions to revert.`);
+                for (const payment of paymentTransactions) {
+                    if (payment.accountId) { // accountId is the source of the transfer
+                        console.log(`[DELETE MSI] Refunding ${payment.amount} to source account ${payment.accountId}.`);
+                        await tx.account.update({
+                            where: { id: payment.accountId },
+                            data: { balance: { increment: payment.amount } },
+                        });
                     }
                 }
             }
 
-            // Delete all generated transactions for this installment purchase
+            // Step 3: Calculate the net debt impact on the credit card and create one final transaction to reverse it.
+            // The net debt added to the card is Total Amount - Paid Amount. We need to reverse this.
+            const remainingDebt = purchase.totalAmount - purchase.paidAmount;
+            
+            console.log(`[DELETE MSI] Original amount: ${purchase.totalAmount}, Paid: ${purchase.paidAmount}, Remaining Debt: ${remainingDebt}`);
+
+            // To revert the net debt on a CREDIT account, we must DECREMENT its balance.
+            if (purchase.account.type === 'CREDIT') {
+                console.log(`[DELETE MSI] Reverting remaining debt of ${remainingDebt} on CREDIT account ${purchase.accountId}.`);
+                await tx.account.update({
+                    where: { id: purchase.accountId },
+                    data: { balance: { decrement: remainingDebt } },
+                });
+            } else {
+                // This case should ideally not happen based on creation logic, but handle it for safety.
+                console.log(`[DELETE MSI] Reverting remaining debt of ${remainingDebt} on non-credit account ${purchase.accountId}.`);
+                await tx.account.update({
+                    where: { id: purchase.accountId },
+                    data: { balance: { increment: remainingDebt } },
+                });
+            }
+            
+            // Step 4: Hard delete all transactions associated with this installment purchase.
             await tx.transaction.deleteMany({
                 where: { installmentPurchaseId: id },
             });
 
-            // Delete the installment purchase itself
+            // Step 5: Delete the installment purchase record itself.
             await tx.installmentPurchase.delete({
                 where: { id },
             });
+
+            console.log(`[DELETE MSI] Successfully deleted purchase ${id} and reverted financial impact.`);
         });
         res.status(204).send();
     } catch (error: any) {

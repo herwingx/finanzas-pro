@@ -1,20 +1,35 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCategories, useAccounts, useAddRecurringTransaction } from '../hooks/useApi';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useCategories, useAccounts, useAddRecurringTransaction, useUpdateRecurringTransaction, useRecurringTransaction } from '../hooks/useApi';
 import { FrequencyType, TransactionType } from '../types';
 import { toastSuccess, toastError, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { DatePicker } from '../components/DatePicker';
 import { CategorySelector } from '../components/CategorySelector';
 import { ToggleButtonGroup } from '../components/Button';
+import { formatDateUTC } from '../utils/dateUtils';
 
 const NewRecurringPage: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = !!id;
 
   // Queries
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { data: recurringToEdit, isLoading: isLoadingRecurring, isError, error } = useRecurringTransaction(id || null, { enabled: isEditMode });
+
+  console.log('Edit Recurring:', {
+    isEditMode,
+    id,
+    isLoading: isLoadingRecurring,
+    isError,
+    error: error as any,
+    data: recurringToEdit,
+  });
+
   const addMutation = useAddRecurringTransaction();
+  const updateMutation = useUpdateRecurringTransaction();
 
   // State
   const [type, setType] = useState<TransactionType>('expense');
@@ -39,7 +54,24 @@ const NewRecurringPage: React.FC = () => {
     if (availableCategories.length > 0 && !categoryId) setCategoryId(availableCategories[0].id);
   }, [availableCategories, categoryId]);
 
-  useEffect(() => setCategoryId(''), [type]);
+  useEffect(() => {
+    // No setCategoryId on type change if editing
+    if (!isEditMode) {
+      setCategoryId('');
+    }
+  }, [type, isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode && recurringToEdit) {
+      setType(recurringToEdit.type);
+      setAmount(String(recurringToEdit.amount));
+      setDescription(recurringToEdit.description);
+      setCategoryId(recurringToEdit.categoryId);
+      setAccountId(recurringToEdit.accountId);
+      setFrequency(recurringToEdit.frequency);
+      setStartDate(new Date(recurringToEdit.startDate));
+    }
+  }, [recurringToEdit, isEditMode]);
 
   // Logic
   const calculateNextDueDate = () => {
@@ -67,26 +99,33 @@ const NewRecurringPage: React.FC = () => {
 
     const nextDueDate = calculateNextDueDate();
 
+    const recurringData = {
+      amount: numAmount,
+      description: description || (type === 'expense' ? 'Gasto Recurrente' : 'Ingreso Recurrente'),
+      categoryId,
+      accountId,
+      startDate: startDate.toISOString(),
+      type,
+      frequency,
+      active: true,
+      nextDueDate: nextDueDate.toISOString(),
+    };
+
     try {
-      await addMutation.mutateAsync({
-        amount: numAmount,
-        description: description || (type === 'expense' ? 'Gasto Recurrente' : 'Ingreso Recurrente'),
-        categoryId,
-        accountId,
-        startDate: startDate.toISOString(),
-        type,
-        frequency,
-        active: true,
-        nextDueDate: nextDueDate.toISOString(),
-      });
-      toastSuccess('Recurrente programado', { description: `Próximo: ${nextDueDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}` });
+      if (isEditMode) {
+        await updateMutation.mutateAsync({ id: id!, transaction: recurringData });
+        toastSuccess('Recurrente actualizado');
+      } else {
+        await addMutation.mutateAsync(recurringData);
+        toastSuccess('Recurrente programado', { description: `Próximo: ${formatDateUTC(nextDueDate, { style: 'short' })}` });
+      }
       navigate('/recurring');
     } catch (error: any) {
       toastError(error.message);
     }
   };
 
-  if (isLoadingCategories || isLoadingAccounts) {
+  if (isLoadingCategories || isLoadingAccounts || (isEditMode && isLoadingRecurring)) {
     return <div className="min-h-dvh flex items-center justify-center text-app-muted animate-pulse">Cargando...</div>;
   }
 
@@ -100,7 +139,7 @@ const NewRecurringPage: React.FC = () => {
 
   return (
     <div className="min-h-dvh bg-app-bg pb-safe text-app-text font-sans">
-      <PageHeader title="Nuevo Fijo" showBackButton={true} />
+      <PageHeader title={isEditMode ? "Editar Fijo" : "Nuevo Fijo"} showBackButton={true} />
 
       <main className="px-5 py-6 w-full max-w-lg mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -218,7 +257,7 @@ const NewRecurringPage: React.FC = () => {
             <div className="mt-3 pt-3 border-t border-app-subtle">
               <p className="text-xs text-app-muted flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px] text-app-primary">next_plan</span>
-                Próxima generación: <strong className="text-app-text">{calculateNextDueDate().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'long' })}</strong>
+                Próxima generación: <strong className="text-app-text">{formatDateUTC(calculateNextDueDate(), { style: 'full' })}</strong>
               </p>
             </div>
           </div>
@@ -226,10 +265,13 @@ const NewRecurringPage: React.FC = () => {
           <div className="pt-6 pb-4">
             <button
               type="submit"
-              disabled={addMutation.isPending}
+              disabled={addMutation.isPending || updateMutation.isPending}
               className="w-full py-4 bg-app-primary hover:bg-app-primary-dark text-white font-bold text-lg rounded-2xl shadow-lg shadow-app-primary/30 active:scale-95 transition-all disabled:opacity-50"
             >
-              {addMutation.isPending ? 'Programando...' : 'Guardar Fijo'}
+              {isEditMode
+                ? (updateMutation.isPending ? 'Actualizando...' : 'Guardar Cambios')
+                : (addMutation.isPending ? 'Programando...' : 'Guardar Fijo')
+              }
             </button>
           </div>
 

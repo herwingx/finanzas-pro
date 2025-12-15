@@ -135,6 +135,7 @@ const MainApp: React.FC = () => {
             {/* Gestión de Datos */}
             <Route path="/recurring" element={<Recurring />} />
             <Route path="/recurring/new" element={<NewRecurringPage />} />
+            <Route path="/recurring/edit/:id" element={<NewRecurringPage />} />
             <Route path="/categories" element={<Categories />} />
 
             <Route path="/accounts" element={<AccountsPage />} />

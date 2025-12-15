@@ -192,10 +192,10 @@ const NewTransaction: React.FC = () => {
             <div className="inline-flex items-center justify-center relative">
               <span className="text-3xl text-app-muted font-bold absolute -left-6 top-1.5">$</span>
               <input
-                type="number" inputMode="decimal" step="0.01"
+                type="number" inputMode="decimal" step="0.01" min="0" onWheel={(e) => e.currentTarget.blur()}
                 value={amount} onChange={e => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="bg-transparent text-5xl font-black text-app-text text-center w-48 outline-none placeholder-app-muted/20"
+                className="bg-transparent text-5xl font-black text-app-text text-center w-48 outline-none placeholder-app-muted/20 no-spin-button"
                 autoFocus={!editId}
               />
             </div>

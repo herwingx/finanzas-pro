@@ -160,12 +160,12 @@ const NewRecurringPage: React.FC = () => {
             <div className="flex items-center justify-center">
               <span className="text-2xl font-bold text-app-muted mr-2">$</span>
               <input
-                type="number" inputMode="decimal"
+                type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 autoFocus
-                className="bg-transparent text-4xl font-black text-app-text outline-none text-center w-40 placeholder-app-muted/20"
+                className="bg-transparent text-4xl font-black text-app-text outline-none text-center w-40 placeholder-app-muted/20 no-spin-button"
               />
             </div>
           </div>

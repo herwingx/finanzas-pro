@@ -318,9 +318,9 @@ const UpsertAccountPage: React.FC = () => {
                         <div className={`flex items-center bg-app-surface border border-app-border rounded-2xl px-4 py-4 ${isEditMode ? 'opacity-70 bg-app-subtle cursor-not-allowed' : 'focus-within:ring-2 focus-within:ring-app-primary'}`}>
                             <span className="text-xl font-bold text-app-muted mr-2">$</span>
                             <input
-                                type="number" inputMode="decimal" step="0.01"
+                                type="number" inputMode="decimal" step="0.01" min="0" onWheel={(e) => e.currentTarget.blur()}
                                 value={balance} onChange={e => setBalance(e.target.value)} placeholder="0.00" disabled={isEditMode}
-                                className="bg-transparent text-2xl font-bold text-app-text outline-none w-full placeholder-app-muted/30"
+                                className="bg-transparent text-2xl font-bold text-app-text outline-none w-full placeholder-app-muted/30 no-spin-button"
                             />
                         </div>
                         {isEditMode && (
@@ -338,17 +338,17 @@ const UpsertAccountPage: React.FC = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-[10px] font-bold text-app-muted block mb-1">Día Corte</label>
-                                    <input type="number" placeholder="14" value={cutoffDay} onChange={e => setCutoffDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold" />
+                                    <input type="number" min="1" max="31" onWheel={(e) => e.currentTarget.blur()} placeholder="14" value={cutoffDay} onChange={e => setCutoffDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold no-spin-button" />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-bold text-app-muted block mb-1">Día Pago</label>
-                                    <input type="number" placeholder="4" value={paymentDay} onChange={e => setPaymentDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold" />
+                                    <input type="number" min="1" max="31" onWheel={(e) => e.currentTarget.blur()} placeholder="4" value={paymentDay} onChange={e => setPaymentDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold no-spin-button" />
                                 </div>
                             </div>
 
                             <div>
                                 <label className="text-[10px] font-bold text-app-muted block mb-1">Límite de Crédito</label>
-                                <input type="number" placeholder="50000" value={creditLimit} onChange={e => setCreditLimit(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 font-bold" />
+                                <input type="number" min="0" step="0.01" onWheel={(e) => e.currentTarget.blur()} placeholder="50000" value={creditLimit} onChange={e => setCreditLimit(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 font-bold no-spin-button" />
                             </div>
                         </div>
                     )}
@@ -373,8 +373,8 @@ const UpsertAccountPage: React.FC = () => {
                         <div className="mb-4">
                             <label className="text-[10px] font-bold uppercase text-app-muted block mb-1">Nuevo Saldo Real</label>
                             <input
-                                type="number" autoFocus value={adjustmentAmount} onChange={e => setAdjustmentAmount(e.target.value)}
-                                className="w-full p-3 bg-app-bg border border-app-border rounded-xl font-bold text-xl outline-none focus:border-app-primary"
+                                type="number" autoFocus min="0" step="0.01" onWheel={(e) => e.currentTarget.blur()} value={adjustmentAmount} onChange={e => setAdjustmentAmount(e.target.value)}
+                                className="w-full p-3 bg-app-bg border border-app-border rounded-xl font-bold text-xl outline-none focus:border-app-primary no-spin-button"
                             />
                         </div>
                         <input

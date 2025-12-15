@@ -18,6 +18,7 @@ interface DatePickerProps {
   className?: string;
   placeholder?: string;
   disabledDays?: (date: Date) => boolean; // Lógica custom para deshabilitar
+  disabled?: boolean;
 }
 
 export function DatePicker({
@@ -25,7 +26,8 @@ export function DatePicker({
   onDateChange,
   className,
   placeholder = "Seleccionar fecha",
-  disabledDays
+  disabledDays,
+  disabled
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -44,12 +46,14 @@ export function DatePicker({
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           className={cn(
             "relative flex w-full items-center justify-between",
             "bg-app-surface border border-app-border text-app-text",
             "rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
             "hover:bg-app-subtle hover:border-app-border-medium",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/50 focus-visible:border-app-primary",
+            "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-app-subtle",
             // Estado cuando está vacío vs lleno
             !date && "text-app-muted",
             className

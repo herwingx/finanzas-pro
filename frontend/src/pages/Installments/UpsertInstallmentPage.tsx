@@ -296,12 +296,12 @@ const UpsertInstallmentPage: React.FC = () => {
                             <div>
                                 <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Total ($)</label>
                                 <input
-                                    type="number" step="0.01" inputMode="decimal"
+                                    type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()}
                                     value={totalAmount}
                                     onChange={e => setTotalAmount(e.target.value)}
                                     placeholder="0.00"
                                     disabled={isEditMode} // Usually total shouldn't change easily to avoid calc errors
-                                    className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-60 outline-none"
+                                    className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-60 outline-none no-spin-button"
                                 />
                             </div>
                             <div>

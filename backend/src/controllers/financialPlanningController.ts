@@ -5,43 +5,102 @@ import { AuthRequest } from '../middleware/auth';
 
 
 
-// Calculate period dates based on type - RELATIVE to current date
-function calculatePeriod(type: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual') {
+// Calculate period dates based on type and mode
+// - mode 'calendar': Calendar-based periods (for Planning - "how is this month going")
+// - mode 'projection': Rolling projection from today (for Analysis - "how will I be in X time")
+function calculatePeriod(
+  type: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual',
+  mode: 'calendar' | 'projection' = 'calendar'
+) {
   const now = new Date();
   const currentDay = now.getDate();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
 
-  let periodStart: Date = startOfDay(now);
+  let periodStart: Date;
   let periodEnd: Date;
 
+  // PROJECTION MODE: Rolling from today (for Financial Analysis)
+  if (mode === 'projection') {
+    periodStart = startOfDay(now);
+    switch (type) {
+      case 'semanal':
+        periodEnd = endOfDay(addDays(now, 7));
+        break;
+      case 'quincenal':
+        periodEnd = endOfDay(addDays(now, 15));
+        break;
+      case 'mensual':
+        periodEnd = endOfDay(addMonths(now, 1));
+        break;
+      case 'bimestral':
+        periodEnd = endOfDay(addMonths(now, 2));
+        break;
+      case 'semestral':
+        periodEnd = endOfDay(addMonths(now, 6));
+        break;
+      case 'anual':
+        periodEnd = endOfDay(addMonths(now, 12));
+        break;
+      default:
+        throw new Error('Invalid period type');
+    }
+    return { periodStart, periodEnd };
+  }
+
+  // CALENDAR MODE: Calendar-based periods (for Planning Widget)
   switch (type) {
     case 'semanal':
-      // Today + 7 days
-      periodEnd = endOfDay(addDays(now, 7));
+      // Calendar week: Monday to Sunday
+      const dayOfWeek = now.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      periodStart = startOfDay(addDays(now, -daysToMonday));
+      periodEnd = endOfDay(addDays(periodStart, 6));
       break;
 
     case 'quincenal':
-      // Today + 15 days
-      periodEnd = endOfDay(addDays(now, 15));
+      // Calendar-based fortnights: 1-15 or 16-end
+      if (currentDay <= 15) {
+        periodStart = startOfDay(new Date(currentYear, currentMonth, 1));
+        periodEnd = endOfDay(new Date(currentYear, currentMonth, 15));
+      } else {
+        periodStart = startOfDay(new Date(currentYear, currentMonth, 16));
+        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        periodEnd = endOfDay(new Date(currentYear, currentMonth, lastDayOfMonth));
+      }
       break;
 
     case 'mensual':
-      // Today + 1 month (same day next month)
-      periodEnd = endOfDay(addMonths(now, 1));
+      // Current calendar month
+      periodStart = startOfDay(new Date(currentYear, currentMonth, 1));
+      const lastDayOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      periodEnd = endOfDay(new Date(currentYear, currentMonth, lastDayOfCurrentMonth));
       break;
 
     case 'bimestral':
-      // Today + 2 months
-      periodEnd = endOfDay(addMonths(now, 2));
+      // Current bimester
+      const bimesterIndex = Math.floor(currentMonth / 2);
+      const bimesterStartMonth = bimesterIndex * 2;
+      periodStart = startOfDay(new Date(currentYear, bimesterStartMonth, 1));
+      const lastDayOfBimester = new Date(currentYear, bimesterStartMonth + 2, 0).getDate();
+      periodEnd = endOfDay(new Date(currentYear, bimesterStartMonth + 1, lastDayOfBimester));
       break;
 
     case 'semestral':
-      // Today + 6 months
-      periodEnd = endOfDay(addMonths(now, 6));
+      // Current semester: Jan-Jun or Jul-Dec
+      if (currentMonth < 6) {
+        periodStart = startOfDay(new Date(currentYear, 0, 1));
+        periodEnd = endOfDay(new Date(currentYear, 5, 30));
+      } else {
+        periodStart = startOfDay(new Date(currentYear, 6, 1));
+        periodEnd = endOfDay(new Date(currentYear, 11, 31));
+      }
       break;
 
     case 'anual':
-      // Today + 12 months (same day next year)
-      periodEnd = endOfDay(addMonths(now, 12));
+      // Current calendar year
+      periodStart = startOfDay(new Date(currentYear, 0, 1));
+      periodEnd = endOfDay(new Date(currentYear, 11, 31));
       break;
 
     default:
@@ -79,7 +138,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     }
 
     const periodType = (req.query.period as 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual') || 'quincenal';
-    const { periodStart, periodEnd } = calculatePeriod(periodType);
+    const mode = (req.query.mode as 'calendar' | 'projection') || 'calendar';
+    const { periodStart, periodEnd } = calculatePeriod(periodType, mode);
 
     // Get all active recurring transactions
     const recurringTransactions = await prisma.recurringTransaction.findMany({

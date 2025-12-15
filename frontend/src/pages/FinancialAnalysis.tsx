@@ -7,7 +7,8 @@ import { formatDateUTC } from '../utils/dateUtils';
 
 const FinancialAnalysis: React.FC = () => {
   const [periodType, setPeriodType] = useState<'quincenal' | 'mensual' | 'bimestral' | 'semestral' | 'anual'>('mensual');
-  const { data: summary, isLoading } = useFinancialPeriodSummary(periodType);
+  // Use 'projection' mode for analysis - shows future projections from today
+  const { data: summary, isLoading } = useFinancialPeriodSummary(periodType, 'projection');
 
   const chartData = useMemo(() => {
     if (!summary) return [];
@@ -89,11 +90,12 @@ const FinancialAnalysis: React.FC = () => {
   };
 
   const periodLabels: Record<string, string> = {
-    quincenal: '15 días',
-    mensual: '1 mes',
-    bimestral: '2 meses',
-    semestral: '6 meses',
-    anual: '1 año'
+    semanal: 'Próximos 7 días',
+    quincenal: 'Próximos 15 días',
+    mensual: 'Próximo mes',
+    bimestral: 'Próximos 2 meses',
+    semestral: 'Próximos 6 meses',
+    anual: 'Próximo año'
   };
 
   if (isLoading) {

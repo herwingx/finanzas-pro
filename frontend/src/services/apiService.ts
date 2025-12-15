@@ -357,8 +357,11 @@ export interface FinancialPeriodSummary {
     warnings: string[];
 }
 
-export const getFinancialPeriodSummary = async (periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual' = 'quincenal'): Promise<FinancialPeriodSummary> => {
-    const response = await fetch(`${API_URL}/financial-planning/summary?period=${periodType}`, {
+export const getFinancialPeriodSummary = async (
+    periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual' = 'quincenal',
+    mode: 'calendar' | 'projection' = 'calendar'
+): Promise<FinancialPeriodSummary> => {
+    const response = await fetch(`${API_URL}/financial-planning/summary?period=${periodType}&mode=${mode}`, {
         headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to fetch financial period summary');

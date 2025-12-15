@@ -91,8 +91,8 @@ const MainBalanceCard: React.FC<{
 
         <div className="flex items-center gap-3 mt-6">
           <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${isPositive
-              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-              : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'
+            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+            : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'
             }`}>
             <span className="material-symbols-outlined text-[14px]">
               {isPositive ? 'trending_up' : 'trending_down'}
@@ -182,60 +182,58 @@ const TopCategoriesChart: React.FC<{
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-6">
-        {/* Donut Chart */}
-        <div className="h-32 w-32 relative shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                innerRadius={35}
-                outerRadius={50}
-                paddingAngle={3}
-                cornerRadius={4}
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value: number) => format(value)}
-                contentStyle={{
-                  backgroundColor: 'var(--bg-surface)',
-                  borderColor: 'var(--border-default)',
-                  borderRadius: '8px',
-                  fontSize: '11px'
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[10px] text-app-muted font-bold">TOTAL</span>
-            <span className="text-xs font-bold text-app-text font-numbers">{format(total)}</span>
-          </div>
+    <div className="flex flex-col h-full gap-4">
+      {/* Donut Chart - Centrado arriba */}
+      <div className="h-28 w-28 relative mx-auto shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              innerRadius={32}
+              outerRadius={45}
+              paddingAngle={3}
+              cornerRadius={4}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) => format(value)}
+              contentStyle={{
+                backgroundColor: 'var(--bg-surface)',
+                borderColor: 'var(--border-default)',
+                borderRadius: '8px',
+                fontSize: '11px'
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-[9px] text-app-muted font-bold">TOTAL</span>
+          <span className="text-xs font-bold text-app-text font-numbers">{format(total)}</span>
         </div>
+      </div>
 
-        {/* Legend */}
-        <div className="flex-1 space-y-2">
-          {data.map((item, i) => (
-            <div key={i} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="size-6 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${item.color}20`, color: item.color }}
-                >
-                  <span className="material-symbols-outlined text-[12px]">{item.icon}</span>
-                </span>
-                <span className="text-app-text font-medium truncate">{item.name}</span>
-              </div>
-              <span className="font-bold text-app-text font-numbers shrink-0 ml-2">
-                {format(item.value)}
+      {/* Legend - Lista debajo */}
+      <div className="flex-1 space-y-2">
+        {data.map((item, i) => (
+          <div key={i} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className="size-6 rounded-lg flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${item.color}20`, color: item.color }}
+              >
+                <span className="material-symbols-outlined text-[12px]">{item.icon}</span>
               </span>
+              <span className="text-app-text font-medium truncate">{item.name}</span>
             </div>
-          ))}
-        </div>
+            <span className="font-bold text-app-text font-numbers shrink-0 ml-2">
+              {format(item.value)}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

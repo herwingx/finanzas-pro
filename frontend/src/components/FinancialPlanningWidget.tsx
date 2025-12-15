@@ -7,15 +7,20 @@ import { formatDateUTC } from '../utils/dateUtils';
 
 // --- Sub-components ---
 
-const StatusBadge = ({ days, overdue }: { days: number, overdue: boolean }) => {
+const StatusBadge = ({ days, isToday }: { days: number, isToday?: boolean }) => {
   let colorClass = "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400";
   let icon = "check_circle";
   let label = `${days}d`;
 
-  if (overdue) {
+  if (days < 0) {
+    // Overdue - date already passed
     colorClass = "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400";
     icon = "warning";
-    label = "¡Hoy!";
+    label = "VENCIDO";
+  } else if (isToday || days === 0) {
+    colorClass = "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400";
+    icon = "today";
+    label = "Hoy";
   } else if (days <= 3) {
     colorClass = "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400";
     icon = "schedule";
@@ -152,7 +157,8 @@ const CreditCardBill = ({
   const paymentDate = new Date(group.dueDate);
   const now = new Date();
   const daysUntil = Math.ceil((paymentDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  const isDue = daysUntil <= 0;
+  const isOverdue = daysUntil < 0; // Payment date already passed
+  const isToday = daysUntil === 0;
 
   // Agrupar items por fecha de pago para vista de período largo
   const itemsByDate = useMemo(() => {
@@ -169,13 +175,15 @@ const CreditCardBill = ({
   return (
     <div className={`
       relative bg-app-surface border transition-all duration-300 rounded-2xl overflow-hidden
-      ${!isLongPeriod && isDue ? 'border-l-4 border-l-rose-500 border-app-border' : 'border border-app-border hover:border-app-primary/40'}
+      ${!isLongPeriod && isOverdue ? 'border-l-4 border-l-rose-500 border-app-border' : ''}
+      ${!isLongPeriod && isToday ? 'border-l-4 border-l-amber-500 border-app-border' : ''}
+      ${!isOverdue && !isToday ? 'border border-app-border hover:border-app-primary/40' : ''}
       shadow-sm
     `}>
       <div onClick={onToggleExpand} className="p-4 cursor-pointer select-none">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <div className="size-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-600 dark:text-indigo-400">
               <span className="material-symbols-outlined text-xl">credit_card</span>
             </div>
             <div>
@@ -189,7 +197,7 @@ const CreditCardBill = ({
               )}
             </div>
           </div>
-          {!isLongPeriod && <StatusBadge days={daysUntil} overdue={isDue} />}
+          {!isLongPeriod && <StatusBadge days={daysUntil} isToday={isToday} />}
         </div>
 
         <div className="flex items-end justify-between pt-2 border-t border-app-border/50">
@@ -293,6 +301,8 @@ export const FinancialPlanningWidget: React.FC = () => {
   const [periodType, setPeriodType] = useState<'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual'>('quincenal');
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [selectedSourceAccounts, setSelectedSourceAccounts] = useState<Record<string, string>>({});
+  const [showAllExpenses, setShowAllExpenses] = useState(false);
+  const [showAllIncome, setShowAllIncome] = useState(false);
 
   const { data: summary, isLoading, isError } = useFinancialPeriodSummary(periodType);
   const { data: accounts } = useAccounts();
@@ -406,6 +416,7 @@ export const FinancialPlanningWidget: React.FC = () => {
 
   const hasCards = Object.keys(groupedCreditCardPayments).length > 0;
   const hasExpenses = summary.expectedExpenses.length > 0;
+  const hasIncome = summary.expectedIncome.length > 0;
   const cardTotal = summary.msiPaymentsDue?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
   const fixedTotal = summary.expectedExpenses?.reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
 
@@ -442,6 +453,35 @@ export const FinancialPlanningWidget: React.FC = () => {
           <option value="anual">Año</option>
         </select>
       </div>
+
+      {/* Period Progress Indicator */}
+      {(() => {
+        const periodStart = new Date(summary.periodStart);
+        const periodEnd = new Date(summary.periodEnd);
+        const now = new Date();
+        const totalDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+        const daysPassed = Math.max(0, Math.ceil((now.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)));
+        const daysRemaining = Math.max(0, totalDays - daysPassed);
+        const progressPercent = Math.min(100, Math.max(0, (daysPassed / totalDays) * 100));
+
+        return (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-app-muted font-medium">
+                <span className="material-symbols-outlined text-[11px] align-middle mr-0.5">calendar_today</span>
+                Día {daysPassed} de {totalDays}
+              </span>
+              <span className="text-app-primary font-bold">{daysRemaining === 0 ? '¡Último día!' : `${daysRemaining} días restantes`}</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-app-border/30 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-app-primary to-indigo-400 transition-all duration-500 rounded-full"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -543,6 +583,67 @@ export const FinancialPlanningWidget: React.FC = () => {
         </div>
       )}
 
+      {/* Expected Income Section */}
+      {hasIncome && (
+        <div>
+          <div className="flex items-center justify-between px-1 mb-2">
+            <h4 className="text-xs font-bold text-app-muted uppercase tracking-wider">Ingresos Esperados</h4>
+            <Link to="/recurring/new" className="text-xs text-app-primary font-medium hover:underline flex items-center gap-1">
+              <span className="material-symbols-outlined text-[12px]">add</span>
+              Añadir
+            </Link>
+          </div>
+          <div className="border border-emerald-200 dark:border-emerald-900 rounded-xl bg-emerald-50/30 dark:bg-emerald-900/10 divide-y divide-emerald-100 dark:divide-emerald-900/50 overflow-hidden">
+            {(showAllIncome ? summary.expectedIncome : summary.expectedIncome.slice(0, 3)).map((income: any) => (
+              <div
+                key={income.uniqueId || income.id}
+                className="px-3 py-2.5 flex items-center justify-between hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div
+                    className="size-8 rounded-lg flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">{income.category?.icon || 'payments'}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-app-text truncate">{income.description}</p>
+                    <div className="flex items-center gap-1.5">
+                      {income.isOverdue && (
+                        <span className="text-[9px] font-bold text-white bg-amber-500 px-1 py-0.5 rounded">PENDIENTE</span>
+                      )}
+                      <span className={`text-[11px] ${income.isOverdue ? 'text-amber-600' : 'text-app-muted'}`}>
+                        {formatDate(income.dueDate)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{formatCurrency(income.amount)}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handlePay(income.id, income.amount, income.description, income.dueDate); }}
+                    className="hidden md:flex size-7 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-500 hover:text-white"
+                    title="Marcar como recibido"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">check</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+            {summary.expectedIncome.length > 3 && (
+              <button
+                onClick={() => setShowAllIncome(!showAllIncome)}
+                className="block w-full p-2.5 text-center text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+              >
+                {showAllIncome
+                  ? 'Ver menos ↑'
+                  : `Ver ${summary.expectedIncome.length - 3} más →`
+                }
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Credit Card Bills */}
       {hasCards && (
         <div className="space-y-3">
@@ -577,13 +678,13 @@ export const FinancialPlanningWidget: React.FC = () => {
         <div>
           <div className="flex items-center justify-between px-1 mb-2">
             <h4 className="text-xs font-bold text-app-muted uppercase tracking-wider">Gastos Fijos</h4>
-            <Link to="/recurring" className="text-xs text-app-primary font-medium hover:underline flex items-center gap-1">
+            <Link to="/recurring/new" className="text-xs text-app-primary font-medium hover:underline flex items-center gap-1">
               <span className="material-symbols-outlined text-[12px]">add</span>
               Añadir
             </Link>
           </div>
           <div className="border border-app-border rounded-xl bg-app-bg divide-y divide-app-border overflow-hidden">
-            {summary.expectedExpenses.slice(0, 5).map((expense: any) => (
+            {(showAllExpenses ? summary.expectedExpenses : summary.expectedExpenses.slice(0, 5)).map((expense: any) => (
               <SwipeableExpenseRow
                 key={expense.uniqueId || expense.id}
                 item={expense}
@@ -593,9 +694,15 @@ export const FinancialPlanningWidget: React.FC = () => {
               />
             ))}
             {summary.expectedExpenses.length > 5 && (
-              <Link to="/recurring" className="block p-2.5 text-center text-xs text-app-primary font-medium hover:bg-app-subtle transition-colors">
-                Ver {summary.expectedExpenses.length - 5} más →
-              </Link>
+              <button
+                onClick={() => setShowAllExpenses(!showAllExpenses)}
+                className="block w-full p-2.5 text-center text-xs text-app-primary font-medium hover:bg-app-subtle transition-colors"
+              >
+                {showAllExpenses
+                  ? 'Ver menos ↑'
+                  : `Ver ${summary.expectedExpenses.length - 5} más →`
+                }
+              </button>
             )}
           </div>
         </div>

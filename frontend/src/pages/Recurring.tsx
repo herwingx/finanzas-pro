@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRecurringTransactions, useCategories, useDeleteRecurringTransaction, useAccounts } from '../hooks/useApi';
 import { SwipeableItem } from '../components/SwipeableItem';
@@ -6,7 +6,124 @@ import { toastSuccess, toastError } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SkeletonTransactionList } from '../components/Skeleton';
-import { formatDateUTC, isDateBeforeUTC, getTodayUTC } from '../utils/dateUtils';
+import { formatDateUTC, isDateBeforeUTC } from '../utils/dateUtils';
+
+// Detail Sheet Component
+const RecurringDetailSheet = ({
+    item,
+    category,
+    account,
+    onClose,
+    onEdit,
+    onDelete,
+    formatCurrency,
+    getFrequencyLabel
+}: any) => {
+    if (!item) return null;
+
+    const nextDue = new Date(item.nextDueDate);
+    const isOverdue = isDateBeforeUTC(nextDue, new Date());
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-md bg-app-surface rounded-t-3xl sm:rounded-3xl p-6 pb-8 animate-slide-up shadow-xl border border-app-border">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="size-14 rounded-2xl flex items-center justify-center"
+                            style={{
+                                backgroundColor: `${category?.color || '#999'}20`,
+                                color: category?.color || '#999'
+                            }}
+                        >
+                            <span className="material-symbols-outlined text-[28px]">
+                                {category?.icon || 'refresh'}
+                            </span>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-app-text">{item.description}</h3>
+                            <p className="text-xs text-app-muted capitalize">{category?.name || 'Sin categoría'}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-app-subtle rounded-full transition-colors">
+                        <span className="material-symbols-outlined text-xl text-app-muted">close</span>
+                    </button>
+                </div>
+
+                {/* Amount */}
+                <div className="text-center mb-6 py-4 bg-app-subtle rounded-2xl">
+                    <p className="text-xs text-app-muted uppercase font-bold mb-1">Monto</p>
+                    <p className={`text-3xl font-bold tabular-nums ${item.type === 'income' ? 'text-emerald-500' : 'text-app-text'}`}>
+                        {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
+                    </p>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-app-bg border border-app-border rounded-xl p-3">
+                        <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Frecuencia</p>
+                        <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-app-primary">schedule</span>
+                            <p className="text-sm font-semibold text-app-text capitalize">{getFrequencyLabel(item.frequency)}</p>
+                        </div>
+                    </div>
+                    <div className="bg-app-bg border border-app-border rounded-xl p-3">
+                        <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Cuenta</p>
+                        <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-indigo-500">account_balance</span>
+                            <p className="text-sm font-semibold text-app-text truncate">{account?.name || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div className={`col-span-2 rounded-xl p-3 border ${isOverdue ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' : 'bg-app-bg border-app-border'}`}>
+                        <p className="text-[10px] text-app-muted uppercase font-bold mb-1">
+                            {isOverdue ? 'Vencido desde' : 'Próximo pago'}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                            <span className={`material-symbols-outlined text-sm ${isOverdue ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                {isOverdue ? 'warning' : 'event'}
+                            </span>
+                            <p className={`text-sm font-semibold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-app-text'}`}>
+                                {formatDateUTC(nextDue, { style: 'long' })}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Type Badge */}
+                <div className="flex items-center justify-center gap-2 mb-6">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.type === 'income'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                        {item.type === 'income' ? '💰 Ingreso' : '💸 Gasto'}
+                    </span>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                        🔄 Recurrente
+                    </span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                    <button
+                        onClick={onEdit}
+                        className="flex-1 btn btn-secondary py-3 flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                        Editar
+                    </button>
+                    <button
+                        onClick={onDelete}
+                        className="flex-1 btn bg-rose-100 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/40 py-3 flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const Recurring: React.FC = () => {
     // --- Routing ---
@@ -20,10 +137,18 @@ const Recurring: React.FC = () => {
 
     // --- Local State ---
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [selectedItem, setSelectedItem] = useState<any>(null);
+    const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
 
     // --- Helpers ---
     const getCategory = (id: string) => categories?.find(c => c.id === id);
     const getAccount = (id: string) => accounts?.find(a => a.id === id);
+
+    const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 0
+    }).format(val);
 
     const getFrequencyLabel = (freq: string) => {
         const labels: Record<string, string> = {
@@ -33,24 +158,59 @@ const Recurring: React.FC = () => {
         return labels[freq?.toLowerCase()] || freq;
     };
 
+    // Sort and filter recurring transactions
+    const sortedRecurring = useMemo(() => {
+        if (!recurring) return [];
+
+        // First filter by type
+        let filtered = [...recurring];
+        if (filterType === 'income') {
+            filtered = filtered.filter(tx => tx.type === 'income');
+        } else if (filterType === 'expense') {
+            filtered = filtered.filter(tx => tx.type === 'expense');
+        }
+
+        // Then sort: overdue first, then by next due date (soonest first)
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.nextDueDate);
+            const dateB = new Date(b.nextDueDate);
+            const now = new Date();
+
+            const isOverdueA = isDateBeforeUTC(dateA, now);
+            const isOverdueB = isDateBeforeUTC(dateB, now);
+
+            // Overdue items first
+            if (isOverdueA && !isOverdueB) return -1;
+            if (!isOverdueA && isOverdueB) return 1;
+
+            // Then by date (soonest first)
+            return dateA.getTime() - dateB.getTime();
+        });
+    }, [recurring, filterType]);
+
+    // Count by type for filter badges
+    const incomeCount = recurring?.filter(tx => tx.type === 'income').length || 0;
+    const expenseCount = recurring?.filter(tx => tx.type === 'expense').length || 0;
+
     const handleDelete = async () => {
         if (!deletingId) return;
         try {
             await deleteMutation.mutateAsync(deletingId);
             toastSuccess('Suscripción eliminada');
             setDeletingId(null);
+            setSelectedItem(null);
         } catch (error: any) {
             toastError(error.message || "Error al eliminar");
         }
     };
 
-    // La edición redirige al usuario a la página completa de "New/Edit Recurring" para reusar lógica
     const handleEdit = (id: string) => {
-        // Implementaremos lógica de edición pasando props por URL o Context, 
-        // pero por ahora redirigimos asumiendo que `NewRecurringPage` soportará modo edición en futuro refactor 
-        // (Para este MVP Clean, lo dejaremos como borrar y crear nuevo es más seguro o añadir soporte en el futuro).
-        // Como placeholder de UX correcta:
-        navigate(`/recurring/edit/${id}`); // Necesitarías configurar esta ruta si quisieras full edit
+        setSelectedItem(null);
+        navigate(`/recurring/edit/${id}`);
+    };
+
+    const handleItemClick = (tx: any) => {
+        setSelectedItem(tx);
     };
 
     return (
@@ -80,15 +240,61 @@ const Recurring: React.FC = () => {
                         <div>
                             <h3 className="font-bold text-sm text-app-text">Control de Suscripciones</h3>
                             <p className="text-xs text-app-muted mt-1 leading-relaxed">
-                                Tus gastos fijos se generarán automáticamente en la fecha correspondiente.
+                                Toca cualquier item para ver detalles. Desliza para editar o eliminar.
                             </p>
                         </div>
                     </div>
                 </div>
 
+                {/* Filter Tabs */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => setFilterType('all')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${filterType === 'all'
+                            ? 'bg-app-primary text-white shadow-sm'
+                            : 'bg-app-subtle text-app-muted hover:text-app-text'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-sm">list</span>
+                        Todos
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterType === 'all' ? 'bg-white/20' : 'bg-app-border'
+                            }`}>
+                            {recurring?.length || 0}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setFilterType('income')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${filterType === 'income'
+                            ? 'bg-emerald-500 text-white shadow-sm'
+                            : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-sm">trending_up</span>
+                        Ingresos
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterType === 'income' ? 'bg-white/20' : 'bg-emerald-100 dark:bg-emerald-800'
+                            }`}>
+                            {incomeCount}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setFilterType('expense')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${filterType === 'expense'
+                            ? 'bg-rose-500 text-white shadow-sm'
+                            : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-sm">trending_down</span>
+                        Gastos
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterType === 'expense' ? 'bg-white/20' : 'bg-rose-100 dark:bg-rose-800'
+                            }`}>
+                            {expenseCount}
+                        </span>
+                    </button>
+                </div>
+
                 {isLoading ? <SkeletonTransactionList count={4} /> : (
                     <div className="space-y-4">
-                        {recurring?.length === 0 ? (
+                        {sortedRecurring.length === 0 ? (
                             <div className="py-12 flex flex-col items-center text-center opacity-50 border-2 border-dashed border-app-border rounded-3xl">
                                 <span className="material-symbols-outlined text-4xl mb-3 text-app-muted">event_busy</span>
                                 <p className="text-sm font-medium">Sin recurrentes</p>
@@ -100,11 +306,10 @@ const Recurring: React.FC = () => {
                                 </button>
                             </div>
                         ) : (
-                            recurring?.map(tx => {
+                            sortedRecurring.map(tx => {
                                 const category = getCategory(tx.categoryId);
                                 const account = getAccount(tx.accountId);
                                 const nextDue = new Date(tx.nextDueDate);
-                                // Usar función centralizada para comparar fechas en UTC
                                 const isOverdue = isDateBeforeUTC(nextDue, new Date());
 
                                 return (
@@ -116,9 +321,11 @@ const Recurring: React.FC = () => {
                                         leftAction={{ icon: 'edit', color: '#3b82f6', label: 'Editar' }}
                                         className="mb-3"
                                     >
-                                        <div className={`
-                                            bg-app-surface border p-4 rounded-2xl flex items-center gap-4 cursor-default
-                                            ${isOverdue ? 'border-rose-200 dark:border-rose-900/50 bg-rose-50/30' : 'border-app-border'}
+                                        <div
+                                            onClick={() => handleItemClick(tx)}
+                                            className={`
+                                            bg-app-surface border p-4 rounded-2xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform
+                                            ${isOverdue ? 'border-rose-200 dark:border-rose-900/50 bg-rose-50/30' : 'border-app-border hover:border-app-primary/30'}
                                         `}>
                                             <div
                                                 className="size-12 rounded-2xl flex items-center justify-center shrink-0 border border-transparent"
@@ -150,10 +357,11 @@ const Recurring: React.FC = () => {
                                                 )}
                                             </div>
 
-                                            <div className="text-right">
+                                            <div className="text-right flex items-center gap-2">
                                                 <p className={`font-bold text-[15px] ${tx.type === 'income' ? 'text-emerald-500' : 'text-app-text'}`}>
                                                     ${tx.amount.toLocaleString('es-MX', { minimumFractionDigits: 0 })}
                                                 </p>
+                                                <span className="material-symbols-outlined text-app-muted text-sm">chevron_right</span>
                                             </div>
                                         </div>
                                     </SwipeableItem>
@@ -163,9 +371,26 @@ const Recurring: React.FC = () => {
                     </div>
                 )}
 
-                {/* New Floating Action (Mobile only visual anchor) */}
+                {/* Spacer for FAB */}
                 <div className="h-16" />
             </div>
+
+            {/* Detail Sheet */}
+            {selectedItem && (
+                <RecurringDetailSheet
+                    item={selectedItem}
+                    category={getCategory(selectedItem.categoryId)}
+                    account={getAccount(selectedItem.accountId)}
+                    onClose={() => setSelectedItem(null)}
+                    onEdit={() => handleEdit(selectedItem.id)}
+                    onDelete={() => {
+                        setSelectedItem(null);
+                        setDeletingId(selectedItem.id);
+                    }}
+                    formatCurrency={formatCurrency}
+                    getFrequencyLabel={getFrequencyLabel}
+                />
+            )}
 
             {deletingId && (
                 <DeleteConfirmationSheet

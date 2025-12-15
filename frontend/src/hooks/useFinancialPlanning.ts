@@ -76,10 +76,13 @@ export interface FinancialPeriodSummary {
   warnings: string[];
 }
 
-export const useFinancialPeriodSummary = (periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual' = 'quincenal') => {
+export const useFinancialPeriodSummary = (
+  periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual' = 'quincenal',
+  mode: 'calendar' | 'projection' = 'calendar'
+) => {
   return useQuery<FinancialPeriodSummary>({
-    queryKey: ['financialPeriodSummary', periodType],
-    queryFn: () => apiService.getFinancialPeriodSummary(periodType),
+    queryKey: ['financialPeriodSummary', periodType, mode],
+    queryFn: () => apiService.getFinancialPeriodSummary(periodType, mode),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };

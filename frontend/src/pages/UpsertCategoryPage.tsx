@@ -66,7 +66,7 @@ const UpsertCategoryPage: React.FC = () => {
         await addMutation.mutateAsync(formState);
         toastSuccess('Categoría creada');
       }
-      navigate(-1);
+      navigate('/categories', { replace: true });
     } catch (e: any) {
       toastError(e.message);
     }

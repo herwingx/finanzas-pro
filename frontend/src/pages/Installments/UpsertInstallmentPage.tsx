@@ -94,7 +94,7 @@ const UpsertInstallmentPage: React.FC = () => {
             } else {
                 await addMutation.mutateAsync(payload);
                 toastSuccess('Plan MSI creado');
-                navigate('/installments');
+                navigate('/installments', { replace: true });
             }
         } catch (e: any) { toastError(e.message); }
     };
@@ -104,7 +104,7 @@ const UpsertInstallmentPage: React.FC = () => {
         try {
             await deleteMutation.mutateAsync(id);
             toastSuccess('Plan eliminado');
-            navigate('/installments');
+            navigate('/installments', { replace: true });
         } catch (e: any) { toastError('No se pudo eliminar', e.message); }
     };
 

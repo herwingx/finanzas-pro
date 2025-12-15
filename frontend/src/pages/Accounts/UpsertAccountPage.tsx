@@ -94,7 +94,7 @@ const UpsertAccountPage: React.FC = () => {
                 await addAccountMutation.mutateAsync(accountData);
                 toastSuccess('Cuenta creada');
             }
-            navigate('/accounts');
+            navigate('/accounts', { replace: true });
         } catch (error: any) {
             toastError(error.message);
         }
@@ -105,7 +105,7 @@ const UpsertAccountPage: React.FC = () => {
         try {
             await deleteAccountMutation.mutateAsync(id);
             toastSuccess('Cuenta eliminada');
-            navigate('/accounts');
+            navigate('/accounts', { replace: true });
         } catch (error: any) {
             if (error.message.includes('associated') || error.message.includes('foreign key')) {
                 toastError('No se puede eliminar', 'La cuenta tiene historial registrado');
@@ -169,7 +169,7 @@ const UpsertAccountPage: React.FC = () => {
 
             toastSuccess(`Saldo ajustado a ${target}`);
             setShowAdjustment(false);
-            navigate('/accounts'); // Refresh page
+            navigate('/accounts', { replace: true });
         } catch (e) {
             toastError('Error al crear ajuste');
         }

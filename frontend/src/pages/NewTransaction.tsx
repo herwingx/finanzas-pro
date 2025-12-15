@@ -130,7 +130,7 @@ const NewTransaction: React.FC = () => {
           } else {
             await payMsiMutation.mutateAsync({ id: msiLinkId, payment: { ...payloadBase, accountId: accountId } });
             toastSuccess('Pago a MSI registrado');
-            return navigate(-1);
+            return navigate('/', { replace: true });
           }
         }
 
@@ -143,7 +143,7 @@ const NewTransaction: React.FC = () => {
         await addMutation.mutateAsync({ ...payloadBase, type, categoryId });
         toastSuccess('Guardado');
       }
-      navigate(-1);
+      navigate('/', { replace: true });
     } catch (e: any) { toastError(e.message); }
   };
 
@@ -152,7 +152,7 @@ const NewTransaction: React.FC = () => {
     try {
       await deleteMutation.mutateAsync(editId);
       toastSuccess('Eliminado');
-      navigate(-1);
+      navigate('/', { replace: true });
     } catch (e) { toastError('Error eliminando'); }
   };
 

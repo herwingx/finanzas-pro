@@ -264,181 +264,196 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     console.log(`Financial Planning: Found ${creditAccounts.length} credit accounts for user.`);
 
     const msiPaymentsDue: any[] = [];
+    const isLongPeriod = ['bimestral', 'semestral', 'anual'].includes(periodType);
 
-    for (const account of creditAccounts) {
-      if (!account.cutoffDay || !account.paymentDay) {
-        console.log(`Account ${account.name} missing cutoff/payment day config.`);
-        continue;
-      }
+    // Para períodos cortos: usar lógica de ciclos de corte
+    // Para períodos largos: usar solo proyección extendida (más abajo)
+    if (!isLongPeriod) {
+      for (const account of creditAccounts) {
+        if (!account.cutoffDay || !account.paymentDay) {
+          console.log(`Account ${account.name} missing cutoff/payment day config.`);
+          continue;
+        }
 
-      console.log(`Analyzing Account: ${account.name}. Cutoff: ${account.cutoffDay}, Payment: ${account.paymentDay}`);
+        console.log(`Analyzing Account: ${account.name}. Cutoff: ${account.cutoffDay}, Payment: ${account.paymentDay}`);
 
-      // We look for PAYMENT DATES that fall within the user's view period.
-      // E.g. User views "December". Payment Date is Dec 30.
-      const checkDates = [
-        new Date(periodStart.getFullYear(), periodStart.getMonth(), account.paymentDay),
-        new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, account.paymentDay),
-        new Date(periodStart.getFullYear(), periodStart.getMonth() - 1, account.paymentDay)
-      ];
+        // We look for PAYMENT DATES that fall within the user's view period.
+        // E.g. User views "December". Payment Date is Dec 30.
+        const checkDates = [
+          new Date(periodStart.getFullYear(), periodStart.getMonth(), account.paymentDay),
+          new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, account.paymentDay),
+          new Date(periodStart.getFullYear(), periodStart.getMonth() - 1, account.paymentDay)
+        ];
 
-      for (const payDate of checkDates) {
-        // Ensure accurate comparison by resetting hours
-        payDate.setHours(12, 0, 0, 0);
+        for (const payDate of checkDates) {
+          // Ensure accurate comparison by resetting hours
+          payDate.setHours(12, 0, 0, 0);
 
-        if (isWithinInterval(payDate, { start: periodStart, end: periodEnd })) {
-          console.log(`>> Found relevant payment date: ${payDate.toISOString().split('T')[0]}`);
+          if (isWithinInterval(payDate, { start: periodStart, end: periodEnd })) {
+            console.log(`>> Found relevant payment date: ${payDate.toISOString().split('T')[0]}`);
 
-          // 1. Calculate the Cutoff Date associated with this Payment Date
-          // Usually Payment is ~20 days after Cutoff.
-          // If Payment(30) > Cutoff(12), they are in same month.
-          // If Payment(05) < Cutoff(20), Payment is Month X+1, Cutoff is Month X.
+            // 1. Calculate the Cutoff Date associated with this Payment Date
+            // Usually Payment is ~20 days after Cutoff.
+            // If Payment(30) > Cutoff(12), they are in same month.
+            // If Payment(05) < Cutoff(20), Payment is Month X+1, Cutoff is Month X.
 
-          let cutoffDate = new Date(payDate);
-          if (account.paymentDay < account.cutoffDay) {
-            cutoffDate.setMonth(cutoffDate.getMonth() - 1);
-          }
-          cutoffDate.setDate(account.cutoffDay);
-          cutoffDate.setHours(23, 59, 59, 999); // End of the cutoff day
+            let cutoffDate = new Date(payDate);
+            if (account.paymentDay < account.cutoffDay) {
+              cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+            }
+            cutoffDate.setDate(account.cutoffDay);
+            cutoffDate.setHours(23, 59, 59, 999); // End of the cutoff day
 
-          // 2. Calculate the Previous Cutoff Date (Start of Cycle)
-          const prevCutoffDate = new Date(cutoffDate);
-          prevCutoffDate.setMonth(prevCutoffDate.getMonth() - 1);
-          // Cycle starts the DAY AFTER previous cutoff
-          const cycleStartDate = new Date(prevCutoffDate);
-          cycleStartDate.setDate(cycleStartDate.getDate() + 1);
-          cycleStartDate.setHours(0, 0, 0, 0);
+            // 2. Calculate the Previous Cutoff Date (Start of Cycle)
+            const prevCutoffDate = new Date(cutoffDate);
+            prevCutoffDate.setMonth(prevCutoffDate.getMonth() - 1);
+            // Cycle starts the DAY AFTER previous cutoff
+            const cycleStartDate = new Date(prevCutoffDate);
+            cycleStartDate.setDate(cycleStartDate.getDate() + 1);
+            cycleStartDate.setHours(0, 0, 0, 0);
 
-          console.log(`   Billing Cycle: ${cycleStartDate.toISOString().split('T')[0]} to ${cutoffDate.toISOString().split('T')[0]}`);
+            console.log(`   Billing Cycle: ${cycleStartDate.toISOString().split('T')[0]} to ${cutoffDate.toISOString().split('T')[0]}`);
 
-          // 3.0 Check for existing payments in this cycle (to exclude already-paid items)
-          const existingMsiPayments = await prisma.transaction.findMany({
-            where: {
-              destinationAccountId: account.id,
-              type: 'transfer',
-              installmentPurchaseId: { not: null },
-              date: {
-                gte: cycleStartDate,
-                lte: new Date() // Up to now
+            // 3.0 Check for existing payments in this cycle (to exclude already-paid items)
+            const existingMsiPayments = await prisma.transaction.findMany({
+              where: {
+                destinationAccountId: account.id,
+                type: 'transfer',
+                installmentPurchaseId: { not: null },
+                date: {
+                  gte: cycleStartDate,
+                  lte: new Date() // Up to now
+                },
+                deletedAt: null
               },
-              deletedAt: null
-            },
-            select: { installmentPurchaseId: true, amount: true }
-          });
-
-          const paidMsiIds = new Set(existingMsiPayments.map(p => p.installmentPurchaseId));
-          console.log(`   Already paid MSI in this cycle: ${paidMsiIds.size}`);
-
-          // Check for existing regular purchase payments (transfers without MSI link)
-          const existingRegularPayments = await prisma.transaction.aggregate({
-            _sum: { amount: true },
-            where: {
-              destinationAccountId: account.id,
-              type: 'transfer',
-              installmentPurchaseId: null,
-              date: {
-                gte: cycleStartDate,
-                lte: new Date()
-              },
-              deletedAt: null
-            }
-          });
-
-          const paidRegularAmount = existingRegularPayments._sum.amount || 0;
-
-          // 3.1 MSI Logic: Which installments fall in this cycle?
-          // An installment 'event' happens on the purchase day of each month.
-          // We check if that 'event date' falls within [cycleStartDate, cutoffDate].
-
-          const accountMsiDue = account.installmentPurchases.filter(msi => {
-            // Skip if already paid in this cycle
-            if (paidMsiIds.has(msi.id)) {
-              console.log(`      [SKIP] MSI '${msi.description}' already paid this cycle.`);
-              return false;
-            }
-
-            const purchaseDate = new Date(msi.purchaseDate);
-            const purchaseDay = purchaseDate.getDate();
-
-            // Construct potential charge dates in the months covered by the cycle
-            // The cycle can span two months (e.g. Nov 13 - Dec 12).
-
-            // We test the "Purchase Day" in the Month of the CycleStart
-            const candidate1 = new Date(cycleStartDate.getFullYear(), cycleStartDate.getMonth(), purchaseDay, 12, 0, 0);
-
-            // We test the "Purchase Day" in the Month of the CutoffDate
-            const candidate2 = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), purchaseDay, 12, 0, 0);
-
-            // Is Candidate 1 within the cycle? AND is it after/on the original purchase date?
-            const valid1 = candidate1 >= cycleStartDate && candidate1 <= cutoffDate && candidate1 >= purchaseDate;
-
-            // Is Candidate 2 within the cycle?
-            const valid2 = candidate2 >= cycleStartDate && candidate2 <= cutoffDate && candidate2 >= purchaseDate;
-
-            if (valid1 || valid2) {
-              console.log(`      [MATCH] MSI '${msi.description}' (Day ${purchaseDay}) falls in this cycle.`);
-              return true;
-            }
-            return false;
-          });
-
-          // 3.2 Regular Purchases Logic
-          const cycleExpenses = await prisma.transaction.aggregate({
-            _sum: { amount: true },
-            where: {
-              accountId: account.id,
-              type: 'expense',
-              installmentPurchaseId: null, // Only non-MSI
-              date: {
-                gte: cycleStartDate,
-                lte: cutoffDate
-              },
-              deletedAt: null
-            }
-          });
-
-          const nonMsiTotal = cycleExpenses._sum.amount || 0;
-          // Subtract already paid regular amount
-          const remainingRegularTotal = Math.max(0, nonMsiTotal - paidRegularAmount);
-
-          const msiTotal = accountMsiDue.reduce((sum, m) => sum + m.monthlyPayment, 0);
-          const totalPayable = msiTotal + remainingRegularTotal;
-
-          if (totalPayable > 0) {
-            accountMsiDue.forEach(msi => {
-              msiPaymentsDue.push({
-                id: msi.id,
-                description: `Cuota ${msi.description}`,
-                amount: msi.monthlyPayment,
-                dueDate: payDate,
-                category: msi.category,
-                accountId: account.id,
-                accountName: account.name,
-                isMsi: true,
-                msiTotal: msi.totalAmount,
-                paidAmount: msi.paidAmount
-              });
+              select: { installmentPurchaseId: true, amount: true }
             });
 
-            if (remainingRegularTotal > 0) {
-              msiPaymentsDue.push({
-                id: `cc-spent-${account.id}-${payDate.getTime()}`,
-                description: `Consumos del Periodo (${account.name})`,
-                amount: remainingRegularTotal,
-                dueDate: payDate,
+            const paidMsiIds = new Set(existingMsiPayments.map(p => p.installmentPurchaseId));
+            console.log(`   Already paid MSI in this cycle: ${paidMsiIds.size}`);
+
+            // Check for existing regular purchase payments (transfers without MSI link)
+            const existingRegularPayments = await prisma.transaction.aggregate({
+              _sum: { amount: true },
+              where: {
+                destinationAccountId: account.id,
+                type: 'transfer',
+                installmentPurchaseId: null,
+                date: {
+                  gte: cycleStartDate,
+                  lte: new Date()
+                },
+                deletedAt: null
+              }
+            });
+
+            const paidRegularAmount = existingRegularPayments._sum.amount || 0;
+
+            // 3.1 MSI Logic: Which installments fall in this cycle?
+            // An installment 'event' happens on the purchase day of each month.
+            // We check if that 'event date' falls within [cycleStartDate, cutoffDate].
+
+            const accountMsiDue = account.installmentPurchases.filter(msi => {
+              // Skip if already paid in this cycle
+              if (paidMsiIds.has(msi.id)) {
+                console.log(`      [SKIP] MSI '${msi.description}' already paid this cycle.`);
+                return false;
+              }
+
+              const purchaseDate = new Date(msi.purchaseDate);
+              const purchaseDay = purchaseDate.getDate();
+
+              // Construct potential charge dates in the months covered by the cycle
+              // The cycle can span two months (e.g. Nov 13 - Dec 12).
+
+              // We test the "Purchase Day" in the Month of the CycleStart
+              const candidate1 = new Date(cycleStartDate.getFullYear(), cycleStartDate.getMonth(), purchaseDay, 12, 0, 0);
+
+              // We test the "Purchase Day" in the Month of the CutoffDate
+              const candidate2 = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), purchaseDay, 12, 0, 0);
+
+              // Is Candidate 1 within the cycle? AND is it after/on the original purchase date?
+              const valid1 = candidate1 >= cycleStartDate && candidate1 <= cutoffDate && candidate1 >= purchaseDate;
+
+              // Is Candidate 2 within the cycle?
+              const valid2 = candidate2 >= cycleStartDate && candidate2 <= cutoffDate && candidate2 >= purchaseDate;
+
+              if (valid1 || valid2) {
+                console.log(`      [MATCH] MSI '${msi.description}' (Day ${purchaseDay}) falls in this cycle.`);
+                return true;
+              }
+              return false;
+            });
+
+            // 3.2 Regular Purchases Logic
+            const cycleExpenses = await prisma.transaction.aggregate({
+              _sum: { amount: true },
+              where: {
                 accountId: account.id,
-                accountName: account.name,
-                isMsi: false,
-                category: { name: 'Tarjeta', color: '#64748b', icon: 'credit_card' }
+                type: 'expense',
+                installmentPurchaseId: null, // Only non-MSI
+                date: {
+                  gte: cycleStartDate,
+                  lte: cutoffDate
+                },
+                deletedAt: null
+              }
+            });
+
+            const nonMsiTotal = cycleExpenses._sum.amount || 0;
+            // Subtract already paid regular amount
+            const remainingRegularTotal = Math.max(0, nonMsiTotal - paidRegularAmount);
+
+            const msiTotal = accountMsiDue.reduce((sum, m) => sum + m.monthlyPayment, 0);
+            const totalPayable = msiTotal + remainingRegularTotal;
+
+            if (totalPayable > 0) {
+              accountMsiDue.forEach(msi => {
+                // Calcular cuota actual: paidAmount / monthlyPayment + 1
+                const paidInstallments = Math.round(msi.paidAmount / msi.monthlyPayment);
+                const currentInstallment = paidInstallments + 1;
+                const isLastInstallment = currentInstallment >= msi.installments;
+
+                msiPaymentsDue.push({
+                  id: msi.id,
+                  originalId: msi.id,
+                  description: `Cuota ${currentInstallment}/${msi.installments} - ${msi.description}`,
+                  purchaseName: msi.description,
+                  amount: msi.monthlyPayment,
+                  dueDate: payDate,
+                  category: msi.category,
+                  accountId: account.id,
+                  accountName: account.name,
+                  isMsi: true,
+                  isLastInstallment,
+                  installmentNumber: currentInstallment,
+                  totalInstallments: msi.installments,
+                  msiTotal: msi.totalAmount,
+                  paidAmount: msi.paidAmount
+                });
               });
+
+              if (remainingRegularTotal > 0) {
+                msiPaymentsDue.push({
+                  id: `cc-spent-${account.id}-${payDate.getTime()}`,
+                  description: `Consumos del Periodo (${account.name})`,
+                  amount: remainingRegularTotal,
+                  dueDate: payDate,
+                  accountId: account.id,
+                  accountName: account.name,
+                  isMsi: false,
+                  category: { name: 'Tarjeta', color: '#64748b', icon: 'credit_card' }
+                });
+              }
             }
           }
         }
       }
-    }
+    } // Fin del bloque para períodos cortos
 
     // 3.5 For LONG periods (bimestral+), project ALL future MSI payments
     // This ensures we see all upcoming installments, not just the next billing cycle
-    if (['bimestral', 'semestral', 'anual'].includes(periodType)) {
+    if (isLongPeriod) {
       console.log(`Processing extended MSI projection for ${periodType} period...`);
 
       for (const account of creditAccounts) {
@@ -474,8 +489,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                   id: `${msi.id}-proj-${i}`,
                   originalId: msi.id,
                   description: isLastInstallment
-                    ? `ÚLTIMA cuota ${msi.description}`
-                    : `Cuota ${paidInstallments + i + 1}/${msi.installments} ${msi.description}`,
+                    ? `Última cuota de "${msi.description}"`
+                    : `Cuota ${paidInstallments + i + 1}/${msi.installments} - ${msi.description}`,
+                  purchaseName: msi.description,
                   amount: msi.monthlyPayment,
                   dueDate: installmentDate,
                   category: msi.category,
@@ -546,11 +562,12 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       savings: { projected: 0, ideal: (totalExpectedIncome + (totalExpectedIncome === 0 ? currentBalance : 0)) * 0.2 }
     };
 
-    // Helper to categorize
+    // Helper to categorize (normalize to uppercase for comparison)
     const categorize = (amount: number, type: string) => {
-      if (type === 'NEEDS') budgetAnalysis.needs.projected += amount;
-      else if (type === 'WANTS') budgetAnalysis.wants.projected += amount;
-      else if (type === 'SAVINGS') budgetAnalysis.savings.projected += amount;
+      const normalizedType = (type || '').toUpperCase();
+      if (normalizedType === 'NEEDS' || normalizedType === 'NEED') budgetAnalysis.needs.projected += amount;
+      else if (normalizedType === 'WANTS' || normalizedType === 'WANT') budgetAnalysis.wants.projected += amount;
+      else if (normalizedType === 'SAVINGS' || normalizedType === 'SAVING') budgetAnalysis.savings.projected += amount;
       else budgetAnalysis.needs.projected += amount; // Default to needs
     };
 

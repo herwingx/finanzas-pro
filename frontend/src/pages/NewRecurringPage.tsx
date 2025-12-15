@@ -119,7 +119,7 @@ const NewRecurringPage: React.FC = () => {
         await addMutation.mutateAsync(recurringData);
         toastSuccess('Recurrente programado', { description: `Próximo: ${formatDateUTC(nextDueDate, { style: 'short' })}` });
       }
-      navigate('/recurring');
+      navigate('/recurring', { replace: true });
     } catch (error: any) {
       toastError(error.message);
     }

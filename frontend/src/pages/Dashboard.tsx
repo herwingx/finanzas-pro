@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useTransactions, useCategories, useProfile, useAccounts } from '../hooks/useApi';
 import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
@@ -67,32 +68,46 @@ const BentoCard: React.FC<{
   </div>
 );
 
-const MainBalanceCard: React.FC<{ balance: number; netWorth: number; format: (n: number) => string }> = ({ balance, netWorth, format }) => (
-  <BentoCard className="md:col-span-2 relative overflow-hidden group">
-    <div className="relative z-10 flex flex-col justify-between h-full min-h-[160px]">
-      <div>
-        <div className="flex items-center gap-2 text-app-muted mb-1">
-          <span className="text-sm font-medium">Balance Total Disponible</span>
-          <span className="material-symbols-outlined text-[16px] cursor-help" title="Efectivo + Débito">info</span>
+const MainBalanceCard: React.FC<{
+  balance: number;
+  netWorth: number;
+  format: (n: number) => string;
+  monthChange: number;
+}> = ({ balance, netWorth, format, monthChange }) => {
+  const isPositive = monthChange >= 0;
+
+  return (
+    <BentoCard className="md:col-span-2 relative overflow-hidden group">
+      <div className="relative z-10 flex flex-col justify-between h-full min-h-[160px]">
+        <div>
+          <div className="flex items-center gap-2 text-app-muted mb-1">
+            <span className="text-sm font-medium">Balance Total Disponible</span>
+            <span className="material-symbols-outlined text-[16px] cursor-help" title="Efectivo + Débito">info</span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold text-app-text tracking-tight font-numbers mt-2">
+            {format(balance)}
+          </h2>
         </div>
-        <h2 className="text-4xl md:text-5xl font-bold text-app-text tracking-tight font-numbers mt-2">
-          {format(balance)}
-        </h2>
+
+        <div className="flex items-center gap-3 mt-6">
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${isPositive
+              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+              : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'
+            }`}>
+            <span className="material-symbols-outlined text-[14px]">
+              {isPositive ? 'trending_up' : 'trending_down'}
+            </span>
+            {isPositive ? '+' : ''}{monthChange.toFixed(1)}% este mes
+          </div>
+          <span className="text-sm text-app-muted">Patrimonio: {format(netWorth)}</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3 mt-6">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
-          <span className="material-symbols-outlined text-[14px]">trending_up</span>
-          +2.4% este mes
-        </div>
-        <span className="text-sm text-app-muted">Patrimonio: {format(netWorth)}</span>
-      </div>
-    </div>
-
-    {/* Decoración sutil abstracta (Estilo Monarch) */}
-    <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 bg-app-primary opacity-[0.03] dark:opacity-[0.1] rounded-full blur-3xl pointer-events-none group-hover:bg-app-primary group-hover:opacity-[0.06] transition-all duration-500" />
-  </BentoCard>
-);
+      {/* Decoración sutil abstracta (Estilo Monarch) */}
+      <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 bg-app-primary opacity-[0.03] dark:opacity-[0.1] rounded-full blur-3xl pointer-events-none group-hover:bg-app-primary group-hover:opacity-[0.06] transition-all duration-500" />
+    </BentoCard>
+  );
+};
 
 const QuickStat: React.FC<{
   label: string;
@@ -121,6 +136,111 @@ const QuickStat: React.FC<{
   );
 };
 
+// --- Top Categories Donut Chart ---
+const TopCategoriesChart: React.FC<{
+  transactions: any[];
+  categories: any[];
+  format: (n: number) => string;
+}> = ({ transactions, categories, format }) => {
+  const { data, total } = useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const monthExpenses = transactions
+      .filter(tx => tx.type === 'expense' && new Date(tx.date) >= startOfMonth);
+
+    const totals = monthExpenses.reduce((acc, tx) => {
+      acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const chartData = Object.entries(totals)
+      .map(([id, val]) => {
+        const cat = categories?.find(c => c.id === id);
+        return {
+          name: cat?.name || 'Otros',
+          value: val as number,
+          color: cat?.color || '#94a3b8',
+          icon: cat?.icon || 'category'
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    const totalAmount = chartData.reduce((sum, item) => sum + item.value, 0);
+
+    return { data: chartData, total: totalAmount };
+  }, [transactions, categories]);
+
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 text-app-muted">
+        <span className="material-symbols-outlined text-4xl opacity-20 mb-2">donut_large</span>
+        <p className="text-xs">Sin gastos este mes</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-6">
+        {/* Donut Chart */}
+        <div className="h-32 w-32 relative shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                innerRadius={35}
+                outerRadius={50}
+                paddingAngle={3}
+                cornerRadius={4}
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value: number) => format(value)}
+                contentStyle={{
+                  backgroundColor: 'var(--bg-surface)',
+                  borderColor: 'var(--border-default)',
+                  borderRadius: '8px',
+                  fontSize: '11px'
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-[10px] text-app-muted font-bold">TOTAL</span>
+            <span className="text-xs font-bold text-app-text font-numbers">{format(total)}</span>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex-1 space-y-2">
+          {data.map((item, i) => (
+            <div key={i} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="size-6 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${item.color}20`, color: item.color }}
+                >
+                  <span className="material-symbols-outlined text-[12px]">{item.icon}</span>
+                </span>
+                <span className="text-app-text font-medium truncate">{item.name}</span>
+              </div>
+              <span className="font-bold text-app-text font-numbers shrink-0 ml-2">
+                {format(item.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Componente Principal ---
 
 const Dashboard: React.FC = () => {
@@ -136,7 +256,7 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'USD' }).format(val);
+    new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'MXN', maximumFractionDigits: 0 }).format(val);
 
   const netWorth = useMemo(() => {
     if (!accounts) return 0;
@@ -148,22 +268,41 @@ const Dashboard: React.FC = () => {
     return accounts.filter(a => ['DEBIT', 'CASH'].includes(a.type)).reduce((sum, a) => sum + a.balance, 0);
   }, [accounts]);
 
-  const monthStats = useMemo(() => {
-    if (!transactions) return { income: 0, expense: 0 };
+  const { monthStats, monthChange } = useMemo(() => {
+    if (!transactions) return { monthStats: { income: 0, expense: 0 }, monthChange: 0 };
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-    // Filtrar transacciones del mes actual
+    // Este mes
     const thisMonthTxs = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
+    const thisMonthIncome = thisMonthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+    const thisMonthExpense = thisMonthTxs.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+
+    // Mes anterior
+    const lastMonthTxs = transactions.filter(tx => {
+      const date = new Date(tx.date);
+      return date >= startOfLastMonth && date <= endOfLastMonth;
+    });
+    const lastMonthIncome = lastMonthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+    const lastMonthExpense = lastMonthTxs.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+
+    // Calcular % de cambio en balance neto (ingresos - gastos)
+    const thisMonthNet = thisMonthIncome - thisMonthExpense;
+    const lastMonthNet = lastMonthIncome - lastMonthExpense;
+
+    let change = 0;
+    if (lastMonthNet !== 0) {
+      change = ((thisMonthNet - lastMonthNet) / Math.abs(lastMonthNet)) * 100;
+    } else if (thisMonthNet > 0) {
+      change = 100;
+    }
 
     return {
-      income: thisMonthTxs
-        .filter(tx => tx.type === 'income')
-        .reduce((sum, tx) => sum + tx.amount, 0),
-      expense: thisMonthTxs
-        .filter(tx => tx.type === 'expense')
-        .reduce((sum, tx) => sum + tx.amount, 0),
+      monthStats: { income: thisMonthIncome, expense: thisMonthExpense },
+      monthChange: change
     };
   }, [transactions]);
 
@@ -189,6 +328,7 @@ const Dashboard: React.FC = () => {
               balance={availableFunds}
               netWorth={netWorth}
               format={formatCurrency}
+              monthChange={monthChange}
             />
           </div>
 
@@ -201,15 +341,35 @@ const Dashboard: React.FC = () => {
             <FinancialPlanningWidget />
           </div>
 
-          {/* Trend Chart - 3 columnas en xl */}
+          {/* Trend Chart - 2 columnas en md, 3 en xl */}
           <BentoCard title="Tendencia de Gastos" className="md:col-span-2 xl:col-span-3 min-h-[280px] lg:min-h-[320px]">
             {transactions && <SpendingTrendChart transactions={transactions} />}
           </BentoCard>
 
-          {/* Recent Transactions - 1 columna en xl */}
+          {/* Top 5 Categories - 1 columna */}
+          <BentoCard
+            title="Top Categorías"
+            className="xl:col-span-1"
+            action={
+              <Link to="/reports" className="text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
+                Ver más
+                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </Link>
+            }
+          >
+            {transactions && categories && (
+              <TopCategoriesChart
+                transactions={transactions}
+                categories={categories}
+                format={formatCurrency}
+              />
+            )}
+          </BentoCard>
+
+          {/* Recent Transactions */}
           <BentoCard
             title="Últimos Movimientos"
-            className="md:col-span-2 xl:col-span-1"
+            className="md:col-span-2 xl:col-span-4"
             action={
               <Link to="/history" className="text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
                 Ver todo
@@ -217,7 +377,7 @@ const Dashboard: React.FC = () => {
               </Link>
             }
           >
-            <div className="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
               {transactions?.slice(0, 6).map(tx => {
                 const isExpense = tx.type === 'expense';
                 const isTransfer = tx.type === 'transfer';
@@ -227,30 +387,30 @@ const Dashboard: React.FC = () => {
                 return (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between p-2 rounded-xl transition-colors"
+                    className="flex items-center justify-between p-3 rounded-xl bg-app-subtle/30 hover:bg-app-subtle transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <div
-                        className="size-8 rounded-lg flex items-center justify-center text-sm shrink-0"
+                        className="size-9 rounded-xl flex items-center justify-center text-sm shrink-0"
                         style={{
                           backgroundColor: cat?.color ? `${cat.color}15` : 'var(--bg-subtle)',
                           color: cat?.color || 'var(--text-muted)'
                         }}
                       >
-                        <span className="material-symbols-outlined text-[16px]">
+                        <span className="material-symbols-outlined text-[18px]">
                           {isTransfer ? 'swap_horiz' : cat?.icon || 'payments'}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-app-text truncate group-hover:text-app-primary transition-colors">
+                        <p className="text-sm font-semibold text-app-text truncate">
                           {tx.description}
                         </p>
-                        <p className="text-[10px] text-app-muted truncate">
+                        <p className="text-[11px] text-app-muted truncate">
                           {cat?.name || 'Sin categoría'}
                         </p>
                       </div>
                     </div>
-                    <span className={`text-xs font-bold font-numbers shrink-0 ml-2 ${colorClass}`}>
+                    <span className={`text-sm font-bold font-numbers shrink-0 ml-2 ${colorClass}`}>
                       {isExpense ? '-' : isTransfer ? '' : '+'}{formatCurrency(tx.amount)}
                     </span>
                   </div>
@@ -258,7 +418,7 @@ const Dashboard: React.FC = () => {
               })}
 
               {!transactions?.length && (
-                <div className="flex flex-col items-center justify-center h-24 text-app-muted">
+                <div className="col-span-full flex flex-col items-center justify-center h-24 text-app-muted">
                   <span className="material-symbols-outlined text-2xl opacity-20 mb-1">savings</span>
                   <span className="text-xs">Sin movimientos</span>
                 </div>

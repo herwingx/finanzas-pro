@@ -47,6 +47,7 @@ const Reports: React.FC = () => {
     };
 
     // --- Calculation Logic (50/30/20 Rule + Projections) ---
+    // --- Calculation Logic (50/30/20 Rule + Projections) ---
     const analysis = useMemo(() => {
         if (!transactions || !categories || !recurringTxs || !installments || !loansData) return null;
 
@@ -104,40 +105,57 @@ const Reports: React.FC = () => {
 
         // Projected Totals
         // For Liquidity: Use Total Actual (including loans) vs Recurring
-        const totalProjectedIncome = Math.max(totalActualIncome, monthlyRecurringIncome);
+        let totalProjectedIncome = Math.max(totalActualIncome, monthlyRecurringIncome);
 
         // For Budget (50/30/20): Use Regular Actual (excluding loans) vs Recurring
-        const regularProjectedIncome = Math.max(regularActualIncome, monthlyRecurringIncome);
+        let regularProjectedIncome = Math.max(regularActualIncome, monthlyRecurringIncome);
 
         // --- 2. Expense Projection (The "Projected" View) ---
         // We combine:
         // A. Active Recurring Expenses (Monthly equivalent)
         // B. Active MSI Installments (Monthly payment)
-        // C. "Manual" Expenses this month (Non-recurring, Non-MSI) - e.g. unplanned groceries, dining out
+        // C. "Manual" Expenses this month (Non-recurring, Non-MSI)
+        // D. Active Loans Due this Month (Balloon payments / Full settlements)
 
-        let needs = 0, wants = 0, savings = 0, loans = 0, unclassified = 0;
+        let needs = 0, wants = 0, savings = 0, unclassified = 0;
+        let loanExpenses = 0; // Just for tracking, but will be distributed to Needs/Savings
         let projectedExpenseTotal = 0;
 
         // Helper to classify amount by category ID and Description
-        const classify = (amount: number, categoryId?: string, isLoan?: boolean, description: string = '') => {
+        const classify = (amount: number, categoryId?: string, loanId?: string, description: string = '') => {
             projectedExpenseTotal += amount;
 
-            if (isLoan) {
-                loans += amount;
-                return;
+            // 1. Handle Linked Loans (Priority)
+            if (loanId) {
+                const loan = loansData.find(l => l.id === loanId);
+                loanExpenses += amount;
+
+                if (loan) {
+                    // Logic:
+                    // - Loans I GAVE (Lent) = I am putting money away = SAVINGS (Asset)
+                    // - Loans I TOOK (Borrowed) = I am paying a debt = NEEDS (Obligation)
+                    if ((loan as any).loanType === 'lent') {
+                        savings += amount;
+                    } else {
+                        // Default to Needs for debt repayment
+                        needs += amount;
+                    }
+                    return;
+                }
             }
 
-            // Keyword check for loans if not explicitly categorized
+            // 2. Handle Manual Keyword detection for Loans (Unlock logic)
             const lowerDesc = description.toLowerCase();
             const isLoanKeyword = lowerDesc.includes('prestamo') || lowerDesc.includes('préstamo') || lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito');
 
             if (isLoanKeyword && !categoryId) {
-                loans += amount;
+                // Ambiguous manual entry. Assume Paying Debt -> Needs.
+                loanExpenses += amount;
+                needs += amount;
                 return;
             }
 
             if (!categoryId) {
-                // Double check if it matches a category name directly? No, categories have IDs.
                 unclassified += amount;
                 return;
             }
@@ -148,17 +166,12 @@ const Reports: React.FC = () => {
                 return;
             }
 
-            // Catch-all for "Préstamos" category by name
+            // 3. Handle 'Préstamos' Category explicitly
             if (cat.name === 'Préstamos' || cat.name === 'Prestamos' || cat.name === 'Deudas') {
-                loans += amount;
+                loanExpenses += amount;
+                // Assume generic Préstamos category is Debt Repayment -> Needs
+                needs += amount;
                 return;
-            }
-
-            if (isLoanKeyword) {
-                // If it has a category but description says "Prestamo", do we force it?
-                // Maybe the category is "Others" or "Unclassified".
-                // Let's stick to category type if present, unless category is generic.
-                // For now, respect category if present.
             }
 
             if (cat.budgetType === 'need') needs += amount;
@@ -178,14 +191,15 @@ const Reports: React.FC = () => {
                 case 'monthly': monthlyAmount = rt.amount; break;
                 case 'yearly': monthlyAmount = rt.amount / 12; break;
             }
-            classify(monthlyAmount, rt.categoryId, false, rt.description);
+            // Recurring usually doesn't have loanId linked directly in this model yet, passing undefined
+            classify(monthlyAmount, rt.categoryId, undefined, rt.description);
         });
 
         // B. MSI Installments
         installments.forEach(inst => {
             const remaining = inst.installments - inst.paidInstallments;
             if (remaining > 0) {
-                classify(inst.monthlyPayment, inst.categoryId, false, inst.description);
+                classify(inst.monthlyPayment, inst.categoryId, undefined, inst.description);
             }
         });
 
@@ -194,16 +208,35 @@ const Reports: React.FC = () => {
             if (tx.recurringTransactionId) return;
             if (tx.installmentPurchaseId) return;
 
-            if (tx.loanId) {
-                classify(tx.amount, undefined, true, tx.description);
-                return;
-            }
+            classify(tx.amount, tx.categoryId, tx.loanId, tx.description);
+        });
 
-            classify(tx.amount, tx.categoryId, false, tx.description);
+        // D. Loans Due This Month (Settlements)
+        loansData.forEach(loan => {
+            if (loan.status === 'paid' || loan.remainingAmount <= 0) return;
+            if (!loan.expectedPayDate) return;
+
+            const dueDate = new Date(loan.expectedPayDate);
+            // Check if due date is in current month/year
+            if (dueDate.getMonth() === now.getMonth() && dueDate.getFullYear() === now.getFullYear()) {
+
+                if ((loan as any).loanType === 'borrowed') {
+                    // I owe this money, it's a debt repayment -> NEED
+                    // We add it as if it were an expense to be covered
+                    projectedExpenseTotal += loan.remainingAmount;
+                    needs += loan.remainingAmount;
+                    loanExpenses += loan.remainingAmount;
+                } else if ((loan as any).loanType === 'lent') {
+                    // Someone owes me this money -> INCOME/RECOVERY
+                    // We add it to projected income
+                    regularProjectedIncome += loan.remainingAmount;
+                    totalProjectedIncome += loan.remainingAmount;
+                }
+            }
         });
 
         // --- 3. Disposable & Surplus Calculation ---
-        const budgetBase = Math.max(0, regularProjectedIncome - loans);
+        const budgetBase = regularProjectedIncome; // Loans are now INSIDE the buckets, so we use full Net Income
         const totalOperationalExpenses = needs + wants + savings + unclassified;
         const surplus = Math.max(0, budgetBase - totalOperationalExpenses);
 
@@ -211,13 +244,10 @@ const Reports: React.FC = () => {
         const totalSavings = savings + surplus;
 
         // Chart segments with modern colors
-        // NOTE: Exclude 'Préstamos' from the 50/30/20 chart
-        // 'Ahorro' now includes unspent disposable income (Surplus)
         const data = [
-            { name: 'Necesidades', value: needs, color: '#f43f5e', ideal: 50, icon: 'home' },
+            { name: 'Necesidades', value: needs, color: '#f43f5e', ideal: 50, icon: 'home' }, // Now includes Debt Repayment
             { name: 'Deseos', value: wants, color: '#a855f7', ideal: 30, icon: 'favorite' },
-            { name: 'Ahorro', value: totalSavings, color: '#10b981', ideal: 20, icon: 'savings' },
-            // { name: 'Préstamos', value: loans, color: '#f59e0b', ideal: 0, icon: 'credit_score' }, // Excluded
+            { name: 'Ahorro', value: totalSavings, color: '#10b981', ideal: 20, icon: 'savings' }, // Now includes Loans Given
             { name: 'Sin clasificar', value: unclassified, color: '#64748b', ideal: 0, icon: 'help' },
         ].filter(i => i.value > 0);
 
@@ -228,7 +258,7 @@ const Reports: React.FC = () => {
             totalProjectedIncome, // Total (Liquidity)
             regularProjectedIncome, // Regular (Budget Base Source)
             budgetBase, // Net Disposable Income
-            loanExpenses: loans,
+            loanExpenses,
             balance: totalProjectedIncome - projectedExpenseTotal,
             chartData: data,
             totalAllocated: needs + wants + totalSavings + unclassified, // Should equal budgetBase (if no deficit)

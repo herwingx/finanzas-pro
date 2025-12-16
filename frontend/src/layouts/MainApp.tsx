@@ -26,6 +26,7 @@ import LoanFormPage from '../pages/LoanFormPage';
 import BottomNav from '../components/BottomNav';
 import { AppLogo } from '../components/AppLogo';
 import { DesktopFAB } from '../components/DesktopFAB';
+import { MobileFAB } from '../components/MobileFAB';
 
 // Pages that show the mobile bottom nav
 const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
@@ -168,6 +169,9 @@ const MainApp: React.FC = () => {
 
       {/* 3. Mobile Bottom Nav (El componente ya maneja lg:hidden internamente) */}
       {isMainNavPage && <BottomNav />}
+
+      {/* 4. Mobile FAB for secondary pages (when BottomNav is not visible) */}
+      <MobileFAB />
 
     </div>
   );

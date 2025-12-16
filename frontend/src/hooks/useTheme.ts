@@ -27,6 +27,12 @@ const useTheme = () => {
       root.classList.add('light');
     }
 
+    // Update theme-color meta tag for iOS Safari
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', isDark ? '#09090B' : '#F9FAFB');
+    }
+
     // Save the user's preference to localStorage
     localStorage.setItem('theme', theme);
 

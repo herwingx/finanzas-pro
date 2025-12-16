@@ -10,6 +10,7 @@
 
 :root {
   /* --- 🎨 LIGHT MODE (Default) --- */
+  color-scheme: light;
 
   /* Backgrounds */
   --bg-canvas: #F9FAFB;
@@ -70,6 +71,7 @@
 
 .dark {
   /* --- 🌙 DARK MODE (Luxury Slate/Zinc) --- */
+  color-scheme: dark;
 
   /* Backgrounds - No usamos negro puro #000 */
   --bg-canvas: #09090B;

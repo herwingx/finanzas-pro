@@ -30,13 +30,13 @@ const ICONS = [
   // Transport
   'directions_car', 'flight', 'train', 'directions_bus', 'local_taxi', 'local_gas_station', 'ev_station', 'parking', 'two_wheeler', 'directions_boat',
   // Home & Utilities
-  'home', 'apartment', 'cottage', 'water_drop', 'lightbulb', 'bolt', 'wifi', 'phone_iphone', 'propane', 'cleaning_services', 'bed', 'chair', 'router',
+  'home', 'apartment', 'cottage', 'water_drop', 'lightbulb', 'bolt', 'wifi', 'phone_iphone', 'propane', 'mop', 'bed', 'chair', 'router',
   // Entertainment & Leisure
   'movie', 'theaters', 'sports_esports', 'music_note', 'headphones', 'casino', 'stadium', 'sports_soccer', 'pool', 'travel_explore',
   // Health & Wellness
   'medical_services', 'fitness_center', 'spa', 'medication', 'local_pharmacy', 'dentistry', 'psychology', 'monitor_heart',
   // Education & Work
-  'school', 'menu_book', 'science', 'backpack', 'work', 'business_center', 'laptop_mac', 'print',
+  'school', 'menu_book', 'science', 'backpack', 'work', 'engineering', 'business_center', 'laptop_mac', 'print',
   // Family, Pets & Services
   'pets', 'family_restroom', 'child_care', 'cake', 'celebration', 'content_cut', 'local_laundry_service', 'build', 'construction', 'local_shipping', 'gavel'
 ];

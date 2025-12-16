@@ -9,6 +9,7 @@ import { SwipeableItem } from '../components/SwipeableItem';
 import { CategorySelector } from '../components/CategorySelector';
 import { Button } from '../components/Button';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
+import { getValidIcon } from '../utils/icons';
 
 const Categories: React.FC = () => {
     const navigate = useNavigate();
@@ -84,7 +85,7 @@ const Categories: React.FC = () => {
                                 className="size-11 rounded-xl flex items-center justify-center shrink-0"
                                 style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
                             >
-                                <span className="material-symbols-outlined text-[22px]">{cat.icon}</span>
+                                <span className="material-symbols-outlined text-[22px]">{getValidIcon(cat.icon)}</span>
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-app-text truncate">{cat.name}</p>

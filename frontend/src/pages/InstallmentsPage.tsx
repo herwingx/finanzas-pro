@@ -7,12 +7,166 @@ import { SwipeableItem } from '../components/SwipeableItem';
 import { SkeletonAccountList } from '../components/Skeleton';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { InstallmentPurchase } from '../types';
+import { formatDateUTC } from '../utils/dateUtils';
 
+// ============== MSI DETAIL SHEET ==============
+// Similar to LoanDetailSheet and RecurringDetailSheet for consistency
+const MSIDetailSheet = ({
+    purchase,
+    onClose,
+    onEdit,
+    onDelete,
+    formatCurrency
+}: {
+    purchase: InstallmentPurchase;
+    onClose: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    formatCurrency: (val: number) => string;
+}) => {
+    if (!purchase) return null;
+
+    const paid = purchase.paidAmount;
+    const total = purchase.totalAmount;
+    const remaining = total - paid;
+    const percentPaid = Math.min(100, Math.round((paid / total) * 100));
+    const isSettled = remaining <= 0.05;
+
+    // Next payment logic
+    const nextPaymentNum = purchase.paidInstallments + 1;
+    const nextPaymentAmt = Math.min(purchase.monthlyPayment, remaining);
+
+    // Forecast next payment date
+    const nextPaymentDate = new Date(purchase.purchaseDate);
+    nextPaymentDate.setMonth(nextPaymentDate.getMonth() + nextPaymentNum);
+
+    const navigate = useNavigate();
+
+    const handleRegisterPayment = () => {
+        navigate(`/new?type=transfer&destinationAccountId=${purchase.accountId}&amount=${nextPaymentAmt.toFixed(2)}&description=${encodeURIComponent(`Pago MSI: ${purchase.description}`)}&installmentPurchaseId=${purchase.id}`);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+            <div className="relative w-full max-w-md bg-app-surface border-t sm:border border-app-border rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300">
+
+                {/* Header handle for mobile feeling */}
+                <div className="w-12 h-1.5 bg-app-border rounded-full mx-auto mb-6 opacity-50 sm:hidden" />
+
+                <div className="text-center mb-6">
+                    <div className="size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                        <span className="material-symbols-outlined">credit_score</span>
+                    </div>
+                    <h2 className="text-xl font-bold text-app-text">{purchase.description}</h2>
+                    <p className="text-sm text-app-muted">{purchase.account?.name}</p>
+                </div>
+
+                {/* Balance Card */}
+                <div className="bg-app-subtle rounded-2xl p-5 mb-4 text-center border border-app-border/50">
+                    <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Saldo Pendiente</p>
+                    <div className={`text-4xl font-black tabular-nums tracking-tight ${isSettled ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {formatCurrency(remaining)}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mt-4">
+                        <div className="w-full h-2 bg-app-bg rounded-full overflow-hidden">
+                            <div
+                                className={`h-full rounded-full transition-all duration-700 ${isSettled ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                style={{ width: `${percentPaid}%` }}
+                            />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-app-muted font-medium mt-1.5">
+                            <span>{purchase.paidInstallments} de {purchase.installments} pagos</span>
+                            <span>{percentPaid}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-app-bg border border-app-border rounded-xl p-3">
+                        <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Total</p>
+                        <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(total)}</p>
+                    </div>
+                    <div className="bg-app-bg border border-app-border rounded-xl p-3">
+                        <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Mensualidad</p>
+                        <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(purchase.monthlyPayment)}</p>
+                    </div>
+                    <div className="bg-app-bg border border-app-border rounded-xl p-3">
+                        <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Pagado</p>
+                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(paid)}</p>
+                    </div>
+                    <div className={`rounded-xl p-3 border ${!isSettled ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-app-bg border-app-border'}`}>
+                        <p className="text-[10px] text-app-muted uppercase font-bold mb-1">
+                            {isSettled ? 'Estado' : 'Próximo pago'}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                            {isSettled ? (
+                                <>
+                                    <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
+                                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Liquidado</p>
+                                </>
+                            ) : (
+                                <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                                    {formatDateUTC(nextPaymentDate, { style: 'monthYear' })}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="flex items-center justify-center gap-2 mb-6">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${isSettled
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'}`}>
+                        {isSettled ? '✅ Liquidado' : '💳 MSI Activo'}
+                    </span>
+                </div>
+
+                {/* Actions */}
+                {!isSettled && (
+                    <button
+                        onClick={handleRegisterPayment}
+                        className="w-full py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2 mb-4"
+                    >
+                        <span className="material-symbols-outlined">payments</span>
+                        Registrar Pago de {formatCurrency(nextPaymentAmt)}
+                    </button>
+                )}
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={onEdit}
+                        className="flex-1 btn btn-secondary py-3 flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                        {isSettled ? 'Ver Detalle' : 'Editar'}
+                    </button>
+                    <button
+                        onClick={onDelete}
+                        className="flex-1 btn bg-rose-100 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/40 py-3 flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============== MAIN COMPONENT ==============
 const InstallmentsPage: React.FC = () => {
     const { data: purchases, isLoading, isError } = useInstallmentPurchases();
     const { data: profile } = useProfile();
     const [activeTab, setActiveTab] = useState<'active' | 'settled'>('active');
     const [itemToDelete, setItemToDelete] = useState<InstallmentPurchase | null>(null);
+    const [selectedItem, setSelectedItem] = useState<InstallmentPurchase | null>(null);
     const navigate = useNavigate();
     const deleteMutation = useDeleteInstallmentPurchase();
 
@@ -28,6 +182,7 @@ const InstallmentsPage: React.FC = () => {
 
     // Handle Delete
     const handleDelete = (purchase: InstallmentPurchase) => {
+        setSelectedItem(null);
         setItemToDelete(purchase);
     };
 
@@ -43,6 +198,11 @@ const InstallmentsPage: React.FC = () => {
             },
             onError: () => toastError('Error eliminando plan')
         });
+    };
+
+    const handleEdit = (purchase: InstallmentPurchase) => {
+        setSelectedItem(null);
+        navigate(`/installments/edit/${purchase.id}?mode=edit`);
     };
 
     if (isLoading) {
@@ -109,10 +269,10 @@ const InstallmentsPage: React.FC = () => {
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
-                                    className="mb-3 rounded-2xl" // Margen para la tarjeta swipeable
+                                    className="mb-3 rounded-2xl"
                                 >
                                     <div
-                                        onClick={() => navigate(`/installments/edit/${purchase.id}`)}
+                                        onClick={() => setSelectedItem(purchase)}
                                         className="group bg-app-surface border border-app-border rounded-2xl p-4 md:p-5 hover:border-app-border/80 transition-all active:scale-[0.99] cursor-pointer"
                                     >
                                         <div className="flex justify-between items-start mb-4">
@@ -125,9 +285,12 @@ const InstallmentsPage: React.FC = () => {
                                                     <p className="text-xs text-app-muted">{purchase.account?.name}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(purchase.monthlyPayment)}</p>
-                                                <p className="text-[10px] text-app-muted font-medium">/ mes</p>
+                                            <div className="text-right flex items-center gap-2">
+                                                <div>
+                                                    <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(purchase.monthlyPayment)}</p>
+                                                    <p className="text-[10px] text-app-muted font-medium">/ mes</p>
+                                                </div>
+                                                <span className="material-symbols-outlined text-app-muted text-sm">chevron_right</span>
                                             </div>
                                         </div>
 
@@ -157,6 +320,17 @@ const InstallmentsPage: React.FC = () => {
 
                 {/* Spacer for safe bottom */}
                 <div className="h-16" />
+
+                {/* MSI Detail Sheet */}
+                {selectedItem && (
+                    <MSIDetailSheet
+                        purchase={selectedItem}
+                        onClose={() => setSelectedItem(null)}
+                        onEdit={() => handleEdit(selectedItem)}
+                        onDelete={() => handleDelete(selectedItem)}
+                        formatCurrency={formatCurrency}
+                    />
+                )}
 
                 {/* Delete Confirmation Sheet */}
                 {itemToDelete && (

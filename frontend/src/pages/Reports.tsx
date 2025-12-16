@@ -75,14 +75,32 @@ const Reports: React.FC = () => {
     const hasData = chartData.length > 0;
     const budgetBase = totalPeriodIncome > 0 ? totalPeriodIncome : totalCommitments;
 
-    // Calculate Saving Percentage including surplus
+    // Calculate percentages for each category
     const savingPercentage = budgetBase > 0 ? (totalSavingsWithSurplus / budgetBase) * 100 : 0;
+    const needsPercentage = budgetBase > 0 && budgetAnalysis ? (budgetAnalysis.needs.projected / budgetBase) * 100 : 0;
+    const wantsPercentage = budgetBase > 0 && budgetAnalysis ? (budgetAnalysis.wants.projected / budgetBase) * 100 : 0;
 
-    // Get motivational message
+    // Get motivational message - considers ALL categories, not just savings
     const getMotivationalMessage = () => {
+        // First check for problems with needs or wants exceeding limits
+        const needsExceeds = needsPercentage > 55; // 5% tolerance
+        const wantsExceeds = wantsPercentage > 35; // 5% tolerance
+        const savingsLow = savingPercentage < 20;
+
+        if (needsExceeds && wantsExceeds) {
+            return { text: "⚠️ Necesidades y Deseos superan los límites. Revisa tu presupuesto.", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-900/10" };
+        }
+        if (needsExceeds) {
+            return { text: `Tus necesidades consumen ${needsPercentage.toFixed(0)}% (meta: 50%). Intenta optimizar gastos fijos 💡`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/10" };
+        }
+        if (wantsExceeds) {
+            return { text: `Deseos en ${wantsPercentage.toFixed(0)}% (meta: 30%). Revisa gastos de entretenimiento 🎯`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/10" };
+        }
+        // If no issues with needs/wants, check savings
         if (savingPercentage >= 50) return { text: "¡Increíble! Estás ahorrando la mitad de tus ingresos 🚀🏆", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/20" };
-        if (savingPercentage >= 20) return { text: "¡Excelente trabajo! Estás cumpliendo tu meta de ahorro 👏", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/10" };
-        if (savingPercentage > 0) return { text: "Vas bien, pero intenta reducir gastos hormiga para llegar al 20% 💪", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-900/10" };
+        if (savingPercentage >= 20) return { text: "¡Excelente trabajo! Estás cumpliendo la regla 50/30/20 👏", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/10" };
+        if (savingPercentage > 0 && !savingsLow) return { text: "¡Vas por buen camino! Mantén el ritmo 💪", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-900/10" };
+        if (savingsLow) return { text: `Ahorro en ${savingPercentage.toFixed(0)}%. Intenta llegar al 20% 💪`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-900/10" };
         return { text: "Cuidado, revisa tus gastos para empezar a ahorrar ⚠️", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/10" };
     };
 
@@ -110,37 +128,37 @@ const Reports: React.FC = () => {
                         </p>
                     </div>
 
-                    {/* Desglose */}
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                        <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/10">
-                            <div className="flex items-center justify-center gap-1 mb-1">
+                    {/* Desglose - Improved mobile responsiveness */}
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
+                        <div className="p-2 sm:p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/10">
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 mb-1">
                                 <span className="material-symbols-outlined text-indigo-500 text-sm">account_balance_wallet</span>
-                                <span className="text-[10px] font-bold text-app-muted uppercase">En Cuenta</span>
+                                <span className="text-[8px] sm:text-[10px] font-bold text-app-muted uppercase leading-tight">En Cuenta</span>
                             </div>
-                            <p className="text-base font-bold font-numbers text-indigo-600 dark:text-indigo-400">
+                            <p className="text-sm sm:text-base font-bold font-numbers text-indigo-600 dark:text-indigo-400">
                                 {formatCurrency(currentBalance)}
                             </p>
                         </div>
-                        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/10">
-                            <div className="flex items-center justify-center gap-1 mb-1">
+                        <div className="p-2 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/10">
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 mb-1">
                                 <span className="material-symbols-outlined text-emerald-500 text-sm">add</span>
-                                <span className="text-[10px] font-bold text-app-muted uppercase">Ingresos</span>
+                                <span className="text-[8px] sm:text-[10px] font-bold text-app-muted uppercase leading-tight">Ingresos</span>
                             </div>
-                            <p className="text-base font-bold font-numbers text-emerald-600 dark:text-emerald-400">
+                            <p className="text-sm sm:text-base font-bold font-numbers text-emerald-600 dark:text-emerald-400">
                                 {formatCurrency(totalPeriodIncome)}
                             </p>
                             {totalReceivedIncome > 0 && totalExpectedIncome > 0 && (
-                                <p className="text-[9px] text-app-muted mt-1">
+                                <p className="text-[8px] sm:text-[9px] text-app-muted mt-0.5 sm:mt-1">
                                     {formatCurrency(totalReceivedIncome)} recibido
                                 </p>
                             )}
                         </div>
-                        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/10">
-                            <div className="flex items-center justify-center gap-1 mb-1">
+                        <div className="p-2 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-900/10">
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 mb-1">
                                 <span className="material-symbols-outlined text-rose-500 text-sm">remove</span>
-                                <span className="text-[10px] font-bold text-app-muted uppercase">Compromisos</span>
+                                <span className="text-[8px] sm:text-[10px] font-bold text-app-muted uppercase leading-tight">Compromisos</span>
                             </div>
-                            <p className="text-base font-bold font-numbers text-rose-600 dark:text-rose-400">
+                            <p className="text-sm sm:text-base font-bold font-numbers text-rose-600 dark:text-rose-400">
                                 {formatCurrency(totalCommitments)}
                             </p>
                         </div>
@@ -160,14 +178,14 @@ const Reports: React.FC = () => {
                             </div>
                         </div>
                         {hasData && (
-                            <div className={`px-3 py-1.5 rounded-lg text-xs font-bold text-center ${motivation.bg} ${motivation.color}`}>
+                            <div className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-center leading-snug ${motivation.bg} ${motivation.color}`}>
                                 {motivation.text}
                             </div>
                         )}
                     </div>
 
                     {hasData ? (
-                        <div className="flex flex-col lg:flex-row gap-8 items-center">
+                        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-center">
 
                             {/* Donut Chart */}
                             <div className="h-48 w-48 relative shrink-0">

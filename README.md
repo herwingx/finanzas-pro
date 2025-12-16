@@ -493,6 +493,16 @@ finanzas-pro/
 - Node.js 18+ (solo para desarrollo local)
 - Git
 
+### 📦 Estrategias de Despliegue
+
+Elige la estrategia que mejor se adapte a tus necesidades:
+
+| Opción | Uso ideal | Docker Compose File | SSL / Puertos |
+|--------|-----------|---------------------|---------------|
+| **1. Desarrollo Local** | Contribuciones al código | _No usa Docker_ | Localhost (3000/4000) |
+| **2. Self-Hosted** | Red local (LAN) o tras Proxy propio | `docker-compose.selfhosted.yml` | HTTP (Puertos expuestos) |
+| **3. Cloudflare** | Producción en Internet (Home Lab) | `docker-compose.yml` | HTTPS (Tunnel seguro) |
+
 ---
 
 ### 🔧 Opción 1: Desarrollo Local (sin Docker)

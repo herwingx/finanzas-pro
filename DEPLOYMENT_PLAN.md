@@ -407,7 +407,7 @@ DB_CONTAINER="finanzas-pro-db-1"
 
 mkdir -p $BACKUP_DIR
 
-docker exec $DB_CONTAINER pg_dump -U herwingx finanzas_pro > "$BACKUP_DIR/backup_$DATE.sql"
+docker exec $DB_CONTAINER pg_dump -U $POSTGRES_USER finanzas_pro > "$BACKUP_DIR/backup_$DATE.sql"
 
 # Mantener solo últimos 7 días
 find $BACKUP_DIR -name "backup_*.sql" -mtime +7 -delete
@@ -508,7 +508,7 @@ docker compose logs backend -f
 docker ps
 
 # Probar conexión directa
-docker exec -it finanzas-pro-db-1 psql -U herwingx -d finanzas_pro
+docker exec -it finanzas-pro-db-1 psql -U $POSTGRES_USER -d finanzas_pro
 ```
 
 ### Frontend no carga

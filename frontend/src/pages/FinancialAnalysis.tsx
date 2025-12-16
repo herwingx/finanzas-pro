@@ -4,7 +4,7 @@ import { PageHeader } from '../components/PageHeader';
 import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatDateUTC } from '../utils/dateUtils';
-
+import { InfoTooltip } from '../components/InfoTooltip';
 import { SkeletonFinancialAnalysis } from '../components/Skeleton';
 
 const FinancialAnalysis: React.FC = () => {
@@ -120,10 +120,7 @@ const FinancialAnalysis: React.FC = () => {
             </div>
             <div className="flex items-center justify-center gap-1">
               <p className="text-[10px] font-bold text-app-muted uppercase">Ingresos Esperados</p>
-              <span
-                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
-                title="Ingresos recurrentes proyectados para el período seleccionado"
-              >info</span>
+              <InfoTooltip content="Ingresos recurrentes proyectados para el período seleccionado" iconSize="12px" />
             </div>
             <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(totalIncome)}</p>
           </div>
@@ -134,10 +131,7 @@ const FinancialAnalysis: React.FC = () => {
             </div>
             <div className="flex items-center justify-center gap-1">
               <p className="text-[10px] font-bold text-app-muted uppercase">Egresos Proyectados</p>
-              <span
-                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
-                title="Compromisos + Pagos TDC proyectados para el período"
-              >info</span>
+              <InfoTooltip content="Compromisos + Pagos TDC proyectados para el período" iconSize="12px" />
             </div>
             <p className="text-base font-bold text-rose-600 dark:text-rose-400 tabular-nums">{formatCurrency(totalExpenses)}</p>
           </div>
@@ -150,10 +144,7 @@ const FinancialAnalysis: React.FC = () => {
             </div>
             <div className="flex items-center justify-center gap-1">
               <p className="text-[10px] font-bold text-app-muted uppercase">Tasa Ahorro</p>
-              <span
-                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
-                title="Porcentaje de ingresos que te queda después de egresos: (Ingresos - Egresos) / Ingresos"
-              >info</span>
+              <InfoTooltip content="Porcentaje de ingresos que te queda después de egresos: (Ingresos - Egresos) / Ingresos" iconSize="12px" />
             </div>
             <p className={`text-base font-bold tabular-nums ${savingsRate >= 20 ? 'text-indigo-600 dark:text-indigo-400' : savingsRate >= 0 ? 'text-app-text' : 'text-amber-600'}`}>
               {savingsRate.toFixed(0)}%
@@ -170,10 +161,7 @@ const FinancialAnalysis: React.FC = () => {
             </div>
             <div className="flex items-center justify-center gap-1">
               <p className="text-[10px] font-bold text-app-muted uppercase">Saldo Final</p>
-              <span
-                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
-                title="Proyección de tu balance al final del período después de todos los movimientos"
-              >info</span>
+              <InfoTooltip content="Proyección de tu balance al final del período después de todos los movimientos" iconSize="12px" />
             </div>
             <p className={`text-base font-bold tabular-nums ${summary.isSufficient ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
               {formatCurrency(summary.disposableIncome)}

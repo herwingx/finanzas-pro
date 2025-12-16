@@ -243,6 +243,150 @@ export const SkeletonAccountList = () => (
   </div>
 );
 
+// Reports Page
+export const SkeletonReports = () => (
+  <div className="min-h-dvh bg-app-bg text-app-text font-sans pb-safe">
+    {/* Header placeholder */}
+    <div className="h-14 mb-2" />
+
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 animate-pulse">
+
+      {/* Hero Stats Card */}
+      <div className="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm">
+        {/* Main result */}
+        <div className="text-center mb-5 pb-5 border-b border-app-border">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <SkeletonText w="w-40" className="h-3" />
+          </div>
+          <SkeletonText w="w-48" className="h-10 mx-auto" />
+        </div>
+
+        {/* 3-column grid */}
+        <div className="grid grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="p-3 rounded-xl bg-gray-100 dark:bg-zinc-800/50 flex flex-col items-center gap-2">
+              <SkeletonText w="w-16" className="h-3" />
+              <SkeletonText w="w-20" className="h-5" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 50/30/20 Section */}
+      <div className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gray-200 dark:bg-zinc-800 size-10" />
+            <div className="space-y-1.5">
+              <SkeletonText w="w-32" className="h-4" />
+              <SkeletonText w="w-24" className="h-3" />
+            </div>
+          </div>
+          <SkeletonText w="w-32" className="h-8 rounded-lg" />
+        </div>
+
+        {/* Chart + Legend */}
+        <div className="flex flex-col lg:flex-row gap-8 items-center">
+          {/* Donut Chart placeholder */}
+          <div className="h-48 w-48 relative shrink-0">
+            <div className="absolute inset-0 rounded-full border-[14px] border-gray-200 dark:border-zinc-800" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <SkeletonText w="w-12" className="h-3" />
+              <SkeletonText w="w-16" className="h-5 mt-1" />
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="w-full space-y-5 flex-1">
+            {[...Array(3)].map((_, i) => (
+              <div key={i}>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="size-8 rounded-lg bg-gray-200 dark:bg-zinc-800" />
+                    <SkeletonText w="w-20" />
+                  </div>
+                  <SkeletonText w="w-20" />
+                </div>
+                <div className="h-2.5 w-full bg-gray-200 dark:bg-zinc-800 rounded-full" />
+                <div className="flex justify-between mt-1.5">
+                  <SkeletonText w="w-24" className="h-3" />
+                  <SkeletonText w="w-20" className="h-3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Info Card */}
+      <div className="p-4 bg-app-subtle/50 rounded-2xl border border-app-border flex items-start gap-3">
+        <div className="size-6 rounded-full bg-gray-200 dark:bg-zinc-800 shrink-0" />
+        <div className="flex-1 space-y-2">
+          <SkeletonText w="w-full" className="h-3" />
+          <SkeletonText w="w-3/4" className="h-3" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Recurring Page
+export const SkeletonRecurring = () => (
+  <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
+    {/* Header placeholder */}
+    <div className="h-14 mb-2" />
+
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 animate-pulse">
+
+      {/* Section header */}
+      <div className="flex justify-between items-center px-1">
+        <SkeletonText w="w-32" className="h-3" />
+        <SkeletonText w="w-16" className="h-6 rounded-lg" />
+      </div>
+
+      {/* Intro Card */}
+      <div className="bento-card p-5 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
+        <div className="flex gap-4">
+          <div className="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <SkeletonText w="w-40" className="h-4" />
+            <SkeletonText w="w-full" className="h-3" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        {['w-20', 'w-24', 'w-20'].map((w, i) => (
+          <div key={i} className={`${w} h-9 rounded-xl bg-gray-200 dark:bg-zinc-800`} />
+        ))}
+      </div>
+
+      {/* Transaction Cards */}
+      <div className="space-y-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-app-surface border border-app-border p-4 rounded-2xl flex items-center gap-4">
+            <div className="size-12 rounded-2xl bg-gray-200 dark:bg-zinc-800 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <SkeletonText w="w-32" className="h-4" />
+              <div className="flex items-center gap-1.5">
+                <SkeletonText w="w-16" className="h-3" />
+                <SkeletonText w="w-20" className="h-3" />
+              </div>
+              <SkeletonText w="w-24" className="h-3" />
+            </div>
+            <div className="flex items-center gap-2">
+              <SkeletonText w="w-16" className="h-5" />
+              <SkeletonText w="w-4" className="h-4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 export const SkeletonAppLoading = () => (
   <div className="h-dvh flex items-center justify-center bg-app-bg">
     <div className="flex flex-col items-center gap-4">

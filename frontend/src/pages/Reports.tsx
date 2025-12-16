@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useProfile } from '../hooks/useApi';
 import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
-import { SkeletonDashboard } from '../components/Skeleton';
+import { SkeletonReports } from '../components/Skeleton';
 import { PageHeader } from '../components/PageHeader';
+import { InfoTooltip } from '../components/InfoTooltip';
 
 const CustomTooltip = ({ active, payload, formatter }: any) => {
     if (active && payload && payload.length) {
@@ -42,7 +43,7 @@ const Reports: React.FC = () => {
         }).format(val);
     };
 
-    if (isLoading) return <SkeletonDashboard />;
+    if (isLoading) return <SkeletonReports />;
     if (!summary) return <div className="p-8 text-center text-app-muted">Sin datos suficientes</div>;
 
     // Calculate totals from backend data
@@ -118,10 +119,7 @@ const Reports: React.FC = () => {
                     <div className="text-center mb-5 pb-5 border-b border-app-border">
                         <div className="flex items-center justify-center gap-2 mb-1">
                             <p className="text-xs font-bold text-app-muted uppercase tracking-wider">Disponible Final del Mes</p>
-                            <span
-                                className="material-symbols-outlined text-[14px] text-app-muted/50 cursor-help"
-                                title="Balance actual + Ingresos esperados - Compromisos del mes"
-                            >info</span>
+                            <InfoTooltip content="Balance actual + Ingresos esperados - Compromisos del mes" iconSize="14px" />
                         </div>
                         <p className={`text-4xl font-black tracking-tight font-numbers ${disposableIncome >= 0 ? 'text-app-text' : 'text-rose-500'}`}>
                             {formatCurrency(disposableIncome)}
@@ -211,12 +209,6 @@ const Reports: React.FC = () => {
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>
-
-                                {/* Center Label */}
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-[10px] font-bold text-app-muted uppercase">Total</span>
-                                    <span className="text-sm font-black text-app-text font-numbers">{formatCurrency(totalAllocated)}</span>
-                                </div>
                             </div>
 
                             {/* Legend / Breakdown List */}
@@ -283,6 +275,14 @@ const Reports: React.FC = () => {
                                         </div>
                                     )
                                 })}
+
+                                {/* Total como resumen al final */}
+                                <div className="flex items-center justify-between pt-4 mt-4 border-t border-app-border">
+                                    <span className="text-sm font-bold text-app-muted uppercase tracking-wider">Total Asignado</span>
+                                    <span className="text-base font-black text-app-text font-numbers">
+                                        {formatCurrency(totalAllocated)}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     ) : (

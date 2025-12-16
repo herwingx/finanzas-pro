@@ -13,12 +13,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
  */
 
 const QUICK_ACTIONS = [
-  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense' },
-  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income' },
-  { icon: 'swap_horiz', label: 'Transferencia', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer' },
-  { icon: 'event_repeat', label: 'Recurrente', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
-  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
-  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new' },
+  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense', hideOnPaths: [] },
+  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income', hideOnPaths: [] },
+  { icon: 'swap_horiz', label: 'Transferencia', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer', hideOnPaths: [] },
+  { icon: 'event_repeat', label: 'Recurrente', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new', hideOnPaths: ['/recurring'] },
+  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new', hideOnPaths: ['/installments'] },
+  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new', hideOnPaths: ['/loans'] },
 ];
 
 // Pages where the main BottomNav is visible (so we don't show MobileFAB)
@@ -73,8 +73,8 @@ export const MobileFAB: React.FC = () => {
       {/* Quick Actions Sheet */}
       <div
         className={`lg:hidden fixed left-4 right-4 z-50 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isMenuOpen
-            ? 'opacity-100 translate-y-0 scale-100'
-            : 'opacity-0 translate-y-8 scale-95 pointer-events-none'
+          ? 'opacity-100 translate-y-0 scale-100'
+          : 'opacity-0 translate-y-8 scale-95 pointer-events-none'
           }`}
         style={{
           bottom: 'calc(env(safe-area-inset-bottom) + 80px)'
@@ -92,13 +92,15 @@ export const MobileFAB: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center">
-            {QUICK_ACTIONS.map(action => (
-              <QuickActionButton
-                key={action.label}
-                action={action}
-                onClick={() => handleQuickAction(action.path)}
-              />
-            ))}
+            {QUICK_ACTIONS
+              .filter(action => !action.hideOnPaths.some(p => location.pathname.startsWith(p)))
+              .map(action => (
+                <QuickActionButton
+                  key={action.label}
+                  action={action}
+                  onClick={() => handleQuickAction(action.path)}
+                />
+              ))}
           </div>
         </div>
       </div>

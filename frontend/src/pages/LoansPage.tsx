@@ -10,6 +10,7 @@ import { SkeletonTransactionList } from '../components/Skeleton';
 import { Button } from '../components/Button';
 import { useAccounts } from '../hooks/useApi';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 
 // --- Sub-Components (Inline for brevity but could be split) ---
 
@@ -17,7 +18,7 @@ import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) => {
   const [isPaymentMode, setIsPaymentMode] = useState(false);
   const [amount, setAmount] = useState('');
-  const [selectedAccountId, setSelectedAccountId] = useState(loan.accountId || '');
+  const [selectedAccountId, setSelectedAccountId] = useState(loan?.accountId || '');
 
   const { data: accounts } = useAccounts();
   const queryClient = useQueryClient();
@@ -35,97 +36,91 @@ const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) =
     onError: (e: any) => toastError(e.message)
   });
 
-  const isLent = loan.loanType === 'lent';
-  const percentPaid = Math.min(100, Math.round(((loan.originalAmount - loan.remainingAmount) / loan.originalAmount) * 100));
-
-  const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
-
   // Filter accounts - for 'borrowed' show non-credit accounts to pay from; for 'lent' show all (receiving money)
   const availableAccounts = useMemo(() => {
     if (!accounts) return [];
     return accounts.filter(acc => !['CREDIT', 'credit', 'Credit Card'].includes(acc.type));
   }, [accounts]);
 
+  if (!loan) return null;
+
+  const isLent = loan.loanType === 'lent';
+  const percentPaid = Math.min(100, Math.round(((loan.originalAmount - loan.remainingAmount) / loan.originalAmount) * 100));
+
+  const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
-      <div className="relative w-full max-w-md bg-app-surface border-t sm:border border-app-border rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300">
-
-        {/* Header handle for mobile feeling */}
-        <div className="w-12 h-1.5 bg-app-border rounded-full mx-auto mb-6 opacity-50 sm:hidden" />
-
-        <div className="text-center mb-8">
-          <div className={`size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm ${isLent ? 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20'
-            }`}>
-            <span className="material-symbols-outlined">{isLent ? 'arrow_outward' : 'arrow_downward'}</span>
-          </div>
-          <h2 className="text-xl font-bold text-app-text">{loan.borrowerName}</h2>
-          <p className="text-sm text-app-muted">{isLent ? 'Te debe' : 'Le debes'}</p>
+    <SwipeableBottomSheet isOpen={!!loan} onClose={onClose}>
+      <div className="text-center mb-8">
+        <div className={`size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm ${isLent ? 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20'
+          }`}>
+          <span className="material-symbols-outlined">{isLent ? 'arrow_outward' : 'arrow_downward'}</span>
         </div>
+        <h2 className="text-xl font-bold text-app-text">{loan.borrowerName}</h2>
+        <p className="text-sm text-app-muted">{isLent ? 'Te debe' : 'Le debes'}</p>
+      </div>
 
-        <div className="bg-app-subtle rounded-2xl p-5 mb-6 text-center border border-app-border/50">
-          <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Saldo Pendiente</p>
-          <div className={`text-4xl font-black tabular-nums tracking-tight ${isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-500'}`}>
-            {formatCurrency(loan.remainingAmount)}
-          </div>
-          {loan.remainingAmount !== loan.originalAmount && (
-            <div className="mt-3 w-full bg-app-subtle h-1.5 rounded-full overflow-hidden">
-              <div className={`h-full ${isLent ? 'bg-violet-500' : 'bg-rose-500'}`} style={{ width: `${percentPaid}%` }} />
-            </div>
-          )}
+      <div className="bg-app-subtle rounded-2xl p-5 mb-6 text-center border border-app-border/50">
+        <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Saldo Pendiente</p>
+        <div className={`text-4xl font-black tabular-nums tracking-tight ${isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-500'}`}>
+          {formatCurrency(loan.remainingAmount)}
         </div>
-
-        {isPaymentMode ? (
-          <form onSubmit={(e) => { e.preventDefault(); paymentMutation.mutate({ amount: parseFloat(amount), accountId: selectedAccountId || undefined }); }} className="space-y-4 animate-fade-in">
-            <div>
-              <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">Monto a abonar</label>
-              <input autoFocus type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()} value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-lg font-bold outline-none focus:ring-2 focus:ring-app-primary no-spin-button" placeholder="0.00" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">
-                {isLent ? 'Recibir en cuenta' : 'Pagar desde cuenta'}
-              </label>
-              <select
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-app-primary appearance-none"
-              >
-                <option value="">Sin afectar cuentas</option>
-                {availableAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
-                ))}
-              </select>
-              <p className="text-[10px] text-app-muted mt-1 ml-1">
-                {selectedAccountId
-                  ? (isLent ? 'Se sumará a esta cuenta' : 'Se restará de esta cuenta')
-                  : 'Solo se actualizará el saldo del préstamo'
-                }
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="ghost" onClick={() => setIsPaymentMode(false)} fullWidth>Cancelar</Button>
-              <Button type="submit" disabled={!amount} isLoading={paymentMutation.isPending} fullWidth>Registrar</Button>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex gap-3">
-              {loan.status !== 'paid' && (
-                <>
-                  <button onClick={() => setIsPaymentMode(true)} className="flex-1 bg-app-primary text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all">Abonar</button>
-                  <button onClick={onMarkPaid} className="flex-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 py-3 rounded-xl font-bold text-sm hover:opacity-80 transition-opacity">Liquidar</button>
-                </>
-              )}
-            </div>
-            <div className="flex justify-center gap-6 pt-2">
-              <button onClick={onEdit} className="text-app-muted hover:text-app-text text-sm font-medium flex items-center gap-1 transition-colors"><span className="material-symbols-outlined text-[18px]">edit</span> Editar</button>
-              <button onClick={onDelete} className="text-app-danger hover:text-red-700 text-sm font-medium flex items-center gap-1 transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span> Eliminar</button>
-            </div>
+        {loan.remainingAmount !== loan.originalAmount && (
+          <div className="mt-3 w-full bg-app-subtle h-1.5 rounded-full overflow-hidden">
+            <div className={`h-full ${isLent ? 'bg-violet-500' : 'bg-rose-500'}`} style={{ width: `${percentPaid}%` }} />
           </div>
         )}
       </div>
-    </div>
+
+      {isPaymentMode ? (
+        <form onSubmit={(e) => { e.preventDefault(); paymentMutation.mutate({ amount: parseFloat(amount), accountId: selectedAccountId || undefined }); }} className="space-y-4 animate-fade-in">
+          <div>
+            <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">Monto a abonar</label>
+            <input autoFocus type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()} value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-lg font-bold outline-none focus:ring-2 focus:ring-app-primary no-spin-button" placeholder="0.00" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">
+              {isLent ? 'Recibir en cuenta' : 'Pagar desde cuenta'}
+            </label>
+            <select
+              value={selectedAccountId}
+              onChange={(e) => setSelectedAccountId(e.target.value)}
+              className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-app-primary appearance-none"
+            >
+              <option value="">Sin afectar cuentas</option>
+              {availableAccounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-app-muted mt-1 ml-1">
+              {selectedAccountId
+                ? (isLent ? 'Se sumará a esta cuenta' : 'Se restará de esta cuenta')
+                : 'Solo se actualizará el saldo del préstamo'
+              }
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => setIsPaymentMode(false)} fullWidth>Cancelar</Button>
+            <Button type="submit" disabled={!amount} isLoading={paymentMutation.isPending} fullWidth>Registrar</Button>
+          </div>
+        </form>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex gap-3">
+            {loan.status !== 'paid' && (
+              <>
+                <button onClick={() => setIsPaymentMode(true)} className="flex-1 bg-app-primary text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all">Abonar</button>
+                <button onClick={onMarkPaid} className="flex-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 py-3 rounded-xl font-bold text-sm hover:opacity-80 transition-opacity">Liquidar</button>
+              </>
+            )}
+          </div>
+          <div className="flex justify-center gap-6 pt-2">
+            <button onClick={onEdit} className="text-app-muted hover:text-app-text text-sm font-medium flex items-center gap-1 transition-colors"><span className="material-symbols-outlined text-[18px]">edit</span> Editar</button>
+            <button onClick={onDelete} className="text-app-danger hover:text-red-700 text-sm font-medium flex items-center gap-1 transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span> Eliminar</button>
+          </div>
+        </div>
+      )}
+    </SwipeableBottomSheet>
   );
 };
 

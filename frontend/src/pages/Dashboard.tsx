@@ -5,6 +5,7 @@ import { useTransactions, useCategories, useProfile, useAccounts } from '../hook
 import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
 import { FinancialPlanningWidget } from '../components/FinancialPlanningWidget';
+import { InfoTooltip } from '../components/InfoTooltip';
 import { toastInfo } from '../utils/toast';
 
 // --- Sub-components para modularidad visual ---
@@ -105,7 +106,7 @@ const MainBalanceCard: React.FC<{
         <div>
           <div className="flex items-center gap-2 text-app-muted mb-1">
             <span className="text-sm font-medium">Balance Total Disponible</span>
-            <span className="material-symbols-outlined text-[16px] cursor-help" title="Efectivo + Débito">info</span>
+            <InfoTooltip content="Efectivo + Débito" iconSize="16px" />
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-app-text tracking-tight font-numbers mt-2">
             {format(balance)}
@@ -150,10 +151,7 @@ const QuickStat: React.FC<{
           <div className="flex items-center gap-1">
             <p className="text-app-muted text-xs font-bold uppercase tracking-wide">{label}</p>
             {tooltip && (
-              <span
-                className="material-symbols-outlined text-[14px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
-                title={tooltip}
-              >info</span>
+              <InfoTooltip content={tooltip} iconSize="14px" />
             )}
           </div>
           <p className={`text-2xl font-bold mt-1 font-numbers ${isIncome ? 'text-app-text' : 'text-app-text'}`}>
@@ -216,14 +214,14 @@ const TopCategoriesChart: React.FC<{
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Donut Chart - Centrado arriba */}
-      <div className="h-28 w-28 relative mx-auto shrink-0">
+      <div className="h-24 w-24 relative mx-auto shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               dataKey="value"
-              innerRadius={32}
-              outerRadius={45}
+              innerRadius={28}
+              outerRadius={42}
               paddingAngle={3}
               cornerRadius={4}
             >
@@ -233,13 +231,10 @@ const TopCategoriesChart: React.FC<{
             </Pie>
             <Tooltip
               content={<CustomTooltip formatter={format} />}
+              wrapperStyle={{ zIndex: 100 }}
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[9px] text-app-muted font-bold">TOTAL</span>
-          <span className="text-xs font-bold text-app-text font-numbers">{format(total)}</span>
-        </div>
       </div>
 
       {/* Legend - Lista debajo */}
@@ -260,6 +255,14 @@ const TopCategoriesChart: React.FC<{
             </span>
           </div>
         ))}
+
+        {/* Total como resumen al final */}
+        <div className="flex items-center justify-between text-xs pt-2 mt-2 border-t border-app-border">
+          <span className="text-app-muted font-bold uppercase tracking-wider">Total</span>
+          <span className="font-bold text-app-text font-numbers">
+            {format(total)}
+          </span>
+        </div>
       </div>
     </div>
   );

@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const QUICK_ACTIONS = [
-  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense' },
-  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income' },
-  { icon: 'swap_horiz', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer' },
-  { icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
-  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
-  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new' },
+  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense', hideOnPaths: [] as string[] },
+  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income', hideOnPaths: [] as string[] },
+  { icon: 'swap_horiz', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer', hideOnPaths: [] as string[] },
+  { icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new', hideOnPaths: ['/recurring'] },
+  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new', hideOnPaths: ['/installments'] },
+  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new', hideOnPaths: ['/loans'] },
 ];
 
 export const DesktopFAB: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Filter out redundant actions based on current path
+  const filteredActions = QUICK_ACTIONS.filter(
+    action => !action.hideOnPaths.some(p => location.pathname.startsWith(p))
+  );
 
   const handleAction = (path: string) => {
     setIsOpen(false);
@@ -36,11 +42,11 @@ export const DesktopFAB: React.FC = () => {
           flex flex-col gap-3 mb-4 transition-all duration-300 origin-bottom
           ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-10 scale-90 pointer-events-none'}
         `}>
-          {QUICK_ACTIONS.map((action, idx) => (
+          {filteredActions.map((action, idx) => (
             <button
               key={action.label}
               onClick={() => handleAction(action.path)}
-              style={{ transitionDelay: `${isOpen ? (QUICK_ACTIONS.length - 1 - idx) * 30 : 0}ms` }}
+              style={{ transitionDelay: `${isOpen ? (filteredActions.length - 1 - idx) * 30 : 0}ms` }}
               className="group flex items-center justify-end gap-3"
             >
               <span className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 text-xs font-bold text-app-text shadow-md border border-app-border opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">

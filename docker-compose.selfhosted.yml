@@ -1,0 +1,93 @@
+# Docker Compose para Self-Hosted (con puertos expuestos)
+# USO: docker compose -f docker-compose.selfhosted.yml up -d
+#
+# Esta configuración expone los puertos directamente.
+# Ideal para:
+#   - Uso en red local (LAN)
+#   - Detrás de un reverse proxy existente (Traefik, Caddy, etc.)
+#   - Desarrollo/testing
+#
+# Para producción con SSL, considera:
+#   - Cloudflare Tunnels (docker-compose.cloudflare.yml)
+#   - Traefik con Let's Encrypt
+#   - Caddy (SSL automático)
+
+services:
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - finanzas-pro-network
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/prisma:/usr/src/app/prisma
+      - backend_uploads:/usr/src/app/uploads
+    networks:
+      - finanzas-pro-network
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:4000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-finanzas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finanzas123}
+      POSTGRES_DB: ${POSTGRES_DB:-finanzas_pro}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-finanzas} -d ${POSTGRES_DB:-finanzas_pro}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finanzas-pro-network
+
+  # Nginx como reverse proxy (opcional, útil para producción)
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - finanzas-pro-network
+    profiles:
+      - with-nginx # Solo se inicia si usas: docker compose --profile with-nginx up
+
+networks:
+  finanzas-pro-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  backend_uploads:

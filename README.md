@@ -44,33 +44,28 @@
 ## 🏗 Arquitectura del Sistema
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                           NGINX (Reverse Proxy)                      │
-│                         (SSL/TLS + Load Balancing)                   │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌───────────────┐       ┌───────────────┐       ┌───────────────┐
-│   FRONTEND    │       │    BACKEND    │       │   DATABASE    │
-│   (Vite +     │◄─────►│  (Express +   │◄─────►│  (PostgreSQL  │
-│    React)     │  API  │   Prisma)     │  ORM  │      16)      │
-│   Port 3000   │       │   Port 4000   │       │   Port 5432   │
-└───────────────┘       └───────────────┘       └───────────────┘
-                                │
-                                ▼
-                        ┌───────────────┐
-                        │   DuckDNS     │
-                        │  (Dynamic DNS)│
-                        └───────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              INTERNET                                        │
+│    Usuario → tu-dominio.com → Reverse Proxy (Nginx/Cloudflare/Traefik)      │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                               │
+┌──────────────────────────────────────────────┼───────────────────────────────┐
+│                           DOCKER NETWORK                                     │
+│                                              │                               │
+│   ┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────────┐ │
+│   │      Frontend       │    │     Backend     │    │     PostgreSQL      │ │
+│   │   (Vite + React)    │◄──►│  (Express API)  │◄──►│        (DB)         │ │
+│   │    Puerto: 3000     │    │   Puerto: 4000  │    │    Puerto: 5432     │ │
+│   └─────────────────────┘    └─────────────────┘    └─────────────────────┘ │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Modelo de Comunicación
 
-1. **Cliente → Nginx**: Peticiones HTTPS en puertos 80/443
-2. **Nginx → Frontend**: Sirve assets estáticos (SPA)
-3. **Nginx → Backend**: Proxy reverso para `/api/*`
+1. **Cliente → Reverse Proxy**: Peticiones HTTPS (SSL terminado aquí)
+2. **Proxy → Frontend**: Sirve assets estáticos (SPA)
+3. **Proxy → Backend**: Redirige peticiones `/api/*`
 4. **Backend → PostgreSQL**: Queries via Prisma ORM
 5. **Auth**: JWT tokens almacenados en localStorage
 
@@ -113,9 +108,9 @@
 | Tecnología | Propósito |
 |------------|-----------|
 | **Docker + Compose** | Containerización |
-| **Nginx** | Reverse proxy + SSL |
-| **DuckDNS** | Dynamic DNS gratuito |
-| **Let's Encrypt** | Certificados SSL |
+| **Nginx** | Reverse proxy interno |
+| **Cloudflare Tunnels** | Exposición segura sin abrir puertos (opcional) |
+| **Traefik / Caddy** | Alternativas con SSL automático (opcional) |
 
 ---
 
@@ -494,33 +489,158 @@ finanzas-pro/
 
 ### Requisitos Previos
 
-- Docker y Docker Compose
-- Node.js 18+ (para desarrollo local)
-- Puerto 80, 443, 4000, 5432 disponibles
+- Docker y Docker Compose v2+
+- Node.js 18+ (solo para desarrollo local)
+- Git
 
-### Variables de Entorno
+---
 
-**`.env` (raíz):**
-```env
-DUCKDNS_SUBDOMAIN=tu-subdominio
-DUCKDNS_TOKEN=tu-token
+### 🔧 Opción 1: Desarrollo Local (sin Docker)
+
+Ideal para desarrollo y contribuciones.
+
+```bash
+# Clonar repositorio
+git clone https://github.com/tu-usuario/finanzas-pro.git
+cd finanzas-pro
+
+# Configurar variables de entorno
+cp backend/.env.example backend/.env
+# Editar backend/.env con tus credenciales de PostgreSQL local
+
+# Instalar dependencias
+cd backend && npm install && cd ..
+cd frontend && npm install && cd ..
+
+# Iniciar PostgreSQL (si no lo tienes, puedes usar Docker solo para la DB)
+docker run -d --name finanzas-db \
+  -e POSTGRES_USER=finanzas \
+  -e POSTGRES_PASSWORD=finanzas123 \
+  -e POSTGRES_DB=finanzas_pro \
+  -p 5432:5432 \
+  postgres:16-alpine
+
+# Ejecutar migraciones
+cd backend && npx prisma migrate dev && cd ..
+
+# Iniciar backend (terminal 1)
+cd backend && npm run dev
+
+# Iniciar frontend (terminal 2)
+cd frontend && npm run dev
 ```
 
-**`backend/.env`:**
+Accede a `http://localhost:5173` (frontend) y `http://localhost:4000` (API).
+
+---
+
+### 🐳 Opción 2: Self-Hosted con Docker
+
+Ideal para uso en red local o detrás de un reverse proxy existente.
+
+```bash
+# Clonar repositorio
+git clone https://github.com/tu-usuario/finanzas-pro.git
+cd finanzas-pro
+
+# Configurar variables de entorno
+cp backend/.env.example backend/.env
+# Editar backend/.env (cambiar localhost por 'db' en DATABASE_URL)
+
+# Crear .env en la raíz
+cat > .env << EOF
+POSTGRES_USER=finanzas
+POSTGRES_PASSWORD=tu_password_segura
+POSTGRES_DB=finanzas_pro
+EOF
+
+# Iniciar servicios
+docker compose -f docker-compose.selfhosted.yml up -d --build
+
+# Ejecutar migraciones
+docker compose -f docker-compose.selfhosted.yml exec backend npx prisma migrate deploy
+
+# Ver logs
+docker compose -f docker-compose.selfhosted.yml logs -f
+```
+
+**Puertos expuestos:**
+- Frontend: `http://tu-ip:3000`
+- API: `http://tu-ip:4000`
+- PostgreSQL: `tu-ip:5432`
+- Nginx (opcional): `http://tu-ip:80`
+
+---
+
+### ☁️ Opción 3: Producción con Cloudflare Tunnels
+
+Ideal para exponer la app a internet sin abrir puertos (ISPs que bloquean 80/443).
+
+```bash
+# Clonar repositorio
+git clone https://github.com/tu-usuario/finanzas-pro.git
+cd finanzas-pro
+
+# Configurar variables de entorno
+cp backend/.env.example backend/.env
+# Editar backend/.env
+
+# Crear .env en la raíz con token de Cloudflare
+cat > .env << EOF
+POSTGRES_USER=finanzas
+POSTGRES_PASSWORD=tu_password_segura
+POSTGRES_DB=finanzas_pro
+CLOUDFLARE_TUNNEL_TOKEN=tu_token_de_cloudflare
+EOF
+
+# Iniciar con script de deploy
+chmod +x deploy.sh
+./deploy.sh start
+./deploy.sh migrate
+```
+
+Ver [DEPLOYMENT_PLAN.md](./DEPLOYMENT_PLAN.md) para instrucciones detalladas de Cloudflare Tunnels.
+
+---
+
+### 📧 Variables de Entorno
+
+**`.env` (raíz) - Para Docker:**
 ```env
-DATABASE_URL="postgresql://user:password@db:5432/finanzas_pro"
-JWT_SECRET="tu-secreto-jwt-seguro"
+# PostgreSQL
+POSTGRES_USER=finanzas
+POSTGRES_PASSWORD=tu_password_segura
+POSTGRES_DB=finanzas_pro
+
+# Cloudflare (solo si usas docker-compose.cloudflare.yml)
+CLOUDFLARE_TUNNEL_TOKEN=eyJ...
+```
+
+**`backend/.env` - Para el Backend:**
+```env
+# Base de datos (usar 'db' para Docker, 'localhost' para desarrollo local)
+DATABASE_URL="postgresql://finanzas:tu_password@db:5432/finanzas_pro"
+
+# Autenticación
+JWT_SECRET="genera-un-string-aleatorio-largo-aqui"
 PORT=4000
 
-# Configuración de Email (opcional - para recuperación de contraseña)
-# Si no se configura, los enlaces de reset se muestran en los logs del servidor
+# URL de la aplicación (para emails de recuperación)
+APP_URL="https://tu-dominio.com"
+
+# Email SMTP (opcional - sin esto, los links de reset se muestran en logs)
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT="587"
 SMTP_SECURE="false"
 SMTP_USER="tu-email@gmail.com"
 SMTP_PASS="tu-app-password"
 SMTP_FROM="Finanzas Pro <noreply@tu-dominio.com>"
-APP_URL="https://tu-dominio.com"
+```
+
+**`frontend/.env` - Para el Frontend:**
+```env
+# API URL (ajustar según tu configuración)
+VITE_API_URL=http://localhost:4000
 ```
 
 #### Configuración de SMTP por Proveedor
@@ -530,42 +650,27 @@ APP_URL="https://tu-dominio.com"
 | **Gmail** | smtp.gmail.com | 587 | Requiere [App Password](https://myaccount.google.com/apppasswords) |
 | **Outlook** | smtp-mail.outlook.com | 587 | Usa credenciales normales |
 | **Mailgun** | smtp.mailgun.org | 587 | Usa API key como password |
-| **Servidor propio** | mail.tu-dominio.com | 587 | Postfix, Mailcow, etc. |
+| **Propio** | mail.tu-dominio.com | 587 | Postfix, Mailcow, etc. |
 
-### Desarrollo Local
+---
 
-```bash
-# Backend
-cd backend
-npm install
-npm run dev
-
-# Frontend (otra terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-### Despliegue con Docker
+### 🔧 Comandos Útiles
 
 ```bash
-# Construir e iniciar todos los servicios
-docker-compose up -d --build
+# Script de deploy (si usas Cloudflare)
+./deploy.sh start    # Iniciar servicios
+./deploy.sh stop     # Detener servicios
+./deploy.sh logs     # Ver logs
+./deploy.sh update   # Actualizar desde Git y reiniciar
+./deploy.sh backup   # Backup de la base de datos
+./deploy.sh migrate  # Ejecutar migraciones de Prisma
 
-# Ver logs
-docker-compose logs -f
-
-# Ejecutar migraciones de Prisma
-docker-compose exec backend npx prisma migrate deploy
-
-# Abrir Prisma Studio
-docker-compose exec backend npx prisma studio
-```
-
-### SSL con Let's Encrypt
-
-```bash
-./install_ssl.sh
+# Docker Compose directo
+docker compose up -d --build     # Iniciar
+docker compose down              # Detener
+docker compose logs -f           # Ver logs
+docker compose exec backend sh   # Shell en el backend
+docker compose exec db psql -U finanzas -d finanzas_pro  # PostgreSQL CLI
 ```
 
 ---

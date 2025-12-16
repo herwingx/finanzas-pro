@@ -46,8 +46,43 @@ const Reports: React.FC = () => {
         }).format(val);
     };
 
-    // --- Calculation Logic (50/30/20 Rule + Projections) ---
-    // --- Calculation Logic (50/30/20 Rule + Projections) ---
+    // =====================================================
+    // ANÁLISIS 50/30/20 - LÓGICA DE CÁLCULO
+    // =====================================================
+    // 
+    // REGLA FUNDAMENTAL:
+    // El presupuesto 50/30/20 se aplica sobre el INGRESO DISPONIBLE NETO,
+    // es decir, el ingreso regular menos el dinero que está "comprometido" 
+    // en préstamos (ya sea prestando a otros o pagando deudas).
+    //
+    // PRÉSTAMOS EN EL CONTEXTO 50/30/20:
+    // ──────────────────────────────────────────────────────
+    // 1. Préstamo que TÚ HACES (lent) = AHORRO
+    //    - Es dinero que "inviertes" en alguien, esperas recuperarlo
+    //    - Sale de tu cuenta pero es un activo (te deben dinero)
+    //    - Se considera AHORRO porque es una forma de "guardar" dinero
+    //
+    // 2. Préstamo que TE HACEN (borrowed) = NECESIDAD
+    //    - Recibes dinero pero tienes que pagarlo
+    //    - Los pagos de esta deuda son una NECESIDAD obligatoria
+    //    - Similar a una renta o servicio que debes pagar
+    //
+    // 3. Préstamos SIN fecha de pago:
+    //    - No afectan la proyección mensual (no sabemos cuándo se pagarán)
+    //    - Se consideran cuando realmente se registran transacciones
+    //
+    // 4. Préstamos CON fecha de pago este mes:
+    //    - borrowed: Se agrega como gasto de NECESIDAD (tienes que pagarlo)
+    //    - lent: Se agrega como INGRESO esperado (te van a pagar)
+    //
+    // DINERO SOBRANTE:
+    // ──────────────────────────────────────────────────────
+    // Si después de cubrir Necesidades y Deseos te sobra dinero,
+    // ese sobrante se suma automáticamente a AHORRO. Esto refleja
+    // que cualquier dinero no gastado potencialmente puede ahorrarse.
+    //
+    // =====================================================
+
     const analysis = useMemo(() => {
         if (!transactions || !categories || !recurringTxs || !installments || !loansData) return null;
 
@@ -55,39 +90,40 @@ const Reports: React.FC = () => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const monthTxs = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
 
-        // --- 1. Income Projection ---
-        // Separate Regular Income (for Budget) vs Total Income (for Liquidity)
+        // ═══════════════════════════════════════════════════
+        // 1. CÁLCULO DE INGRESOS
+        // ═══════════════════════════════════════════════════
 
-        // A. Actual Income
-        const totalActualIncome = monthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
+        // A. Ingreso TOTAL real (incluye todo, incluso préstamos recibidos)
+        const totalActualIncome = monthTxs
+            .filter(tx => tx.type === 'income')
+            .reduce((sum, tx) => sum + tx.amount, 0);
 
-        // Regular Actual Income = Total - New Debt (Borrowed Loans)
-        // BUT include Loan Repayments (Lent Loans) as this is 'money returning to me'
+        // B. Ingreso REGULAR (excluye préstamos - estos no son "ingreso ganado")
         const regularActualIncome = monthTxs
             .filter(tx => tx.type === 'income')
             .filter(tx => {
-                // Check if linked to Loan
+                // Si está vinculado a un préstamo
                 if (tx.loanId) {
                     const loan = loansData.find(l => l.id === tx.loanId);
-                    // If it's a "Lent" loan, and this is income, it means they are paying me back.
-                    // This IS disposable money I can use. KEEP IT.
+                    // Préstamo que DI (lent) + me pagan = Es dinero que me devuelven = SÍ CONTAR
                     if (loan && (loan as any).loanType === 'lent') return true;
-
-                    // If it's a "Borrowed" loan, and this is income, it means I am receiving the bank's money.
-                    // This is DEBT. EXCLUDE IT.
+                    // Préstamo que ME DIERON (borrowed) = Es deuda = NO CONTAR
                     return false;
                 }
 
-                // If not linked to loan, check category
+                // Si no hay préstamo vinculado, revisar la categoría
                 const cat = categories.find(c => c.id === tx.categoryId);
-                // Exclude if category is explicitly Préstamos (Manual entry assumed to be debt/borrowing if not linked)
-                // If user manually enters "Cobro a Juan" without linking, it might get excluded here.
-                // But safer to exclude potential debt than include it.
-                return !cat || (cat.name !== 'Préstamos' && cat.name !== 'Prestamos' && cat.name !== 'Deudas');
+                const catName = cat?.name?.toLowerCase() || '';
+                // Excluir categorías de préstamos/deudas si no tienen loanId
+                if (catName.includes('préstamo') || catName.includes('prestamo') || catName.includes('deuda')) {
+                    return false;
+                }
+                return true;
             })
             .reduce((sum, tx) => sum + tx.amount, 0);
 
-        // B. Recurring Income
+        // C. Ingreso recurrente esperado este mes
         const monthlyRecurringIncome = recurringTxs
             .filter(rt => rt.active && rt.type === 'income')
             .reduce((sum, rt) => {
@@ -103,60 +139,52 @@ const Reports: React.FC = () => {
                 return sum + monthlyAmount;
             }, 0);
 
-        // Projected Totals
-        // For Liquidity: Use Total Actual (including loans) vs Recurring
+        // D. Ingresos proyectados
         let totalProjectedIncome = Math.max(totalActualIncome, monthlyRecurringIncome);
-
-        // For Budget (50/30/20): Use Regular Actual (excluding loans) vs Recurring
         let regularProjectedIncome = Math.max(regularActualIncome, monthlyRecurringIncome);
 
-        // --- 2. Expense Projection (The "Projected" View) ---
-        // We combine:
-        // A. Active Recurring Expenses (Monthly equivalent)
-        // B. Active MSI Installments (Monthly payment)
-        // C. "Manual" Expenses this month (Non-recurring, Non-MSI)
-        // D. Active Loans Due this Month (Balloon payments / Full settlements)
+        // ═══════════════════════════════════════════════════
+        // 2. CLASIFICACIÓN DE GASTOS (50/30/20)
+        // ═══════════════════════════════════════════════════
 
         let needs = 0, wants = 0, savings = 0, unclassified = 0;
-        let loanExpenses = 0; // Just for tracking, but will be distributed to Needs/Savings
+        let loanExpenses = 0;
         let projectedExpenseTotal = 0;
 
-        // Helper to classify amount by category ID and Description
+        // Función para clasificar gastos según categoría
         const classify = (amount: number, categoryId?: string, loanId?: string, description: string = '') => {
             projectedExpenseTotal += amount;
 
-            // 1. Handle Linked Loans (Priority)
+            // ── CASO 1: Gasto vinculado a Préstamo ──
             if (loanId) {
                 const loan = loansData.find(l => l.id === loanId);
                 loanExpenses += amount;
 
                 if (loan) {
-                    // Logic:
-                    // - Loans I GAVE (Lent) = I am putting money away = SAVINGS (Asset)
-                    // - Loans I TOOK (Borrowed) = I am paying a debt = NEEDS (Obligation)
-                    if ((loan as any).loanType === 'lent') {
+                    const loanType = (loan as any).loanType;
+                    if (loanType === 'lent') {
+                        // Préstamo que DI = Dinero que "guardé" en alguien = AHORRO
                         savings += amount;
                     } else {
-                        // Default to Needs for debt repayment
+                        // Préstamo que ME DIERON = Pago de deuda = NECESIDAD
                         needs += amount;
                     }
                     return;
                 }
             }
 
-            // 2. Handle Manual Keyword detection for Loans (Unlock logic)
+            // ── CASO 2: Detección por palabras clave (sin loanId) ──
             const lowerDesc = description.toLowerCase();
-            const isLoanKeyword = lowerDesc.includes('prestamo') || lowerDesc.includes('préstamo') || lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito');
+            const isLoanKeyword = lowerDesc.includes('prestamo') || lowerDesc.includes('préstamo') ||
+                lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito');
 
             if (!categoryId && isLoanKeyword) {
-                // Ambiguous manual entry without category.
                 loanExpenses += amount;
-                // Default hypothesis: "Prestamo" in description often means I lent it (Savings) or Paid Debt (Needs).
-                // "Deuda" -> Needs. "Prestamo" -> Ambiguous.
+                // "Deuda" o "Crédito" = pago obligatorio = NECESIDAD
                 if (lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito')) {
                     needs += amount;
                 } else {
-                    // Assume "Prestamo" means I lent money (Asset) -> Savings
+                    // "Préstamo" genérico = probablemente presté dinero = AHORRO
                     savings += amount;
                 }
                 return;
@@ -167,46 +195,44 @@ const Reports: React.FC = () => {
                 return;
             }
 
+            // ── CASO 3: Clasificación por Categoría ──
             const cat = categories.find(c => c.id === categoryId);
             if (!cat) {
                 unclassified += amount;
                 return;
             }
 
-            // 3. Handle 'Préstamos' Category explicitly (if not already handled by budgetType)
-            // Expand match list to include singular and variations
             const catName = cat.name.toLowerCase();
-            if (catName === 'préstamos' || catName === 'prestamos' || catName === 'préstamo' || catName === 'prestamo' || catName === 'deudas' || catName === 'deuda') {
+
+            // Manejar categoría de "Préstamos" explícitamente
+            if (catName.includes('préstamo') || catName.includes('prestamo') || catName.includes('deuda')) {
                 loanExpenses += amount;
 
-                // Respect user's explicit budget setting if present
+                // Respetar budgetType si está configurado
                 if (cat.budgetType === 'need') { needs += amount; return; }
                 if (cat.budgetType === 'want') { wants += amount; return; }
                 if (cat.budgetType === 'savings') { savings += amount; return; }
 
-                // Fallback Disambiguation based on Description + Category Name
-                // If it's "Deudas" -> Needs
-                if (catName.includes('deuda')) {
+                // Fallback: Identificar por descripción
+                if (catName.includes('deuda') ||
+                    lowerDesc.includes('pago') ||
+                    lowerDesc.includes('tarjeta') ||
+                    lowerDesc.includes('hipoteca')) {
                     needs += amount;
-                }
-                // If description implies repayment (pago, abono, tarjeta) -> Needs
-                else if (lowerDesc.includes('pago') || lowerDesc.includes('abono') || lowerDesc.includes('tarjeta') || lowerDesc.includes('credito') || lowerDesc.includes('crédito')) {
-                    needs += amount;
-                }
-                // Default Assumption: I am giving a loan -> Savings
-                else {
+                } else {
                     savings += amount;
                 }
                 return;
             }
 
+            // Clasificación estándar por budgetType
             if (cat.budgetType === 'need') needs += amount;
             else if (cat.budgetType === 'want') wants += amount;
             else if (cat.budgetType === 'savings') savings += amount;
             else unclassified += amount;
         };
 
-        // A. Recurring Expenses
+        // A. Procesar Gastos Recurrentes
         recurringTxs.filter(rt => rt.active && rt.type === 'expense').forEach(rt => {
             let monthlyAmount = rt.amount;
             switch (rt.frequency) {
@@ -217,11 +243,10 @@ const Reports: React.FC = () => {
                 case 'monthly': monthlyAmount = rt.amount; break;
                 case 'yearly': monthlyAmount = rt.amount / 12; break;
             }
-            // Recurring usually doesn't have loanId linked directly in this model yet, passing undefined
             classify(monthlyAmount, rt.categoryId, undefined, rt.description);
         });
 
-        // B. MSI Installments
+        // B. Procesar MSI (Compras a meses)
         installments.forEach(inst => {
             const remaining = inst.installments - inst.paidInstallments;
             if (remaining > 0) {
@@ -229,51 +254,62 @@ const Reports: React.FC = () => {
             }
         });
 
-        // C. Manual Expenses
+        // C. Procesar Gastos Manuales del mes
         monthTxs.filter(tx => tx.type === 'expense').forEach(tx => {
+            // Evitar doble conteo
             if (tx.recurringTransactionId) return;
             if (tx.installmentPurchaseId) return;
-
             classify(tx.amount, tx.categoryId, tx.loanId, tx.description);
         });
 
-        // D. Loans Due This Month (Settlements)
+        // D. Procesar Préstamos que vencen este mes
+        let loanRecoveryThisMonth = 0; // Dinero que te van a devolver de préstamos
+
         loansData.forEach(loan => {
             if (loan.status === 'paid' || loan.remainingAmount <= 0) return;
-            if (!loan.expectedPayDate) return;
+            if (!loan.expectedPayDate) return; // Sin fecha = No proyectamos
 
             const dueDate = new Date(loan.expectedPayDate);
-            // Check if due date is in current month/year
-            if (dueDate.getMonth() === now.getMonth() && dueDate.getFullYear() === now.getFullYear()) {
+            const isDueThisMonth = dueDate.getMonth() === now.getMonth() &&
+                dueDate.getFullYear() === now.getFullYear();
 
-                if ((loan as any).loanType === 'borrowed') {
-                    // I owe this money, it's a debt repayment -> NEED
-                    // We add it as if it were an expense to be covered
+            if (isDueThisMonth) {
+                const loanType = (loan as any).loanType;
+
+                if (loanType === 'borrowed') {
+                    // Debo pagar este préstamo = NECESIDAD (gasto obligatorio)
                     projectedExpenseTotal += loan.remainingAmount;
                     needs += loan.remainingAmount;
                     loanExpenses += loan.remainingAmount;
-                } else if ((loan as any).loanType === 'lent') {
-                    // Someone owes me this money -> INCOME/RECOVERY
-                    // We add it to projected income
-                    regularProjectedIncome += loan.remainingAmount;
-                    totalProjectedIncome += loan.remainingAmount;
+                } else if (loanType === 'lent') {
+                    // Me van a pagar este préstamo = Va directo a AHORRO
+                    // (No es ingreso "nuevo", es capital que ya era mío regresando)
+                    savings += loan.remainingAmount;
+                    loanRecoveryThisMonth += loan.remainingAmount;
+                    loanExpenses += loan.remainingAmount; // Para el tracking total
                 }
             }
         });
 
-        // --- 3. Disposable & Surplus Calculation ---
-        const budgetBase = regularProjectedIncome; // Loans are now INSIDE the buckets, so we use full Net Income
+        // ═══════════════════════════════════════════════════
+        // 3. CÁLCULO DEL SOBRANTE Y DISTRIBUCIÓN FINAL
+        // ═══════════════════════════════════════════════════
+
+        const budgetBase = regularProjectedIncome;
         const totalOperationalExpenses = needs + wants + savings + unclassified;
         const surplus = Math.max(0, budgetBase - totalOperationalExpenses);
 
-        // Add surplus to savings (Potential Savings)
+        // El sobrante se considera "Ahorro Potencial"
         const totalSavings = savings + surplus;
 
-        // Chart segments with modern colors
+        // ═══════════════════════════════════════════════════
+        // 4. PREPARAR DATOS PARA EL GRÁFICO
+        // ═══════════════════════════════════════════════════
+
         const data = [
-            { name: 'Necesidades', value: needs, color: '#f43f5e', ideal: 50, icon: 'home' }, // Now includes Debt Repayment
+            { name: 'Necesidades', value: needs, color: '#f43f5e', ideal: 50, icon: 'home' },
             { name: 'Deseos', value: wants, color: '#a855f7', ideal: 30, icon: 'favorite' },
-            { name: 'Ahorro', value: totalSavings, color: '#10b981', ideal: 20, icon: 'savings' }, // Now includes Loans Given
+            { name: 'Ahorro', value: totalSavings, color: '#10b981', ideal: 20, icon: 'savings' },
             { name: 'Sin clasificar', value: unclassified, color: '#64748b', ideal: 0, icon: 'help' },
         ].filter(i => i.value > 0);
 
@@ -281,15 +317,19 @@ const Reports: React.FC = () => {
             income: totalActualIncome,
             expense: projectedExpenseTotal,
             actualExpense: monthTxs.filter(tx => tx.type === 'expense').reduce((s, t) => s + t.amount, 0),
-            totalProjectedIncome, // Total (Liquidity)
-            regularProjectedIncome, // Regular (Budget Base Source)
-            budgetBase, // Net Disposable Income
+            totalProjectedIncome,
+            regularProjectedIncome,
+            budgetBase,
             loanExpenses,
+            loanRecoveryThisMonth, // Préstamos que te van a pagar este mes
             balance: totalProjectedIncome - projectedExpenseTotal,
             chartData: data,
-            totalAllocated: needs + wants + totalSavings + unclassified, // Should equal budgetBase (if no deficit)
-            surplus, // Export surplus for UI
-            hasUnclassified: unclassified > 0
+            totalAllocated: needs + wants + totalSavings + unclassified,
+            surplus,
+            hasUnclassified: unclassified > 0,
+            // Desglose para UI
+            savingsFromExpenses: savings,
+            savingsFromSurplus: surplus,
         };
     }, [transactions, categories, recurringTxs, installments, loansData]);
 
@@ -299,8 +339,6 @@ const Reports: React.FC = () => {
     if (!analysis) return <div className="p-8 text-center text-app-muted">Sin datos suficientes</div>;
 
     const hasData = analysis.chartData.length > 0;
-
-    // Base Amount (Calculated in useMemo)
     const { budgetBase, surplus } = analysis;
 
     return (
@@ -315,7 +353,7 @@ const Reports: React.FC = () => {
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                                 <p className="text-xs font-bold text-app-muted uppercase tracking-wider">Balance Estimado</p>
-                                <span className="material-symbols-outlined text-[14px] text-app-muted cursor-help" title="Ingresos Recurrentes - Gastos Actuales">help</span>
+                                <span className="material-symbols-outlined text-[14px] text-app-muted cursor-help" title="Ingresos Regulares - Gastos Proyectados">help</span>
                             </div>
                             <p className={`text-4xl font-black tracking-tight font-numbers ${(analysis.totalProjectedIncome - analysis.expense) >= 0 ? 'text-app-text' : 'text-rose-500'}`}>
                                 {formatCurrency(analysis.totalProjectedIncome - analysis.expense)}
@@ -465,6 +503,34 @@ const Reports: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Loan Info Card */}
+                {(analysis.loanExpenses > 0 || analysis.loanRecoveryThisMonth > 0) && (
+                    <div className="bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 rounded-2xl p-4 flex gap-3 items-start">
+                        <div className="size-10 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-violet-500 text-xl">handshake</span>
+                        </div>
+                        <div className="flex-1">
+                            <p className="font-bold text-sm text-violet-700 dark:text-violet-400 mb-1">
+                                Préstamos en este análisis
+                            </p>
+                            <div className="text-xs text-violet-600/90 dark:text-violet-500/80 leading-relaxed space-y-1">
+                                {analysis.loanRecoveryThisMonth > 0 && (
+                                    <p>
+                                        <span className="material-symbols-outlined text-[12px] align-middle mr-1">arrow_downward</span>
+                                        Te deben pagar <strong>{formatCurrency(analysis.loanRecoveryThisMonth)}</strong> → va a <span className="font-bold text-emerald-600 dark:text-emerald-400">Ahorro</span>
+                                    </p>
+                                )}
+                                {analysis.loanExpenses > analysis.loanRecoveryThisMonth && (
+                                    <p>
+                                        <span className="material-symbols-outlined text-[12px] align-middle mr-1">arrow_upward</span>
+                                        Préstamos dados/pagos: <strong>{formatCurrency(analysis.loanExpenses - analysis.loanRecoveryThisMonth)}</strong> → distribuidos en el análisis
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Unclassified Warning */}
                 {analysis.hasUnclassified && (

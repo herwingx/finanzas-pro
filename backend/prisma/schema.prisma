@@ -12,6 +12,7 @@ model User {
   password              String
   name                  String
   currency              String                 @default("USD")
+  timezone              String                 @default("America/Mexico_City")
   avatar                String?
   createdAt             DateTime               @default(now())
   resetToken            String?

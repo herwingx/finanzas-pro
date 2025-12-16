@@ -8,15 +8,15 @@ const router = express.Router();
 router.use(authMiddleware);
 
 const defaultCategories = [
-  // Expenses
-  { name: 'Comida', icon: 'restaurant', color: '#FF6B6B', type: 'expense', budgetType: 'need' },
-  { name: 'Transporte', icon: 'directions_car', color: '#FFD166', type: 'expense', budgetType: 'need' },
-  { name: 'Vivienda', icon: 'home', color: '#06D6A0', type: 'expense', budgetType: 'need' },
-  { name: 'Ocio', icon: 'sports_esports', color: '#118AB2', type: 'expense', budgetType: 'want' },
-  { name: 'Salud', icon: 'medical_services', color: '#073B4C', type: 'expense', budgetType: 'need' },
-  { name: 'Ahorros', icon: 'savings', color: '#6B5FFF', type: 'expense', budgetType: 'savings' },
-  // Incomes
-  { name: 'Salario', icon: 'payments', color: '#34D399', type: 'income' },
+    // Expenses
+    { name: 'Comida', icon: 'restaurant', color: '#FF6B6B', type: 'expense', budgetType: 'need' },
+    { name: 'Transporte', icon: 'directions_car', color: '#FFD166', type: 'expense', budgetType: 'need' },
+    { name: 'Vivienda', icon: 'home', color: '#06D6A0', type: 'expense', budgetType: 'need' },
+    { name: 'Ocio', icon: 'sports_esports', color: '#118AB2', type: 'expense', budgetType: 'want' },
+    { name: 'Salud', icon: 'medical_services', color: '#073B4C', type: 'expense', budgetType: 'need' },
+    { name: 'Ahorros', icon: 'savings', color: '#6B5FFF', type: 'expense', budgetType: 'savings' },
+    // Incomes
+    { name: 'Salario', icon: 'payments', color: '#34D399', type: 'income' },
 ];
 
 router.get('/', async (req: AuthRequest, res) => {
@@ -26,7 +26,7 @@ router.get('/', async (req: AuthRequest, res) => {
     try {
         let user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { name: true, email: true, currency: true, avatar: true, _count: { select: { categories: true } } }
+            select: { name: true, email: true, currency: true, timezone: true, avatar: true, _count: { select: { categories: true } } }
         });
 
         if (!user) {
@@ -41,7 +41,7 @@ router.get('/', async (req: AuthRequest, res) => {
                         create: defaultCategories,
                     },
                 },
-                select: { name: true, email: true, currency: true, avatar: true }
+                select: { name: true, email: true, currency: true, timezone: true, avatar: true }
             });
             return res.json(newUser);
         }
@@ -56,7 +56,7 @@ router.get('/', async (req: AuthRequest, res) => {
         // Refetch user data to include the new categories if they were just added
         const finalUser = await prisma.user.findUnique({
             where: { id: userId },
-            select: { name: true, email: true, currency: true, avatar: true }
+            select: { name: true, email: true, currency: true, timezone: true, avatar: true }
         });
 
         res.json(finalUser);
@@ -68,7 +68,7 @@ router.get('/', async (req: AuthRequest, res) => {
 
 router.put('/', multer().any(), async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { name, currency, avatar } = req.body;
+    const { name, currency, timezone, avatar } = req.body;
 
     try {
         const updatedUser = await prisma.user.update({
@@ -76,12 +76,14 @@ router.put('/', multer().any(), async (req: AuthRequest, res) => {
             data: {
                 name,
                 currency,
+                timezone,
                 avatar
             },
             select: {
                 name: true,
                 email: true,
                 currency: true,
+                timezone: true,
                 avatar: true
             }
         });

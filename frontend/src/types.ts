@@ -86,6 +86,7 @@ export interface Profile {
   name: string;
   email: string;
   currency: 'USD' | 'EUR' | 'GBP' | 'MXN';
+  timezone: string;
   avatar?: string;
 }
 

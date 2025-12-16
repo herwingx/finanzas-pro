@@ -15,7 +15,24 @@ const Profile: React.FC = () => {
   // Local edit state initialized
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP' | 'MXN'>('MXN');
+  const [timezone, setTimezone] = useState('America/Mexico_City');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Common timezones for Latin America and key regions
+  const timezones = [
+    { value: 'America/Mexico_City', label: 'México Central (CDMX)' },
+    { value: 'America/Cancun', label: 'México Sureste (Cancún)' },
+    { value: 'America/Tijuana', label: 'México Noroeste (Tijuana)' },
+    { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
+    { value: 'America/Lima', label: 'Perú (Lima)' },
+    { value: 'America/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
+    { value: 'America/Santiago', label: 'Chile (Santiago)' },
+    { value: 'America/Sao_Paulo', label: 'Brasil (São Paulo)' },
+    { value: 'America/New_York', label: 'USA Este (New York)' },
+    { value: 'America/Los_Angeles', label: 'USA Oeste (Los Angeles)' },
+    { value: 'Europe/Madrid', label: 'España (Madrid)' },
+    { value: 'UTC', label: 'UTC (Universal)' },
+  ];
 
   const userInitials = useMemo(() => {
     return profile?.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
@@ -26,6 +43,7 @@ const Profile: React.FC = () => {
     if (profile) {
       setName(profile.name);
       setCurrency(profile.currency);
+      setTimezone(profile.timezone || 'America/Mexico_City');
       setAvatarPreview(profile.avatar || null);
       setIsEditing(true);
     }
@@ -46,7 +64,7 @@ const Profile: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      await updateProfileMutation.mutateAsync({ name, currency, avatar: avatarPreview || '' });
+      await updateProfileMutation.mutateAsync({ name, currency, timezone, avatar: avatarPreview || '' });
       toastSuccess('Perfil actualizado correctamente');
       setIsEditing(false);
     } catch (error) {
@@ -66,6 +84,7 @@ const Profile: React.FC = () => {
   if (isError) return <div className="p-8 text-center text-app-muted">Error cargando perfil.</div>;
 
   const currentAvatar = isEditing ? avatarPreview : profile?.avatar;
+  const currentTimezoneLabel = timezones.find(tz => tz.value === profile?.timezone)?.label || profile?.timezone;
 
   return (
     <div className="min-h-dvh bg-app-bg pb-safe text-app-text font-sans">
@@ -128,6 +147,7 @@ const Profile: React.FC = () => {
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider pl-1">Configuración Regional</h3>
 
+            {/* Currency */}
             <div className="bg-app-surface border border-app-border rounded-2xl p-4 flex justify-between items-center shadow-sm">
               <div>
                 <p className="font-semibold text-sm text-app-text">Moneda Principal</p>
@@ -150,6 +170,33 @@ const Profile: React.FC = () => {
               ) : (
                 <div className="bg-app-subtle px-3 py-1.5 rounded-lg text-sm font-bold text-app-text border border-app-border">
                   {profile?.currency}
+                </div>
+              )}
+            </div>
+
+            {/* Timezone */}
+            <div className="bg-app-surface border border-app-border rounded-2xl p-4 flex justify-between items-center shadow-sm">
+              <div className="flex-1 min-w-0 mr-3">
+                <p className="font-semibold text-sm text-app-text">Zona Horaria</p>
+                <p className="text-xs text-app-muted mt-0.5">Para calcular períodos y vencimientos</p>
+              </div>
+
+              {isEditing ? (
+                <div className="relative">
+                  <select
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    className="appearance-none bg-app-subtle border-transparent py-2 pl-3 pr-9 rounded-lg text-sm font-bold text-app-text focus:ring-2 focus:ring-app-primary outline-none cursor-pointer transition-shadow"
+                  >
+                    {timezones.map(tz => (
+                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                    ))}
+                  </select>
+                  <span className="absolute right-2.5 top-2.5 text-app-muted pointer-events-none material-symbols-outlined text-sm">expand_more</span>
+                </div>
+              ) : (
+                <div className="bg-app-subtle px-3 py-1.5 rounded-lg text-xs font-bold text-app-text border border-app-border truncate max-w-[150px]">
+                  {currentTimezoneLabel}
                 </div>
               )}
             </div>

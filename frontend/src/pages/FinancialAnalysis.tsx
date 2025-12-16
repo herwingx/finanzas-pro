@@ -107,7 +107,7 @@ const FinancialAnalysis: React.FC = () => {
             ))}
           </div>
           <p className="text-xs text-app-muted">
-            {formatDateUTC(summary.periodStart, { style: 'short' })} → {formatDateUTC(summary.periodEnd, { style: 'short' })}
+            {formatDateUTC(summary.displayStart || summary.periodStart, { style: 'short' })} → {formatDateUTC(summary.displayEnd || summary.periodEnd, { style: 'short' })}
             <span className="ml-2 text-app-primary font-medium">({periodLabels[periodType]})</span>
           </p>
         </div>

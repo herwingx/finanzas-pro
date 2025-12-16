@@ -8,7 +8,6 @@ router.use(authMiddleware);
 
 router.get('/', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    console.log(`Fetching categories for user: ${userId}`); // Debugging line
     try {
         const categories = await prisma.category.findMany({
             where: { userId },
@@ -18,7 +17,6 @@ router.get('/', async (req: AuthRequest, res) => {
                 }
             }
         });
-        console.log(`Found ${categories.length} categories for user: ${userId}`); // Debugging line
         res.json(categories);
     } catch (error) {
         console.error("Failed to retrieve categories:", error);
@@ -28,7 +26,6 @@ router.get('/', async (req: AuthRequest, res) => {
 
 router.post('/', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    console.log(`Creating category for user: ${userId}`); // Debugging line
     const { name, icon, color, type, budgetType } = req.body || {};
 
     if (!name || !icon || !color || !type) {
@@ -80,7 +77,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
         if (updatedCategory.count === 0) {
             return res.status(404).json({ message: 'Category not found or you do not have permission to update it.' });
         }
-        
+
         const category = await prisma.category.findFirst({ where: { id, userId } });
         res.json(category);
 

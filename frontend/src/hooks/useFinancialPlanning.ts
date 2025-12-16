@@ -4,6 +4,8 @@ import * as apiService from '../services/apiService';
 export interface FinancialPeriodSummary {
   periodStart: string;
   periodEnd: string;
+  displayStart?: string;  // Local date string for UI display (YYYY-MM-DD)
+  displayEnd?: string;    // Local date string for UI display (YYYY-MM-DD)
   periodType: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual';
 
   // Current state

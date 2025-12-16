@@ -1,113 +1,140 @@
 import { Request, Response } from 'express';
 import prisma from '../services/database';
 import { addDays, addWeeks, addMonths, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { AuthRequest } from '../middleware/auth';
 
 
 
-// Calculate period dates based on type and mode
+// Calculate period dates based on type, mode, and user's timezone
 // - mode 'calendar': Calendar-based periods (for Planning - "how is this month going")
 // - mode 'projection': Rolling projection from today (for Analysis - "how will I be in X time")
+// Returns:
+// - periodStart/periodEnd: UTC dates for database queries
+// - displayStart/displayEnd: Local dates (as ISO strings) for display in UI
 function calculatePeriod(
   type: 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual',
-  mode: 'calendar' | 'projection' = 'calendar'
+  mode: 'calendar' | 'projection' = 'calendar',
+  timezone: string = 'America/Mexico_City'
 ) {
-  const now = new Date();
-  const currentDay = now.getDate();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  // Get current time in user's timezone
+  const nowUTC = new Date();
+  const nowInUserTZ = toZonedTime(nowUTC, timezone);
 
-  let periodStart: Date;
-  let periodEnd: Date;
+  const currentDay = nowInUserTZ.getDate();
+  const currentMonth = nowInUserTZ.getMonth();
+  const currentYear = nowInUserTZ.getFullYear();
+
+  let periodStartLocal: Date;
+  let periodEndLocal: Date;
 
   // PROJECTION MODE: Rolling from today (for Financial Analysis)
   if (mode === 'projection') {
-    periodStart = startOfDay(now);
+    // Start from today in user's timezone
+    periodStartLocal = startOfDay(nowInUserTZ);
     switch (type) {
       case 'semanal':
-        periodEnd = endOfDay(addDays(now, 7));
+        periodEndLocal = endOfDay(addDays(nowInUserTZ, 7));
         break;
       case 'quincenal':
-        periodEnd = endOfDay(addDays(now, 15));
+        periodEndLocal = endOfDay(addDays(nowInUserTZ, 15));
         break;
       case 'mensual':
-        periodEnd = endOfDay(addMonths(now, 1));
+        periodEndLocal = endOfDay(addMonths(nowInUserTZ, 1));
         break;
       case 'bimestral':
-        periodEnd = endOfDay(addMonths(now, 2));
+        periodEndLocal = endOfDay(addMonths(nowInUserTZ, 2));
         break;
       case 'semestral':
-        periodEnd = endOfDay(addMonths(now, 6));
+        periodEndLocal = endOfDay(addMonths(nowInUserTZ, 6));
         break;
       case 'anual':
-        periodEnd = endOfDay(addMonths(now, 12));
+        periodEndLocal = endOfDay(addMonths(nowInUserTZ, 12));
         break;
       default:
         throw new Error('Invalid period type');
     }
-    return { periodStart, periodEnd };
+    // Return both UTC (for DB) and local strings (for display)
+    return {
+      periodStart: fromZonedTime(periodStartLocal, timezone),
+      periodEnd: fromZonedTime(periodEndLocal, timezone),
+      displayStart: `${currentYear}-${String(periodStartLocal.getMonth() + 1).padStart(2, '0')}-${String(periodStartLocal.getDate()).padStart(2, '0')}`,
+      displayEnd: `${periodEndLocal.getFullYear()}-${String(periodEndLocal.getMonth() + 1).padStart(2, '0')}-${String(periodEndLocal.getDate()).padStart(2, '0')}`,
+      userLocalNow: nowInUserTZ
+    };
   }
 
   // CALENDAR MODE: Calendar-based periods (for Planning Widget)
   switch (type) {
     case 'semanal':
       // Calendar week: Monday to Sunday
-      const dayOfWeek = now.getDay();
+      const dayOfWeek = nowInUserTZ.getDay();
       const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      periodStart = startOfDay(addDays(now, -daysToMonday));
-      periodEnd = endOfDay(addDays(periodStart, 6));
+      periodStartLocal = startOfDay(addDays(nowInUserTZ, -daysToMonday));
+      periodEndLocal = endOfDay(addDays(periodStartLocal, 6));
       break;
 
     case 'quincenal':
       // Calendar-based fortnights: 1-15 or 16-end
       if (currentDay <= 15) {
-        periodStart = startOfDay(new Date(currentYear, currentMonth, 1));
-        periodEnd = endOfDay(new Date(currentYear, currentMonth, 15));
+        periodStartLocal = new Date(currentYear, currentMonth, 1);
+        periodEndLocal = new Date(currentYear, currentMonth, 15);
       } else {
-        periodStart = startOfDay(new Date(currentYear, currentMonth, 16));
+        periodStartLocal = new Date(currentYear, currentMonth, 16);
         const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        periodEnd = endOfDay(new Date(currentYear, currentMonth, lastDayOfMonth));
+        periodEndLocal = new Date(currentYear, currentMonth, lastDayOfMonth);
       }
       break;
 
     case 'mensual':
       // Current calendar month
-      periodStart = startOfDay(new Date(currentYear, currentMonth, 1));
+      periodStartLocal = new Date(currentYear, currentMonth, 1);
       const lastDayOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      periodEnd = endOfDay(new Date(currentYear, currentMonth, lastDayOfCurrentMonth));
+      periodEndLocal = new Date(currentYear, currentMonth, lastDayOfCurrentMonth);
       break;
 
     case 'bimestral':
       // Current bimester
       const bimesterIndex = Math.floor(currentMonth / 2);
       const bimesterStartMonth = bimesterIndex * 2;
-      periodStart = startOfDay(new Date(currentYear, bimesterStartMonth, 1));
+      periodStartLocal = new Date(currentYear, bimesterStartMonth, 1);
       const lastDayOfBimester = new Date(currentYear, bimesterStartMonth + 2, 0).getDate();
-      periodEnd = endOfDay(new Date(currentYear, bimesterStartMonth + 1, lastDayOfBimester));
+      periodEndLocal = new Date(currentYear, bimesterStartMonth + 1, lastDayOfBimester);
       break;
 
     case 'semestral':
       // Current semester: Jan-Jun or Jul-Dec
       if (currentMonth < 6) {
-        periodStart = startOfDay(new Date(currentYear, 0, 1));
-        periodEnd = endOfDay(new Date(currentYear, 5, 30));
+        periodStartLocal = new Date(currentYear, 0, 1);
+        periodEndLocal = new Date(currentYear, 5, 30);
       } else {
-        periodStart = startOfDay(new Date(currentYear, 6, 1));
-        periodEnd = endOfDay(new Date(currentYear, 11, 31));
+        periodStartLocal = new Date(currentYear, 6, 1);
+        periodEndLocal = new Date(currentYear, 11, 31);
       }
       break;
 
     case 'anual':
       // Current calendar year
-      periodStart = startOfDay(new Date(currentYear, 0, 1));
-      periodEnd = endOfDay(new Date(currentYear, 11, 31));
+      periodStartLocal = new Date(currentYear, 0, 1);
+      periodEndLocal = new Date(currentYear, 11, 31);
       break;
 
     default:
       throw new Error('Invalid period type');
   }
 
-  return { periodStart, periodEnd };
+  // Create display strings (YYYY-MM-DD format in local time)
+  const displayStart = `${periodStartLocal.getFullYear()}-${String(periodStartLocal.getMonth() + 1).padStart(2, '0')}-${String(periodStartLocal.getDate()).padStart(2, '0')}`;
+  const displayEnd = `${periodEndLocal.getFullYear()}-${String(periodEndLocal.getMonth() + 1).padStart(2, '0')}-${String(periodEndLocal.getDate()).padStart(2, '0')}`;
+
+  // Convert to UTC for database queries
+  return {
+    periodStart: fromZonedTime(startOfDay(periodStartLocal), timezone),
+    periodEnd: fromZonedTime(endOfDay(periodEndLocal), timezone),
+    displayStart,
+    displayEnd,
+    userLocalNow: nowInUserTZ
+  };
 }
 
 // Get next due date for a recurring transaction
@@ -137,9 +164,16 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // Get user's timezone
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true }
+    });
+    const userTimezone = user?.timezone || 'America/Mexico_City';
+
     const periodType = (req.query.period as 'quincenal' | 'mensual' | 'semanal' | 'bimestral' | 'semestral' | 'anual') || 'quincenal';
     const mode = (req.query.mode as 'calendar' | 'projection') || 'calendar';
-    const { periodStart, periodEnd } = calculatePeriod(periodType, mode);
+    const { periodStart, periodEnd, displayStart, displayEnd, userLocalNow } = calculatePeriod(periodType, mode, userTimezone);
 
     // Get all active recurring transactions
     const recurringTransactions = await prisma.recurringTransaction.findMany({
@@ -178,8 +212,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         description: `Cobrar: ${l.borrowerName}`, // Short description
         amount: l.remainingAmount,
         dueDate: l.expectedPayDate,
-        category: { name: 'Préstamos', color: '#f59e0b', icon: 'credit_score', budgetType: 'savings' }, // Using 'savings' budgetType for income? Or null. 
-        isOverdue: l.expectedPayDate ? new Date(l.expectedPayDate) < new Date() : false,
+        category: { name: 'Préstamos', color: '#f59e0b', icon: 'credit_score', budgetType: 'savings' },
+        isOverdue: l.expectedPayDate ? new Date(l.expectedPayDate) < userLocalNow : false,
         isLoan: true
       });
     });
@@ -196,7 +230,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         amount: l.remainingAmount,
         dueDate: l.expectedPayDate,
         category: { name: 'Préstamos', color: '#f59e0b', icon: 'credit_score', budgetType: 'need' }, // Debt is a NEED
-        isOverdue: l.expectedPayDate ? new Date(l.expectedPayDate) < new Date() : false,
+        isOverdue: l.expectedPayDate ? new Date(l.expectedPayDate) < userLocalNow : false,
         isLoan: true
       });
     });
@@ -231,9 +265,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       anual: 370
     };
     const projectionLimit = maxInstances[periodType] || 50;
-
-    console.log(`[DEBUG] Planning: ${periodType}, Mode: ${mode}, Limit: ${projectionLimit}`);
-    console.log(`[DEBUG] Period: ${periodStart.toISOString()} -> ${periodEnd.toISOString()}`);
 
     // Helper to calculate next date for projection
     const getNextDate = (date: Date, freq: string): Date => {
@@ -270,8 +301,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       projectionDate.setHours(12, 0, 0, 0); // Normalize time
 
       let instanceCount = 0;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Use user's local time for "today" calculation
+      const today = startOfDay(userLocalNow);
 
       // Check for existing payments linked to this recurring transaction
       const existingPayments = await prisma.transaction.findMany({
@@ -302,9 +333,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
         // Only add if in period, not already added globally, and not paid
         if (isInPeriod && !globalAddedIds.has(uniqueId) && !paidDates.has(projDateStr)) {
-          if (rt.description === 'Ingreso Recurrente') {
-            console.log(`[DEBUG] Adding Recurrente: ${uniqueId} | Count: ${instanceCount}`);
-          }
           globalAddedIds.add(uniqueId);
 
           const isOverdue = projectionDate < today;
@@ -711,6 +739,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     const summary = {
       periodStart: periodStart.toISOString(),
       periodEnd: periodEnd.toISOString(),
+      displayStart,  // For UI display (local time, YYYY-MM-DD format)
+      displayEnd,    // For UI display (local time, YYYY-MM-DD format)
       periodType,
       currentBalance,
       currentDebt,

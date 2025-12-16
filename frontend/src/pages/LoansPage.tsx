@@ -9,6 +9,7 @@ import { PageHeader } from '../components/PageHeader';
 import { SkeletonTransactionList } from '../components/Skeleton';
 import { Button } from '../components/Button';
 import { useAccounts } from '../hooks/useApi';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 
 // --- Sub-Components (Inline for brevity but could be split) ---
 
@@ -26,6 +27,8 @@ const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) =
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
       toastSuccess('Abono registrado');
       onClose();
     },
@@ -156,6 +159,7 @@ const LoansPage: React.FC = () => {
 
   const [filter, setFilter] = useState<'all' | 'lent' | 'borrowed'>('all');
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [loanToDelete, setLoanToDelete] = useState<Loan | null>(null);
 
   const { data: loans = [], isLoading } = useQuery<Loan[]>({ queryKey: ['loans'], queryFn: getLoans });
   const { data: summary } = useQuery<LoanSummary>({ queryKey: ['loans-summary'], queryFn: getLoanSummary });
@@ -165,8 +169,15 @@ const LoansPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
       toastSuccess('Préstamo eliminado');
       setSelectedLoan(null);
+      setLoanToDelete(null);
+    },
+    onError: (error: any) => {
+      toastError(error.message || 'Error al eliminar préstamo');
     }
   });
 
@@ -174,6 +185,9 @@ const LoansPage: React.FC = () => {
     mutationFn: (id: string) => markLoanAsPaid(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
       toastSuccess('Marcado como pagado');
       setSelectedLoan(null);
     }
@@ -243,12 +257,12 @@ const LoansPage: React.FC = () => {
               return (
                 <SwipeableItem
                   key={loan.id}
-                  leftAction={{ icon: 'delete', color: '#EF4444', label: 'Eliminar' }}
-                  rightAction={!isPaid ? { icon: 'check', color: '#10B981', label: 'Liquidar' } : undefined}
-                  onSwipeLeft={() => {
-                    if (confirm('¿Eliminar préstamo?')) deleteMutation.mutate({ id: loan.id, revert: !isPaid });
-                  }}
-                  onSwipeRight={!isPaid ? () => markPaidMutation.mutate(loan.id) : undefined}
+                  // Swipe RIGHT -> muestra leftAction (Editar)
+                  leftAction={{ icon: 'edit', color: '#3b82f6', label: 'Editar' }}
+                  onSwipeRight={() => navigate(`/loans/${loan.id}`)}
+                  // Swipe LEFT -> muestra rightAction (Eliminar)
+                  rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
+                  onSwipeLeft={() => setLoanToDelete(loan)}
                 >
                   <div onClick={() => setSelectedLoan(loan)} className="bg-app-surface p-4 rounded-2xl border border-app-border hover:bg-app-subtle/50 transition-colors flex items-center gap-4 cursor-pointer">
                     <div className={`size-12 rounded-full flex items-center justify-center text-xl shrink-0 ${isPaid ? 'bg-emerald-100 text-emerald-600' :
@@ -290,11 +304,34 @@ const LoansPage: React.FC = () => {
           onClose={() => setSelectedLoan(null)}
           onMarkPaid={() => markPaidMutation.mutate(selectedLoan.id)}
           onDelete={() => {
-            if (confirm('¿Eliminar préstamo y revertir movimientos?')) {
-              deleteMutation.mutate({ id: selectedLoan.id, revert: true });
-            }
+            setSelectedLoan(null);
+            setLoanToDelete(selectedLoan);
           }}
           onEdit={() => navigate(`/loans/${selectedLoan.id}`)}
+        />
+      )}
+
+      {/* Delete Confirmation Sheet */}
+      {loanToDelete && (
+        <DeleteConfirmationSheet
+          isOpen={!!loanToDelete}
+          onClose={() => setLoanToDelete(null)}
+          onConfirm={() => {
+            const isPaid = loanToDelete.status === 'paid';
+            deleteMutation.mutate({ id: loanToDelete.id, revert: !isPaid });
+          }}
+          itemName={`"${loanToDelete.borrowerName}"`}
+          warningLevel={loanToDelete.status !== 'paid' ? 'warning' : 'normal'}
+          warningMessage={loanToDelete.status !== 'paid' ? 'Préstamo activo' : undefined}
+          warningDetails={
+            loanToDelete.status !== 'paid'
+              ? [
+                'Se revertirán las transacciones asociadas',
+                'El saldo de la cuenta vinculada será ajustado'
+              ]
+              : []
+          }
+          isDeleting={deleteMutation.isPending}
         />
       )}
     </div>

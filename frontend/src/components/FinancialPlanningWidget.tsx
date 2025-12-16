@@ -536,7 +536,7 @@ export const FinancialPlanningWidget: React.FC = () => {
             )}
           </div>
           <p className="text-xs text-app-muted mt-0.5">
-            {formatDate(summary.periodStart)} → {formatDate(summary.periodEnd)}
+            {formatDate(summary.displayStart || summary.periodStart)} → {formatDate(summary.displayEnd || summary.periodEnd)}
           </p>
         </div>
 

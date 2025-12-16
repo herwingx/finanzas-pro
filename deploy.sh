@@ -29,6 +29,8 @@ NC='\033[0m' # No Color
 COMPOSE_FILE="docker-compose.yml"
 PROJECT_NAME="finanzas-pro"
 BACKUP_DIR="./backups"
+POSTGRES_USER="${POSTGRES_USER:-finanzas}"
+POSTGRES_DB="${POSTGRES_DB:-finanzas_pro}"
 
 # Funciones de utilidad
 log_info() {
@@ -139,7 +141,7 @@ cmd_backup() {
     BACKUP_FILE="$BACKUP_DIR/backup_$DATE.sql"
     
     docker compose -f $COMPOSE_FILE -p $PROJECT_NAME exec -T db \
-        pg_dump -U herwingx finanzas_pro > "$BACKUP_FILE"
+        pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > "$BACKUP_FILE"
     
     # Comprimir
     gzip "$BACKUP_FILE"
@@ -169,7 +171,7 @@ cmd_shell() {
 cmd_db() {
     log_info "Conectando a PostgreSQL..."
     docker compose -f $COMPOSE_FILE -p $PROJECT_NAME exec db \
-        psql -U herwingx -d finanzas_pro
+        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 }
 
 cmd_help() {

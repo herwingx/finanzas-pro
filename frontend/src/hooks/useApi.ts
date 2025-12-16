@@ -48,7 +48,7 @@ export const useUpdateInstallmentPurchase = () => {
 export const useDeleteInstallmentPurchase = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: string) => apiService.deleteInstallmentPurchase(id),
+        mutationFn: ({ id, revert }: { id: string; revert?: boolean }) => apiService.deleteInstallmentPurchase(id, revert),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['installments'] });
             queryClient.invalidateQueries({ queryKey: ['accounts'] });

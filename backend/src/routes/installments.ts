@@ -267,7 +267,8 @@ router.put('/:id', async (req: AuthRequest, res) => {
                     data: {
                         amount: newTxAmount,
                         description: description ?? initialTransaction.description,
-                        date: purchaseDate ? new Date(purchaseDate) : initialTransaction.date
+                        date: purchaseDate ? new Date(purchaseDate) : initialTransaction.date,
+                        categoryId: categoryId ?? initialTransaction.categoryId
                     }
                 });
 
@@ -311,18 +312,22 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                 throw new Error('Installment purchase not found or you do not have permission to delete it.');
             }
 
-            // Step 2: For every payment made from a different account (transfers), refund the source account.
-            const paymentTransactions = purchase.generatedTransactions.filter(
-                (trx: any) => trx.type === 'transfer' && trx.destinationAccountId === purchase.accountId
-            );
+            // Step 2: For every payment made from a different account (transfers), refund the source account ONLY IF REVERT IS REQUESTED.
+            const shouldRevert = req.query.revert === 'true';
 
-            if (paymentTransactions.length > 0) {
-                for (const payment of paymentTransactions) {
-                    if (payment.accountId) { // accountId is the source of the transfer
-                        await tx.account.update({
-                            where: { id: payment.accountId },
-                            data: { balance: { increment: payment.amount } },
-                        });
+            if (shouldRevert) {
+                const paymentTransactions = purchase.generatedTransactions.filter(
+                    (trx: any) => trx.type === 'transfer' && trx.destinationAccountId === purchase.accountId
+                );
+
+                if (paymentTransactions.length > 0) {
+                    for (const payment of paymentTransactions) {
+                        if (payment.accountId) { // accountId is the source of the transfer
+                            await tx.account.update({
+                                where: { id: payment.accountId },
+                                data: { balance: { increment: payment.amount } },
+                            });
+                        }
                     }
                 }
             }
@@ -330,7 +335,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
             // Step 3: Calculate the net debt impact on the credit card and create one final transaction to reverse it.
             // The net debt added to the card is Total Amount - Paid Amount. We need to reverse this.
             const remainingDebt = purchase.totalAmount - purchase.paidAmount;
-            
+
 
             // To revert the net debt on a CREDIT account, we must DECREMENT its balance.
             if (purchase.account.type === 'CREDIT') {
@@ -345,7 +350,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                     data: { balance: { increment: remainingDebt } },
                 });
             }
-            
+
             // Step 4: Hard delete all transactions associated with this installment purchase.
             await tx.transaction.deleteMany({
                 where: { installmentPurchaseId: id },

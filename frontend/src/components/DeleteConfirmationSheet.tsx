@@ -10,10 +10,14 @@ export interface ImpactDetail {
   msiProgress?: { current: number; total: number };
 }
 
+interface DeleteConfirmOptions {
+  revertBalance: boolean;
+}
+
 interface DeleteConfirmationSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (options?: DeleteConfirmOptions) => void;
   itemName: string;
   warningLevel?: WarningLevel;
   warningMessage?: string;
@@ -21,6 +25,10 @@ interface DeleteConfirmationSheetProps {
   impactPreview?: ImpactDetail;
   requireConfirmation?: boolean; // Requiere escribir "ELIMINAR"
   isDeleting?: boolean;
+  // New Revert Option Props
+  showRevertOption?: boolean;
+  revertOptionLabel?: string;
+  defaultRevertState?: boolean;
 }
 
 export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = ({
@@ -34,17 +42,22 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
   impactPreview,
   requireConfirmation = false,
   isDeleting = false,
+  showRevertOption = false,
+  revertOptionLabel = "Revertir impacto en saldo de cuentas",
+  defaultRevertState = true,
 }) => {
   const [confirmationText, setConfirmationText] = useState('');
   const [acknowledgeWarning, setAcknowledgeWarning] = useState(false);
+  const [revertBalance, setRevertBalance] = useState(defaultRevertState);
 
   // Reset state on open
   useEffect(() => {
     if (isOpen) {
       setConfirmationText('');
       setAcknowledgeWarning(false);
+      setRevertBalance(defaultRevertState);
     }
-  }, [isOpen]);
+  }, [isOpen, defaultRevertState]);
 
   // Handle ESC key
   useEffect(() => {
@@ -93,6 +106,10 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
   const canConfirm = requireConfirmation
     ? confirmationText === 'ELIMINAR' && acknowledgeWarning
     : true;
+
+  const handleConfirm = () => {
+    onConfirm({ revertBalance });
+  };
 
   return (
     <div
@@ -147,6 +164,26 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
             </div>
           )}
 
+          {/* Revert Option Toggle */}
+          {showRevertOption && (
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-app-subtle border border-app-border hover:bg-app-subtle/80 cursor-pointer transition-colors">
+              <input
+                type="checkbox"
+                checked={revertBalance}
+                onChange={e => setRevertBalance(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-app-primary border-gray-300 rounded focus:ring-app-primary"
+              />
+              <div>
+                <span className="text-sm font-bold text-app-text block">{revertOptionLabel}</span>
+                <span className="text-xs text-app-muted leading-tight block mt-0.5">
+                  {revertBalance
+                    ? "El dinero pendiente regresará al saldo de tu cuenta."
+                    : "Solo se borrará el registro. El saldo de tu cuenta NO cambiará."}
+                </span>
+              </div>
+            </label>
+          )}
+
           {/* Data Impact Summary (Mini Scorecard) */}
           {impactPreview && (
             <div className="bg-app-subtle/50 border border-app-border rounded-2xl p-4 text-sm">
@@ -163,6 +200,7 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
                     <span className="text-app-text">Ajuste de saldo</span>
                     <span className={`font-bold tabular-nums ${impactPreview.balanceChange > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                       {impactPreview.balanceChange > 0 ? '+' : ''}${Math.abs(impactPreview.balanceChange).toFixed(2)}
+                      {!revertBalance && showRevertOption && <span className="ml-2 text-xs font-normal text-app-muted line-through opacity-50">(Ignorado)</span>}
                     </span>
                   </div>
                 )}
@@ -208,7 +246,7 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
             Cancelar
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={!canConfirm || isDeleting}
             className={`
                  px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg active:scale-95 transition-all flex items-center gap-2

@@ -49,8 +49,9 @@ export const updateInstallmentPurchase = async (id: string, purchase: Partial<Om
     return response.json();
 };
 
-export const deleteInstallmentPurchase = async (id: string): Promise<void> => {
-    const response = await fetch(`${API_URL}/installments/${id}`, {
+export const deleteInstallmentPurchase = async (id: string, revertBalance: boolean = false): Promise<void> => {
+    const url = revertBalance ? `${API_URL}/installments/${id}?revert=true` : `${API_URL}/installments/${id}`;
+    const response = await fetch(url, {
         method: 'DELETE',
         headers: getAuthHeaders(),
     });

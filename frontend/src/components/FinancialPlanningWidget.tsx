@@ -589,6 +589,10 @@ export const FinancialPlanningWidget: React.FC = () => {
           <div className="flex items-center gap-1.5 mb-1">
             <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[14px]">trending_up</span>
             <p className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400">Ingresos</p>
+            <span
+              className="material-symbols-outlined text-[12px] text-emerald-500/50 cursor-help hover:text-emerald-500 transition-colors"
+              title="Total de ingresos del período: recibidos + esperados"
+            >info</span>
           </div>
           <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatCurrency(summary.totalPeriodIncome ?? 0)}</p>
           {/* Breakdown: Received vs Pending - only show if there's activity */}
@@ -613,7 +617,11 @@ export const FinancialPlanningWidget: React.FC = () => {
         <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/50">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="material-symbols-outlined text-rose-600 dark:text-rose-400 text-[14px]">credit_card</span>
-            <p className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-400">Tarjetas</p>
+            <p className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-400">Pagos TDC</p>
+            <span
+              className="material-symbols-outlined text-[12px] text-rose-500/50 cursor-help hover:text-rose-500 transition-colors"
+              title="Pagos de deuda de tarjetas: MSI y consumos del período (no son gastos nuevos)"
+            >info</span>
           </div>
           <p className="text-lg font-bold text-rose-700 dark:text-rose-400 tabular-nums">{formatCurrency(cardTotal)}</p>
         </div>
@@ -621,7 +629,11 @@ export const FinancialPlanningWidget: React.FC = () => {
         <div className="p-3 rounded-xl bg-app-subtle/50 border border-app-border/50">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="material-symbols-outlined text-app-muted text-[14px]">receipt_long</span>
-            <p className="text-[10px] uppercase font-bold text-app-muted">Fijos</p>
+            <p className="text-[10px] uppercase font-bold text-app-muted">Compromisos</p>
+            <span
+              className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
+              title="Gastos recurrentes pendientes: servicios, suscripciones, préstamos por pagar"
+            >info</span>
           </div>
           <p className="text-lg font-bold text-app-text tabular-nums">{formatCurrency(fixedTotal)}</p>
         </div>
@@ -633,7 +645,11 @@ export const FinancialPlanningWidget: React.FC = () => {
             <span className={`material-symbols-outlined text-[14px] ${summary.isSufficient ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600 dark:text-rose-400'}`}>
               {summary.isSufficient ? 'savings' : 'warning'}
             </span>
-            <p className={`text-[10px] uppercase font-bold ${summary.isSufficient ? 'text-indigo-700 dark:text-indigo-400' : 'text-rose-700 dark:text-rose-400'}`}>Resultado</p>
+            <p className={`text-[10px] uppercase font-bold ${summary.isSufficient ? 'text-indigo-700 dark:text-indigo-400' : 'text-rose-700 dark:text-rose-400'}`}>Disponible</p>
+            <span
+              className={`material-symbols-outlined text-[12px] cursor-help transition-colors ${summary.isSufficient ? 'text-indigo-500/50 hover:text-indigo-500' : 'text-rose-500/50 hover:text-rose-500'}`}
+              title="Tu balance actual + ingresos esperados - todos los compromisos del período"
+            >info</span>
           </div>
           <p className={`text-lg font-bold tabular-nums ${summary.isSufficient ? 'text-indigo-700 dark:text-indigo-400' : 'text-rose-700 dark:text-rose-400'}`}>
             {formatCurrency(summary.disposableIncome)}
@@ -747,7 +763,7 @@ export const FinancialPlanningWidget: React.FC = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h4 className="text-xs font-bold text-app-muted uppercase tracking-wider">
-              {isLongPeriod ? 'Resumen de Tarjetas' : 'Tarjetas por Pagar'}
+              {isLongPeriod ? 'Resumen Pagos TDC' : 'Pagos de Deuda TDC'}
             </h4>
             <Link to="/installments" className="text-xs text-app-primary font-medium hover:underline">Ver MSI</Link>
           </div>
@@ -775,7 +791,7 @@ export const FinancialPlanningWidget: React.FC = () => {
       {hasExpenses && (
         <div>
           <div className="flex items-center justify-between px-1 mb-2">
-            <h4 className="text-xs font-bold text-app-muted uppercase tracking-wider">Gastos Fijos</h4>
+            <h4 className="text-xs font-bold text-app-muted uppercase tracking-wider">Compromisos Pendientes</h4>
             <Link to="/recurring/new" className="text-xs text-app-primary font-medium hover:underline flex items-center gap-1">
               <span className="material-symbols-outlined text-[12px]">add</span>
               Añadir

@@ -239,8 +239,8 @@ export const BalanceOverTimeChart: React.FC<{ transactions: Transaction[] }> = (
       <AreaChart data={data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
         <defs>
           <linearGradient id="gradBalance" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--app-primary)" stopOpacity={0.2} />
-            <stop offset="100%" stopColor="var(--app-primary)" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--brand-primary)" stopOpacity={0.2} />
+            <stop offset="100%" stopColor="var(--brand-primary)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-default)" />
@@ -248,7 +248,7 @@ export const BalanceOverTimeChart: React.FC<{ transactions: Transaction[] }> = (
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
           tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val} />
         <Tooltip content={<ModernTooltip />} cursor={false} />
-        <Area type="monotone" dataKey="Saldo" stroke="var(--app-primary)" strokeWidth={2} fill="url(#gradBalance)" />
+        <Area type="monotone" dataKey="Saldo" stroke="var(--brand-primary)" strokeWidth={2} fill="url(#gradBalance)" />
       </AreaChart>
     </ResponsiveContainer>
   );

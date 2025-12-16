@@ -1,15 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } from '../hooks/useApi';
-import { toastSuccess, toastError, toast } from '../utils/toast';
+import { toastSuccess, toastError } from '../utils/toast';
 import { useNavigate } from 'react-router-dom';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { SkeletonAccountList } from '../components/Skeleton';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
+import { InstallmentPurchase } from '../types';
 
 const InstallmentsPage: React.FC = () => {
     const { data: purchases, isLoading, isError } = useInstallmentPurchases();
     const { data: profile } = useProfile();
     const [activeTab, setActiveTab] = useState<'active' | 'settled'>('active');
+    const [itemToDelete, setItemToDelete] = useState<InstallmentPurchase | null>(null);
     const navigate = useNavigate();
     const deleteMutation = useDeleteInstallmentPurchase();
 
@@ -23,42 +26,23 @@ const InstallmentsPage: React.FC = () => {
     const settledPurchases = useMemo(() => purchases?.filter(p => p.paidAmount >= p.totalAmount) || [], [purchases]);
     const displayedPurchases = useMemo(() => activeTab === 'active' ? activePurchases : settledPurchases, [activeTab, activePurchases, settledPurchases]);
 
-    // Handle Delete (Confirmación Moderna)
-    const handleDelete = (purchase: any) => {
-        const isSettled = (purchase.totalAmount - purchase.paidAmount) <= 0.05;
+    // Handle Delete
+    const handleDelete = (purchase: InstallmentPurchase) => {
+        setItemToDelete(purchase);
+    };
 
-        toast.custom((t) => (
-            <div className="bg-app-surface border border-app-border rounded-xl shadow-xl max-w-sm w-full p-4 font-sans animate-fade-in">
-                <div className="flex gap-4">
-                    <div className="size-10 rounded-full bg-rose-100 dark:bg-rose-900/20 text-rose-600 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined">delete_forever</span>
-                    </div>
-                    <div>
-                        <h4 className="text-sm font-bold text-app-text">¿Eliminar Plan MSI?</h4>
-                        <p className="text-xs text-app-muted mt-1 leading-relaxed">
-                            Esto eliminará "{purchase.description}" y sus {purchase.paidInstallments} pagos registrados de tu contabilidad.
-                        </p>
+    const confirmDelete = (options?: { revertBalance: boolean }) => {
+        if (!itemToDelete) return;
 
-                        {isSettled && (
-                            <div className="mt-2 text-[10px] bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 px-2 py-1 rounded-md font-bold">
-                                ⚠️ Este plan ya estaba liquidado.
-                            </div>
-                        )}
+        const shouldRevert = options?.revertBalance ?? false;
 
-                        <div className="flex gap-2 mt-4">
-                            <button onClick={() => toast.dismiss(t)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-app-muted hover:bg-app-subtle transition-colors">Cancelar</button>
-                            <button onClick={async () => {
-                                toast.dismiss(t);
-                                try {
-                                    await deleteMutation.mutateAsync(purchase.id);
-                                    toastSuccess('Plan eliminado');
-                                } catch (error) { toastError('Error eliminando'); }
-                            }} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-500 text-white hover:bg-rose-600 shadow-sm transition-colors">Confirmar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        ), { duration: Infinity });
+        deleteMutation.mutate({ id: itemToDelete.id, revert: shouldRevert }, {
+            onSuccess: () => {
+                toastSuccess('Plan eliminado');
+                setItemToDelete(null);
+            },
+            onError: () => toastError('Error eliminando plan')
+        });
     };
 
     if (isLoading) {
@@ -122,10 +106,10 @@ const InstallmentsPage: React.FC = () => {
                                 <SwipeableItem
                                     key={purchase.id}
                                     onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`)}
-                                    leftAction={{ icon: 'edit', color: 'var(--app-primary)', label: 'Editar' }}
+                                    leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
-                                    className="mb-3" // Margen para la tarjeta swipeable
+                                    className="mb-3 rounded-2xl" // Margen para la tarjeta swipeable
                                 >
                                     <div
                                         onClick={() => navigate(`/installments/edit/${purchase.id}`)}
@@ -159,7 +143,7 @@ const InstallmentsPage: React.FC = () => {
                                                     className="h-full rounded-full transition-all duration-500 ease-out"
                                                     style={{
                                                         width: `${percent}%`,
-                                                        backgroundColor: activeTab === 'active' ? 'var(--app-primary)' : 'var(--text-muted)'
+                                                        backgroundColor: activeTab === 'active' ? 'var(--brand-primary)' : 'var(--text-muted)'
                                                     }}
                                                 />
                                             </div>
@@ -173,6 +157,26 @@ const InstallmentsPage: React.FC = () => {
 
                 {/* Spacer for safe bottom */}
                 <div className="h-16" />
+
+                {/* Delete Confirmation Sheet */}
+                {itemToDelete && (
+                    <DeleteConfirmationSheet
+                        isOpen={!!itemToDelete}
+                        onClose={() => setItemToDelete(null)}
+                        onConfirm={confirmDelete}
+                        itemName={itemToDelete.description}
+                        warningLevel={itemToDelete.paidAmount < itemToDelete.totalAmount ? 'warning' : 'normal'}
+                        warningMessage={itemToDelete.paidAmount < itemToDelete.totalAmount ? 'Plan Activo' : undefined}
+                        warningDetails={[
+                            "Se eliminará el plan de tus proyecciones.",
+                            "La deuda pendiente se cancelará de la tarjeta."
+                        ]}
+                        showRevertOption={itemToDelete.paidAmount > 0}
+                        revertOptionLabel="Reembolsar pagos realizados (Devolver dinero a mi cuenta)"
+                        defaultRevertState={false}
+                        isDeleting={deleteMutation.isPending}
+                    />
+                )}
             </div>
         </div>
     );

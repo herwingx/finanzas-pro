@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Routes, Route, useLocation, Link, NavLink } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { Routes, Route, useLocation, Link, NavLink, useNavigate } from 'react-router-dom';
 
 // Pages
 import Dashboard from '../pages/Dashboard';
@@ -25,6 +25,7 @@ import LoanFormPage from '../pages/LoanFormPage';
 // Components
 import BottomNav from '../components/BottomNav';
 import { AppLogo } from '../components/AppLogo';
+import { DesktopFAB } from '../components/DesktopFAB';
 
 // Pages that show the mobile bottom nav
 const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
@@ -36,6 +37,7 @@ const DesktopSidebar = () => {
     { to: '/', label: 'Panel Principal', icon: 'space_dashboard' },
     { to: '/history', label: 'Movimientos', icon: 'receipt_long' },
     { to: '/accounts', label: 'Mis Cuentas', icon: 'account_balance' },
+    { to: '/categories', label: 'Categorías', icon: 'category' },
     { to: '/analysis', label: 'Análisis', icon: 'analytics' },
     { to: '/reports', label: 'Reportes', icon: 'summarize' },
     { to: '/installments', label: 'Meses (MSI)', icon: 'credit_score' },
@@ -44,6 +46,7 @@ const DesktopSidebar = () => {
   ];
 
   const bottomLinks = [
+    { to: '/trash', label: 'Papelera', icon: 'delete_sweep' },
     { to: '/settings', label: 'Configuración', icon: 'settings' },
     { to: '/profile', label: 'Perfil', icon: 'person' },
   ];
@@ -65,7 +68,7 @@ const DesktopSidebar = () => {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar mt-4">
         <div className="mb-2 px-4 py-2">
           <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Menú</p>
         </div>
@@ -112,6 +115,7 @@ const MainApp: React.FC = () => {
 
       {/* 1. Global Sidebar (Desktop Only) */}
       <DesktopSidebar />
+      <DesktopFAB />
 
       {/* 2. Main Content Wrapper */}
       <main

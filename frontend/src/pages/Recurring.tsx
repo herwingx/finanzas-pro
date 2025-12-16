@@ -318,8 +318,8 @@ const Recurring: React.FC = () => {
                                         onSwipeLeft={() => setDeletingId(tx.id)}
                                         rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
                                         onSwipeRight={() => handleEdit(tx.id)}
-                                        leftAction={{ icon: 'edit', color: '#3b82f6', label: 'Editar' }}
-                                        className="mb-3"
+                                        leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                                        className="mb-3 rounded-2xl"
                                     >
                                         <div
                                             onClick={() => handleItemClick(tx)}
@@ -397,7 +397,7 @@ const Recurring: React.FC = () => {
                     isOpen={!!deletingId}
                     onClose={() => setDeletingId(null)}
                     onConfirm={handleDelete}
-                    itemName="esta suscripción"
+                    itemName={recurring?.find(r => r.id === deletingId)?.description || "esta suscripción"}
                     warningMessage="Detener pago recurrente"
                     warningDetails={['Esto no borrará el historial pasado, solo los cobros futuros.']}
                     isDeleting={deleteMutation.isPending}

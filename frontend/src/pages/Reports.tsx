@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useTransactions, useCategories, useProfile, useRecurringTransactions, useInstallmentPurchases, useLoans } from '../hooks/useApi';
+import { useProfile } from '../hooks/useApi';
+import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
 import { SkeletonDashboard } from '../components/Skeleton';
 import { PageHeader } from '../components/PageHeader';
 
@@ -29,15 +30,10 @@ const CustomTooltip = ({ active, payload, formatter }: any) => {
 };
 
 const Reports: React.FC = () => {
-    // --- Data Hooks ---
-    const { data: transactions, isLoading: loadingTx } = useTransactions();
-    const { data: categories, isLoading: loadingCat } = useCategories();
-    const { data: profile, isLoading: loadingProf } = useProfile();
-    const { data: recurringTxs, isLoading: loadingRec } = useRecurringTransactions();
-    const { data: installments, isLoading: loadingInst } = useInstallmentPurchases();
-    const { data: loansData, isLoading: loadingLoans } = useLoans();
+    // Use backend data with 'mensual' period and 'calendar' mode for consistency
+    const { data: summary, isLoading } = useFinancialPeriodSummary('mensual', 'calendar');
+    const { data: profile } = useProfile();
 
-    // --- Helpers ---
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('es-MX', {
             style: 'currency',
@@ -46,300 +42,51 @@ const Reports: React.FC = () => {
         }).format(val);
     };
 
-    // =====================================================
-    // ANÁLISIS 50/30/20 - LÓGICA DE CÁLCULO
-    // =====================================================
-    // 
-    // REGLA FUNDAMENTAL:
-    // El presupuesto 50/30/20 se aplica sobre el INGRESO DISPONIBLE NETO,
-    // es decir, el ingreso regular menos el dinero que está "comprometido" 
-    // en préstamos (ya sea prestando a otros o pagando deudas).
-    //
-    // PRÉSTAMOS EN EL CONTEXTO 50/30/20:
-    // ──────────────────────────────────────────────────────
-    // 1. Préstamo que TÚ HACES (lent) = AHORRO
-    //    - Es dinero que "inviertes" en alguien, esperas recuperarlo
-    //    - Sale de tu cuenta pero es un activo (te deben dinero)
-    //    - Se considera AHORRO porque es una forma de "guardar" dinero
-    //
-    // 2. Préstamo que TE HACEN (borrowed) = NECESIDAD
-    //    - Recibes dinero pero tienes que pagarlo
-    //    - Los pagos de esta deuda son una NECESIDAD obligatoria
-    //    - Similar a una renta o servicio que debes pagar
-    //
-    // 3. Préstamos SIN fecha de pago:
-    //    - No afectan la proyección mensual (no sabemos cuándo se pagarán)
-    //    - Se consideran cuando realmente se registran transacciones
-    //
-    // 4. Préstamos CON fecha de pago este mes:
-    //    - borrowed: Se agrega como gasto de NECESIDAD (tienes que pagarlo)
-    //    - lent: Se agrega como INGRESO esperado (te van a pagar)
-    //
-    // DINERO SOBRANTE:
-    // ──────────────────────────────────────────────────────
-    // Si después de cubrir Necesidades y Deseos te sobra dinero,
-    // ese sobrante se suma automáticamente a AHORRO. Esto refleja
-    // que cualquier dinero no gastado potencialmente puede ahorrarse.
-    //
-    // =====================================================
-
-    const analysis = useMemo(() => {
-        if (!transactions || !categories || !recurringTxs || !installments || !loansData) return null;
-
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthTxs = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
-
-        // ═══════════════════════════════════════════════════
-        // 1. CÁLCULO DE INGRESOS
-        // ═══════════════════════════════════════════════════
-
-        // A. Ingreso TOTAL real (incluye todo, incluso préstamos recibidos)
-        const totalActualIncome = monthTxs
-            .filter(tx => tx.type === 'income')
-            .reduce((sum, tx) => sum + tx.amount, 0);
-
-        // B. Ingreso REGULAR (excluye préstamos - estos no son "ingreso ganado")
-        const regularActualIncome = monthTxs
-            .filter(tx => tx.type === 'income')
-            .filter(tx => {
-                // Si está vinculado a un préstamo
-                if (tx.loanId) {
-                    const loan = loansData.find(l => l.id === tx.loanId);
-                    // Préstamo que DI (lent) + me pagan = Es dinero que me devuelven = SÍ CONTAR
-                    if (loan && (loan as any).loanType === 'lent') return true;
-                    // Préstamo que ME DIERON (borrowed) = Es deuda = NO CONTAR
-                    return false;
-                }
-
-                // Si no hay préstamo vinculado, revisar la categoría
-                const cat = categories.find(c => c.id === tx.categoryId);
-                const catName = cat?.name?.toLowerCase() || '';
-                // Excluir categorías de préstamos/deudas si no tienen loanId
-                if (catName.includes('préstamo') || catName.includes('prestamo') || catName.includes('deuda')) {
-                    return false;
-                }
-                return true;
-            })
-            .reduce((sum, tx) => sum + tx.amount, 0);
-
-        // C. Ingreso recurrente esperado este mes
-        const monthlyRecurringIncome = recurringTxs
-            .filter(rt => rt.active && rt.type === 'income')
-            .reduce((sum, rt) => {
-                let monthlyAmount = rt.amount;
-                switch (rt.frequency) {
-                    case 'daily': monthlyAmount = rt.amount * 30; break;
-                    case 'weekly': monthlyAmount = rt.amount * 4; break;
-                    case 'biweekly': monthlyAmount = rt.amount * 2; break;
-                    case 'biweekly_15_30': monthlyAmount = rt.amount * 2; break;
-                    case 'monthly': monthlyAmount = rt.amount; break;
-                    case 'yearly': monthlyAmount = rt.amount / 12; break;
-                }
-                return sum + monthlyAmount;
-            }, 0);
-
-        // D. Ingresos proyectados
-        let totalProjectedIncome = Math.max(totalActualIncome, monthlyRecurringIncome);
-        let regularProjectedIncome = Math.max(regularActualIncome, monthlyRecurringIncome);
-
-        // ═══════════════════════════════════════════════════
-        // 2. CLASIFICACIÓN DE GASTOS (50/30/20)
-        // ═══════════════════════════════════════════════════
-
-        let needs = 0, wants = 0, savings = 0, unclassified = 0;
-        let loanExpenses = 0;
-        let projectedExpenseTotal = 0;
-
-        // Función para clasificar gastos según categoría
-        const classify = (amount: number, categoryId?: string, loanId?: string, description: string = '') => {
-            projectedExpenseTotal += amount;
-
-            // ── CASO 1: Gasto vinculado a Préstamo ──
-            if (loanId) {
-                const loan = loansData.find(l => l.id === loanId);
-                loanExpenses += amount;
-
-                if (loan) {
-                    const loanType = (loan as any).loanType;
-                    if (loanType === 'lent') {
-                        // Préstamo que DI = Dinero que "guardé" en alguien = AHORRO
-                        savings += amount;
-                    } else {
-                        // Préstamo que ME DIERON = Pago de deuda = NECESIDAD
-                        needs += amount;
-                    }
-                    return;
-                }
-            }
-
-            // ── CASO 2: Detección por palabras clave (sin loanId) ──
-            const lowerDesc = description.toLowerCase();
-            const isLoanKeyword = lowerDesc.includes('prestamo') || lowerDesc.includes('préstamo') ||
-                lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito');
-
-            if (!categoryId && isLoanKeyword) {
-                loanExpenses += amount;
-                // "Deuda" o "Crédito" = pago obligatorio = NECESIDAD
-                if (lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito')) {
-                    needs += amount;
-                } else {
-                    // "Préstamo" genérico = probablemente presté dinero = AHORRO
-                    savings += amount;
-                }
-                return;
-            }
-
-            if (!categoryId) {
-                unclassified += amount;
-                return;
-            }
-
-            // ── CASO 3: Clasificación por Categoría ──
-            const cat = categories.find(c => c.id === categoryId);
-            if (!cat) {
-                unclassified += amount;
-                return;
-            }
-
-            const catName = cat.name.toLowerCase();
-
-            // Manejar categoría de "Préstamos" explícitamente
-            if (catName.includes('préstamo') || catName.includes('prestamo') || catName.includes('deuda')) {
-                loanExpenses += amount;
-
-                // Respetar budgetType si está configurado
-                if (cat.budgetType === 'need') { needs += amount; return; }
-                if (cat.budgetType === 'want') { wants += amount; return; }
-                if (cat.budgetType === 'savings') { savings += amount; return; }
-
-                // Fallback: Identificar por descripción
-                if (catName.includes('deuda') ||
-                    lowerDesc.includes('pago') ||
-                    lowerDesc.includes('tarjeta') ||
-                    lowerDesc.includes('hipoteca')) {
-                    needs += amount;
-                } else {
-                    savings += amount;
-                }
-                return;
-            }
-
-            // Clasificación estándar por budgetType
-            if (cat.budgetType === 'need') needs += amount;
-            else if (cat.budgetType === 'want') wants += amount;
-            else if (cat.budgetType === 'savings') savings += amount;
-            else unclassified += amount;
-        };
-
-        // A. Procesar Gastos Recurrentes
-        recurringTxs.filter(rt => rt.active && rt.type === 'expense').forEach(rt => {
-            let monthlyAmount = rt.amount;
-            switch (rt.frequency) {
-                case 'daily': monthlyAmount = rt.amount * 30; break;
-                case 'weekly': monthlyAmount = rt.amount * 4; break;
-                case 'biweekly': monthlyAmount = rt.amount * 2; break;
-                case 'biweekly_15_30': monthlyAmount = rt.amount * 2; break;
-                case 'monthly': monthlyAmount = rt.amount; break;
-                case 'yearly': monthlyAmount = rt.amount / 12; break;
-            }
-            classify(monthlyAmount, rt.categoryId, undefined, rt.description);
-        });
-
-        // B. Procesar MSI (Compras a meses)
-        installments.forEach(inst => {
-            const remaining = inst.installments - inst.paidInstallments;
-            if (remaining > 0) {
-                classify(inst.monthlyPayment, inst.categoryId, undefined, inst.description);
-            }
-        });
-
-        // C. Procesar Gastos Manuales del mes
-        monthTxs.filter(tx => tx.type === 'expense').forEach(tx => {
-            // Evitar doble conteo
-            if (tx.recurringTransactionId) return;
-            if (tx.installmentPurchaseId) return;
-            classify(tx.amount, tx.categoryId, tx.loanId, tx.description);
-        });
-
-        // D. Procesar Préstamos que vencen este mes
-        let loanRecoveryThisMonth = 0; // Dinero que te van a devolver de préstamos
-
-        loansData.forEach(loan => {
-            if (loan.status === 'paid' || loan.remainingAmount <= 0) return;
-            if (!loan.expectedPayDate) return; // Sin fecha = No proyectamos
-
-            const dueDate = new Date(loan.expectedPayDate);
-            const isDueThisMonth = dueDate.getMonth() === now.getMonth() &&
-                dueDate.getFullYear() === now.getFullYear();
-
-            if (isDueThisMonth) {
-                const loanType = (loan as any).loanType;
-
-                if (loanType === 'borrowed') {
-                    // Debo pagar este préstamo = NECESIDAD (gasto obligatorio)
-                    projectedExpenseTotal += loan.remainingAmount;
-                    needs += loan.remainingAmount;
-                    loanExpenses += loan.remainingAmount;
-                } else if (loanType === 'lent') {
-                    // Me van a pagar este préstamo = Va directo a AHORRO
-                    // (No es ingreso "nuevo", es capital que ya era mío regresando)
-                    savings += loan.remainingAmount;
-                    loanRecoveryThisMonth += loan.remainingAmount;
-                    loanExpenses += loan.remainingAmount; // Para el tracking total
-                }
-            }
-        });
-
-        // ═══════════════════════════════════════════════════
-        // 3. CÁLCULO DEL SOBRANTE Y DISTRIBUCIÓN FINAL
-        // ═══════════════════════════════════════════════════
-
-        const budgetBase = regularProjectedIncome;
-        const totalOperationalExpenses = needs + wants + savings + unclassified;
-        const surplus = Math.max(0, budgetBase - totalOperationalExpenses);
-
-        // El sobrante se considera "Ahorro Potencial"
-        const totalSavings = savings + surplus;
-
-        // ═══════════════════════════════════════════════════
-        // 4. PREPARAR DATOS PARA EL GRÁFICO
-        // ═══════════════════════════════════════════════════
-
-        const data = [
-            { name: 'Necesidades', value: needs, color: '#f43f5e', ideal: 50, icon: 'home' },
-            { name: 'Deseos', value: wants, color: '#a855f7', ideal: 30, icon: 'favorite' },
-            { name: 'Ahorro', value: totalSavings, color: '#10b981', ideal: 20, icon: 'savings' },
-            { name: 'Sin clasificar', value: unclassified, color: '#64748b', ideal: 0, icon: 'help' },
-        ].filter(i => i.value > 0);
-
-        return {
-            income: totalActualIncome,
-            expense: projectedExpenseTotal,
-            actualExpense: monthTxs.filter(tx => tx.type === 'expense').reduce((s, t) => s + t.amount, 0),
-            totalProjectedIncome,
-            regularProjectedIncome,
-            budgetBase,
-            loanExpenses,
-            loanRecoveryThisMonth, // Préstamos que te van a pagar este mes
-            balance: totalProjectedIncome - projectedExpenseTotal,
-            chartData: data,
-            totalAllocated: needs + wants + totalSavings + unclassified,
-            surplus,
-            hasUnclassified: unclassified > 0,
-            // Desglose para UI
-            savingsFromExpenses: savings,
-            savingsFromSurplus: surplus,
-        };
-    }, [transactions, categories, recurringTxs, installments, loansData]);
-
-    const isLoading = loadingTx || loadingCat || loadingProf || loadingRec || loadingInst || loadingLoans;
-
     if (isLoading) return <SkeletonDashboard />;
-    if (!analysis) return <div className="p-8 text-center text-app-muted">Sin datos suficientes</div>;
+    if (!summary) return <div className="p-8 text-center text-app-muted">Sin datos suficientes</div>;
 
-    const hasData = analysis.chartData.length > 0;
-    const { budgetBase, surplus } = analysis;
+    // Calculate totals from backend data
+    const totalExpectedIncome = summary.totalExpectedIncome ?? 0;
+    const totalReceivedIncome = summary.totalReceivedIncome ?? 0;
+    const totalPeriodIncome = summary.totalPeriodIncome ?? 0;
+    const totalCommitments = summary.totalCommitments ?? 0;
+    const currentBalance = summary.currentBalance ?? 0;
+    const disposableIncome = summary.disposableIncome ?? 0;
+    const budgetAnalysis = summary.budgetAnalysis;
+
+    // Calculate surplus (money left after all expenses)
+    // Surplus = Total Income - (Needs + Wants + Savings + Unclassified)
+    const totalAllocated = budgetAnalysis
+        ? (budgetAnalysis.needs.projected + budgetAnalysis.wants.projected + budgetAnalysis.savings.projected)
+        : 0;
+
+    const surplus = Math.max(0, totalPeriodIncome - totalAllocated);
+
+    // Build 50/30/20 chart data
+    // WE ADD SURPLUS TO SAVINGS VISUALLY
+    const totalSavingsWithSurplus = (budgetAnalysis?.savings.projected || 0) + surplus;
+
+    const chartData = budgetAnalysis ? [
+        { name: 'Necesidades', value: budgetAnalysis.needs.projected, color: '#f43f5e', ideal: 50, icon: 'home' },
+        { name: 'Deseos', value: budgetAnalysis.wants.projected, color: '#a855f7', ideal: 30, icon: 'favorite' },
+        { name: 'Ahorro', value: totalSavingsWithSurplus, color: '#10b981', ideal: 20, icon: 'savings' },
+    ].filter(i => i.value > 0) : [];
+
+    const hasData = chartData.length > 0;
+    const budgetBase = totalPeriodIncome > 0 ? totalPeriodIncome : totalCommitments;
+
+    // Calculate Saving Percentage including surplus
+    const savingPercentage = budgetBase > 0 ? (totalSavingsWithSurplus / budgetBase) * 100 : 0;
+
+    // Get motivational message
+    const getMotivationalMessage = () => {
+        if (savingPercentage >= 50) return { text: "¡Increíble! Estás ahorrando la mitad de tus ingresos 🚀🏆", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/20" };
+        if (savingPercentage >= 20) return { text: "¡Excelente trabajo! Estás cumpliendo tu meta de ahorro 👏", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/10" };
+        if (savingPercentage > 0) return { text: "Vas bien, pero intenta reducir gastos hormiga para llegar al 20% 💪", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-900/10" };
+        return { text: "Cuidado, revisa tus gastos para empezar a ahorrar ⚠️", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/10" };
+    };
+
+    const motivation = getMotivationalMessage();
 
     return (
         <div className="min-h-dvh bg-app-bg text-app-text font-sans pb-safe">
@@ -347,51 +94,76 @@ const Reports: React.FC = () => {
 
             <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
 
-                {/* Hero Stats Card */}
+                {/* Hero Stats Card - Desglose completo */}
                 <div className="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm">
-                    <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 justify-between">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                                <p className="text-xs font-bold text-app-muted uppercase tracking-wider">Balance Estimado</p>
-                                <span className="material-symbols-outlined text-[14px] text-app-muted cursor-help" title="Ingresos Regulares - Gastos Proyectados">help</span>
+                    {/* Resultado Principal */}
+                    <div className="text-center mb-5 pb-5 border-b border-app-border">
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                            <p className="text-xs font-bold text-app-muted uppercase tracking-wider">Disponible Final del Mes</p>
+                            <span
+                                className="material-symbols-outlined text-[14px] text-app-muted/50 cursor-help"
+                                title="Balance actual + Ingresos esperados - Compromisos del mes"
+                            >info</span>
+                        </div>
+                        <p className={`text-4xl font-black tracking-tight font-numbers ${disposableIncome >= 0 ? 'text-app-text' : 'text-rose-500'}`}>
+                            {formatCurrency(disposableIncome)}
+                        </p>
+                    </div>
+
+                    {/* Desglose */}
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/10">
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                                <span className="material-symbols-outlined text-indigo-500 text-sm">account_balance_wallet</span>
+                                <span className="text-[10px] font-bold text-app-muted uppercase">En Cuenta</span>
                             </div>
-                            <p className={`text-4xl font-black tracking-tight font-numbers ${(analysis.totalProjectedIncome - analysis.expense) >= 0 ? 'text-app-text' : 'text-rose-500'}`}>
-                                {formatCurrency(analysis.totalProjectedIncome - analysis.expense)}
+                            <p className="text-base font-bold font-numbers text-indigo-600 dark:text-indigo-400">
+                                {formatCurrency(currentBalance)}
                             </p>
                         </div>
-                        <div className="flex gap-8">
-                            <div>
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="size-2 rounded-full bg-emerald-500"></span>
-                                    <span className="text-[10px] font-bold text-app-muted uppercase">Ingresos Est.</span>
-                                </div>
-                                <p className="text-lg font-bold font-numbers text-emerald-600 dark:text-emerald-400">
-                                    {formatCurrency(analysis.totalProjectedIncome)}
-                                </p>
+                        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/10">
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                                <span className="material-symbols-outlined text-emerald-500 text-sm">add</span>
+                                <span className="text-[10px] font-bold text-app-muted uppercase">Ingresos</span>
                             </div>
-                            <div>
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="size-2 rounded-full bg-rose-500"></span>
-                                    <span className="text-[10px] font-bold text-app-muted uppercase">Gastos Est.</span>
-                                </div>
-                                <p className="text-lg font-bold font-numbers text-rose-600 dark:text-rose-400">
-                                    {formatCurrency(analysis.expense)}
+                            <p className="text-base font-bold font-numbers text-emerald-600 dark:text-emerald-400">
+                                {formatCurrency(totalPeriodIncome)}
+                            </p>
+                            {totalReceivedIncome > 0 && totalExpectedIncome > 0 && (
+                                <p className="text-[9px] text-app-muted mt-1">
+                                    {formatCurrency(totalReceivedIncome)} recibido
                                 </p>
+                            )}
+                        </div>
+                        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/10">
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                                <span className="material-symbols-outlined text-rose-500 text-sm">remove</span>
+                                <span className="text-[10px] font-bold text-app-muted uppercase">Compromisos</span>
                             </div>
+                            <p className="text-base font-bold font-numbers text-rose-600 dark:text-rose-400">
+                                {formatCurrency(totalCommitments)}
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 {/* 50/30/20 Rule Section */}
                 <div className="bg-app-surface border border-app-border rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                            <span className="material-symbols-outlined text-xl">donut_large</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                                <span className="material-symbols-outlined text-xl">donut_large</span>
+                            </div>
+                            <div>
+                                <h2 className="font-bold text-sm text-app-text">Análisis de Presupuesto</h2>
+                                <p className="text-xs text-app-muted">Regla 50/30/20</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="font-bold text-sm text-app-text">Análisis de Presupuesto</h2>
-                            <p className="text-xs text-app-muted">Regla 50/30/20 (Operativo)</p>
-                        </div>
+                        {hasData && (
+                            <div className={`px-3 py-1.5 rounded-lg text-xs font-bold text-center ${motivation.bg} ${motivation.color}`}>
+                                {motivation.text}
+                            </div>
+                        )}
                     </div>
 
                     {hasData ? (
@@ -402,7 +174,7 @@ const Reports: React.FC = () => {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={analysis.chartData}
+                                            data={chartData}
                                             dataKey="value"
                                             innerRadius={55}
                                             outerRadius={75}
@@ -411,7 +183,7 @@ const Reports: React.FC = () => {
                                             animationDuration={800}
                                             animationBegin={0}
                                         >
-                                            {analysis.chartData.map((e, i) => (
+                                            {chartData.map((e, i) => (
                                                 <Cell key={i} fill={e.color} strokeWidth={0} />
                                             ))}
                                         </Pie>
@@ -425,13 +197,13 @@ const Reports: React.FC = () => {
                                 {/* Center Label */}
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                     <span className="text-[10px] font-bold text-app-muted uppercase">Total</span>
-                                    <span className="text-sm font-black text-app-text font-numbers">{formatCurrency(analysis.totalAllocated)}</span>
+                                    <span className="text-sm font-black text-app-text font-numbers">{formatCurrency(totalAllocated)}</span>
                                 </div>
                             </div>
 
                             {/* Legend / Breakdown List */}
                             <div className="w-full space-y-4 flex-1">
-                                {analysis.chartData.map((item, index) => {
+                                {chartData.map((item, index) => {
                                     const pct = budgetBase > 0 ? (item.value / budgetBase) * 100 : 0;
                                     const diff = pct - item.ideal;
 
@@ -471,18 +243,18 @@ const Reports: React.FC = () => {
                                             <div className="flex justify-between text-[11px] mt-1.5">
                                                 <div className="flex flex-col">
                                                     <span className="text-app-muted">
-                                                        {pct.toFixed(1)}% del disp. neto
+                                                        {pct.toFixed(1)}% del ingreso
                                                     </span>
                                                     {item.name === 'Ahorro' && surplus > 0 && (
                                                         <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 italic">
-                                                            Inc. {formatCurrency(surplus)} sobrante
+                                                            + {formatCurrency(surplus)} sobrante potencial
                                                         </span>
                                                     )}
                                                 </div>
 
                                                 {item.ideal > 0 && (
                                                     <span className={`font-semibold flex items-center gap-1 ${diff > 10 ? 'text-rose-500' :
-                                                        diff > 0 ? 'text-green-600' :
+                                                        diff > 0 ? 'text-amber-600' :
                                                             'text-emerald-500'
                                                         }`}>
                                                         <span>Meta: {formatCurrency(budgetBase * (item.ideal / 100))}</span>
@@ -504,55 +276,17 @@ const Reports: React.FC = () => {
                     )}
                 </div>
 
-                {/* Loan Info Card */}
-                {(analysis.loanExpenses > 0 || analysis.loanRecoveryThisMonth > 0) && (
-                    <div className="bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/30 rounded-2xl p-4 flex gap-3 items-start">
-                        <div className="size-10 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center shrink-0">
-                            <span className="material-symbols-outlined text-violet-500 text-xl">handshake</span>
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold text-sm text-violet-700 dark:text-violet-400 mb-1">
-                                Préstamos en este análisis
-                            </p>
-                            <div className="text-xs text-violet-600/90 dark:text-violet-500/80 leading-relaxed space-y-1">
-                                {analysis.loanRecoveryThisMonth > 0 && (
-                                    <p>
-                                        <span className="material-symbols-outlined text-[12px] align-middle mr-1">arrow_downward</span>
-                                        Te deben pagar <strong>{formatCurrency(analysis.loanRecoveryThisMonth)}</strong> → va a <span className="font-bold text-emerald-600 dark:text-emerald-400">Ahorro</span>
-                                    </p>
-                                )}
-                                {analysis.loanExpenses > analysis.loanRecoveryThisMonth && (
-                                    <p>
-                                        <span className="material-symbols-outlined text-[12px] align-middle mr-1">arrow_upward</span>
-                                        Préstamos dados/pagos: <strong>{formatCurrency(analysis.loanExpenses - analysis.loanRecoveryThisMonth)}</strong> → distribuidos en el análisis
-                                    </p>
-                                )}
+                {/* Warnings from backend */}
+                {summary.warnings && summary.warnings.length > 0 && (
+                    <div className="space-y-3">
+                        {summary.warnings.map((warning: string, i: number) => (
+                            <div key={i} className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 flex gap-3 items-start">
+                                <div className="size-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-amber-500 text-xl">warning</span>
+                                </div>
+                                <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">{warning}</p>
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Unclassified Warning */}
-                {analysis.hasUnclassified && (
-                    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 flex gap-3 items-start">
-                        <div className="size-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center shrink-0">
-                            <span className="material-symbols-outlined text-amber-500 text-xl">warning</span>
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold text-sm text-amber-700 dark:text-amber-400 mb-1">
-                                Categorías sin configurar
-                            </p>
-                            <p className="text-xs text-amber-600/90 dark:text-amber-500/80 leading-relaxed mb-3">
-                                Tienes gastos sin asignar a Necesidad/Deseo/Ahorro. Configura tus categorías para un análisis más preciso.
-                            </p>
-                            <Link
-                                to="/categories"
-                                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline"
-                            >
-                                Configurar categorías
-                                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                            </Link>
-                        </div>
+                        ))}
                     </div>
                 )}
 

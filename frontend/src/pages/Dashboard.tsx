@@ -136,8 +136,9 @@ const QuickStat: React.FC<{
   label: string;
   amount: number;
   type: 'income' | 'expense';
-  format: (n: number) => string
-}> = ({ label, amount, type, format }) => {
+  format: (n: number) => string;
+  tooltip?: string;
+}> = ({ label, amount, type, format, tooltip }) => {
   const isIncome = type === 'income';
   return (
     <BentoCard className="justify-center">
@@ -146,7 +147,15 @@ const QuickStat: React.FC<{
           <div className={`p-2 w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${isIncome ? 'bg-app-success/10 text-app-success' : 'bg-app-danger/10 text-app-danger'}`}>
             <span className="material-symbols-outlined">{isIncome ? 'arrow_downward' : 'arrow_upward'}</span>
           </div>
-          <p className="text-app-muted text-xs font-bold uppercase tracking-wide">{label}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-app-muted text-xs font-bold uppercase tracking-wide">{label}</p>
+            {tooltip && (
+              <span
+                className="material-symbols-outlined text-[14px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
+                title={tooltip}
+              >info</span>
+            )}
+          </div>
           <p className={`text-2xl font-bold mt-1 font-numbers ${isIncome ? 'text-app-text' : 'text-app-text'}`}>
             {format(amount)}
           </p>
@@ -348,8 +357,20 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Stats Cards - Lado a lado (1 columna cada uno) */}
-          <QuickStat label="Ingresos del Mes" amount={monthStats.income} type="income" format={formatCurrency} />
-          <QuickStat label="Gastos del Mes" amount={monthStats.expense} type="expense" format={formatCurrency} />
+          <QuickStat
+            label="Ingresos Recibidos"
+            amount={monthStats.income}
+            type="income"
+            format={formatCurrency}
+            tooltip="Suma de todos los ingresos registrados este mes"
+          />
+          <QuickStat
+            label="Gastos Realizados"
+            amount={monthStats.expense}
+            type="expense"
+            format={formatCurrency}
+            tooltip="Suma de todos los gastos registrados este mes (no incluye compromisos pendientes)"
+          />
 
           {/* Financial Planning Widget - Ancho completo */}
           <div className="col-span-2 xl:col-span-4">

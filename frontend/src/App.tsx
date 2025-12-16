@@ -28,7 +28,6 @@ const App: React.FC = () => {
         richColors={false}
         expand={false}
         closeButton
-        theme="system"
         toastOptions={{
           classNames: {
             toast: 'bg-app-surface dark:bg-[#1C1C1E] border border-app-border rounded-2xl shadow-lg backdrop-blur-xl',

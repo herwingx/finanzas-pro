@@ -118,16 +118,28 @@ const FinancialAnalysis: React.FC = () => {
             <div className="size-10 mx-auto mb-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-xl">trending_up</span>
             </div>
-            <p className="text-[10px] font-bold text-app-muted uppercase">Ingresos</p>
-            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(totalIncome)}</p>
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-[10px] font-bold text-app-muted uppercase">Ingresos Esperados</p>
+              <span
+                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
+                title="Ingresos recurrentes proyectados para el período seleccionado"
+              >info</span>
+            </div>
+            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(totalIncome)}</p>
           </div>
 
           <div className="bg-app-surface border border-app-border rounded-2xl p-4 text-center">
             <div className="size-10 mx-auto mb-2 rounded-xl bg-rose-100 dark:bg-rose-900/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-rose-600 dark:text-rose-400 text-xl">trending_down</span>
             </div>
-            <p className="text-[10px] font-bold text-app-muted uppercase">Gastos</p>
-            <p className="text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums">{formatCurrency(totalExpenses)}</p>
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-[10px] font-bold text-app-muted uppercase">Egresos Proyectados</p>
+              <span
+                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
+                title="Compromisos + Pagos TDC proyectados para el período"
+              >info</span>
+            </div>
+            <p className="text-base font-bold text-rose-600 dark:text-rose-400 tabular-nums">{formatCurrency(totalExpenses)}</p>
           </div>
 
           <div className="bg-app-surface border border-app-border rounded-2xl p-4 text-center">
@@ -136,8 +148,14 @@ const FinancialAnalysis: React.FC = () => {
                 {savingsRate >= 20 ? 'savings' : savingsRate >= 0 ? 'account_balance' : 'warning'}
               </span>
             </div>
-            <p className="text-[10px] font-bold text-app-muted uppercase">Ahorro</p>
-            <p className={`text-lg font-bold tabular-nums ${savingsRate >= 20 ? 'text-indigo-600 dark:text-indigo-400' : savingsRate >= 0 ? 'text-app-text' : 'text-amber-600'}`}>
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-[10px] font-bold text-app-muted uppercase">Tasa Ahorro</p>
+              <span
+                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
+                title="Porcentaje de ingresos que te queda después de egresos: (Ingresos - Egresos) / Ingresos"
+              >info</span>
+            </div>
+            <p className={`text-base font-bold tabular-nums ${savingsRate >= 20 ? 'text-indigo-600 dark:text-indigo-400' : savingsRate >= 0 ? 'text-app-text' : 'text-amber-600'}`}>
               {savingsRate.toFixed(0)}%
             </p>
           </div>
@@ -150,8 +168,14 @@ const FinancialAnalysis: React.FC = () => {
                 {summary.isSufficient ? 'check_circle' : 'error'}
               </span>
             </div>
-            <p className="text-[10px] font-bold text-app-muted uppercase">Resultado</p>
-            <p className={`text-lg font-bold tabular-nums ${summary.isSufficient ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-[10px] font-bold text-app-muted uppercase">Saldo Final</p>
+              <span
+                className="material-symbols-outlined text-[12px] text-app-muted/50 cursor-help hover:text-app-muted transition-colors"
+                title="Proyección de tu balance al final del período después de todos los movimientos"
+              >info</span>
+            </div>
+            <p className={`text-base font-bold tabular-nums ${summary.isSufficient ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
               {formatCurrency(summary.disposableIncome)}
             </p>
           </div>
@@ -245,7 +269,7 @@ const FinancialAnalysis: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-bold text-sm text-app-text flex items-center gap-2">
                 <span className="material-symbols-outlined text-rose-500 text-lg">receipt_long</span>
-                Gastos Fijos
+                Compromisos Pendientes
               </h4>
               <Link to="/recurring" className="text-xs text-app-primary font-medium hover:underline">Ver todos</Link>
             </div>

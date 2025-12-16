@@ -19,7 +19,27 @@ const DEFAULT_CATEGORY_STATE = {
 };
 
 const COLORS = ['#FF6B6B', '#FFD166', '#06D6A0', '#118AB2', '#073B4C', '#6B5FFF', '#FF9F1C', '#FF477E', '#34D399', '#60A5FA'];
-const ICONS = ['category', 'shopping_cart', 'restaurant', 'local_cafe', 'directions_car', 'flight', 'home', 'payments', 'school', 'fitness_center', 'movie', 'medical_services', 'pets', 'work', 'star', 'attach_money', 'savings', 'trending_up', 'receipt', 'local_gas_station'];
+// Comprehensive Icon Set for Fintech App
+const ICONS = [
+  // General & Money
+  'category', 'paid', 'attach_money', 'savings', 'account_balance', 'credit_card', 'payments', 'trending_up', 'receipt_long', 'currency_exchange', 'wallet',
+  // Food & Drink
+  'restaurant', 'local_cafe', 'fastfood', 'lunch_dining', 'local_bar', 'liquor', 'kitchen', 'bakery_dining', 'icecream',
+  // Shopping
+  'shopping_cart', 'shopping_bag', 'store', 'sell', 'percent', 'card_giftcard', 'checkroom', 'diamond',
+  // Transport
+  'directions_car', 'flight', 'train', 'directions_bus', 'local_taxi', 'local_gas_station', 'ev_station', 'parking', 'two_wheeler', 'directions_boat',
+  // Home & Utilities
+  'home', 'apartment', 'cottage', 'water_drop', 'lightbulb', 'bolt', 'wifi', 'phone_iphone', 'propane', 'cleaning_services', 'bed', 'chair', 'router',
+  // Entertainment & Leisure
+  'movie', 'theaters', 'sports_esports', 'music_note', 'headphones', 'casino', 'stadium', 'sports_soccer', 'pool', 'travel_explore',
+  // Health & Wellness
+  'medical_services', 'fitness_center', 'spa', 'medication', 'local_pharmacy', 'dentistry', 'psychology', 'monitor_heart',
+  // Education & Work
+  'school', 'menu_book', 'science', 'backpack', 'work', 'business_center', 'laptop_mac', 'print',
+  // Family, Pets & Services
+  'pets', 'family_restroom', 'child_care', 'cake', 'celebration', 'content_cut', 'local_laundry_service', 'build', 'construction', 'local_shipping', 'gavel'
+];
 
 const UpsertCategoryPage: React.FC = () => {
   const navigate = useNavigate();

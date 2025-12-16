@@ -258,11 +258,12 @@ const LoansPage: React.FC = () => {
                 <SwipeableItem
                   key={loan.id}
                   // Swipe RIGHT -> muestra leftAction (Editar)
-                  leftAction={{ icon: 'edit', color: '#3b82f6', label: 'Editar' }}
+                  leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                   onSwipeRight={() => navigate(`/loans/${loan.id}`)}
                   // Swipe LEFT -> muestra rightAction (Eliminar)
                   rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
                   onSwipeLeft={() => setLoanToDelete(loan)}
+                  className="mb-3 rounded-2xl"
                 >
                   <div onClick={() => setSelectedLoan(loan)} className="bg-app-surface p-4 rounded-2xl border border-app-border hover:bg-app-subtle/50 transition-colors flex items-center gap-4 cursor-pointer">
                     <div className={`size-12 rounded-full flex items-center justify-center text-xl shrink-0 ${isPaid ? 'bg-emerald-100 text-emerald-600' :
@@ -316,9 +317,11 @@ const LoansPage: React.FC = () => {
         <DeleteConfirmationSheet
           isOpen={!!loanToDelete}
           onClose={() => setLoanToDelete(null)}
-          onConfirm={() => {
+          onConfirm={(options) => {
             const isPaid = loanToDelete.status === 'paid';
-            deleteMutation.mutate({ id: loanToDelete.id, revert: !isPaid });
+            // Use user selection if available, otherwise default to logic
+            const shouldRevert = options?.revertBalance ?? !isPaid;
+            deleteMutation.mutate({ id: loanToDelete.id, revert: shouldRevert });
           }}
           itemName={`"${loanToDelete.borrowerName}"`}
           warningLevel={loanToDelete.status !== 'paid' ? 'warning' : 'normal'}
@@ -326,12 +329,15 @@ const LoansPage: React.FC = () => {
           warningDetails={
             loanToDelete.status !== 'paid'
               ? [
-                'Se revertirán las transacciones asociadas',
-                'El saldo de la cuenta vinculada será ajustado'
+                'Se borrará el historial de pagos asociados',
               ]
               : []
           }
           isDeleting={deleteMutation.isPending}
+          // Only show toggle for active loans where reversion makes sense
+          showRevertOption={loanToDelete.status !== 'paid'}
+          revertOptionLabel="Devolver saldo pendiente a mi cuenta"
+          defaultRevertState={true}
         />
       )}
     </div>

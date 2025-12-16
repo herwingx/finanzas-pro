@@ -152,7 +152,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   // Ensure the wrapper cuts off corners
 
   return (
-    <div className={`relative w-full overflow-hidden select-none touch-pan-y ${className}`} style={{ borderRadius: 'inherit' }}>
+    <div className={`relative w-full overflow-hidden select-none touch-pan-y ${className}`}>
 
       {/* Background Action Layer */}
       {activeConfig && Math.abs(offset) > 10 && (

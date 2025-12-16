@@ -8,6 +8,7 @@ import { SkeletonTransactionList } from '../components/Skeleton';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { CategorySelector } from '../components/CategorySelector';
 import { Button } from '../components/Button';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 
 const Categories: React.FC = () => {
     const navigate = useNavigate();
@@ -17,26 +18,34 @@ const Categories: React.FC = () => {
     // Reassignment Modal State
     const [reassignData, setReassignData] = useState<{ categoryToDelete: Category } | null>(null);
     const [reassignTargetId, setReassignTargetId] = useState<string>('');
+    const [deleteConfirmation, setDeleteConfirmation] = useState<Category | null>(null);
 
     // Derived Data
     const expenses = useMemo(() => categories?.filter(c => c.type === 'expense') || [], [categories]);
     const incomes = useMemo(() => categories?.filter(c => c.type === 'income') || [], [categories]);
     const reassignList = useMemo(() =>
-        categories?.filter(c => reassignData && c.type === reassignData.categoryToDelete.type && c.id !== reassignData.categoryToDelete.id) || []
-        , [categories, reassignData]);
+        categories?.filter(c => (reassignData || deleteConfirmation) && c.type === (reassignData?.categoryToDelete.type || deleteConfirmation?.type) && c.id !== (reassignData?.categoryToDelete.id || deleteConfirmation?.id)) || []
+        , [categories, reassignData, deleteConfirmation]);
 
     // Handlers
     const handleEdit = (cat: Category) => {
         navigate(`/categories/edit/${cat.id}`);
     };
 
-    const handleDeleteClick = async (category: Category) => {
+    const handleDeleteClick = (category: Category) => {
+        setDeleteConfirmation(category);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmation) return;
         try {
-            await deleteMutation.mutateAsync({ id: category.id });
+            await deleteMutation.mutateAsync({ id: deleteConfirmation.id });
             toastSuccess('Categoría eliminada');
+            setDeleteConfirmation(null);
         } catch (error: any) {
+            setDeleteConfirmation(null);
             if (error.message === 'in-use') {
-                setReassignData({ categoryToDelete: category });
+                setReassignData({ categoryToDelete: deleteConfirmation });
             } else {
                 toastError(error.message);
             }
@@ -65,9 +74,10 @@ const Categories: React.FC = () => {
                     <SwipeableItem
                         key={cat.id}
                         onSwipeRight={() => handleEdit(cat)}
-                        leftAction={{ icon: 'edit', color: '#3b82f6', label: 'Editar' }}
+                        leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                         onSwipeLeft={() => handleDeleteClick(cat)}
                         rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
+                        className="rounded-2xl"
                     >
                         <div className="bg-app-surface border border-app-border rounded-2xl p-3.5 flex items-center gap-3.5">
                             <div
@@ -130,6 +140,19 @@ const Categories: React.FC = () => {
                     </p>
                 </div>
             </div>
+
+            {/* Delete Confirmation */}
+            {deleteConfirmation && (
+                <DeleteConfirmationSheet
+                    isOpen={!!deleteConfirmation}
+                    onClose={() => setDeleteConfirmation(null)}
+                    onConfirm={confirmDelete}
+                    itemName={deleteConfirmation.name}
+                    warningMessage="¿Eliminar categoría?"
+                    warningDetails={['Se te pedirá reasignar las transacciones si existen movimientos asociados.']}
+                    isDeleting={deleteMutation.isPending}
+                />
+            )}
 
             {/* Reassign Modal */}
             {reassignData && (

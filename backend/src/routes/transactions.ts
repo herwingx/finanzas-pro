@@ -436,7 +436,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
         throw new Error('Transaction not found or you do not have permission to delete it.');
       }
 
-      const { account, destinationAccount, amount, type, installmentPurchaseId, recurringTransactionId, date } = transaction;
+      const { account, destinationAccount, amount, type, installmentPurchaseId, recurringTransactionId, date, loanId } = transaction;
 
       // 1b. Handle Recurring Transaction Reversion
       // If this transaction came from a recurring rule, we should reset the recurring rule's 
@@ -502,12 +502,38 @@ router.delete('/:id', async (req: AuthRequest, res) => {
               },
             });
           }
+        } else if (loanId && !transaction.deletedAt) {
+          // Si borramos un pago de préstamo, la deuda aumenta (se revierte el pago)
+          const loan = await tx.loan.findUnique({ where: { id: loanId } });
+          if (loan) {
+            const newRemaining = loan.remainingAmount + amount;
+            // Determinar status: si debe algo, ya no está pagado.
+            // Si el nuevo restante es igual (o mayor por error) al original, es active puros.
+            // Si es menor al original pero > 0, es partial? 
+            // Simplificación: Si debe dinero, status 'active' (o 'partial' si tu app distingue).
+            // Viendo tus modelos, usas 'active', 'partial', 'paid'.
+
+            let newStatus = loan.status;
+            if (newRemaining > 0 && loan.status === 'paid') {
+              newStatus = 'active'; // Revive el préstamo
+            }
+
+            // Opcional: Refinar entre active/partial
+            if (newRemaining >= loan.originalAmount - 0.01) newStatus = 'active';
+            else if (newRemaining > 0) newStatus = 'partial';
+
+            await tx.loan.update({
+              where: { id: loanId },
+              data: {
+                remainingAmount: { increment: amount },
+                status: newStatus
+              }
+            });
+          }
         } else if (installmentPurchaseId && type === 'expense') {
-          await tx.transaction.updateMany({
-            where: { installmentPurchaseId: installmentPurchaseId, id: { not: id } },
-            data: { installmentPurchaseId: null },
-          });
-          await tx.installmentPurchase.delete({ where: { id: installmentPurchaseId } });
+          // PROTECTION: Do not allow deleting the parent MSI transaction from history.
+          // Doing so leaves orphan payments or requires complex full-deletion logic better handled in the Installments module.
+          throw new Error('No puedes eliminar la compra original de un MSI desde el historial. Para eliminar este plan, ve a la sección "Meses Sin Intereses" y elimínalo completamente.');
         }
       }
 

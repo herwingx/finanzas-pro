@@ -185,7 +185,7 @@ const History: React.FC = () => {
                   {date}
                 </h3>
                 <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden divide-y divide-app-border">
-                  {txs.map((tx) => {
+                  {txs.map((tx, index) => {
                     const cat = getCategoryInfo(tx.categoryId);
                     const isExp = tx.type === 'expense';
                     const isInc = tx.type === 'income';
@@ -194,12 +194,15 @@ const History: React.FC = () => {
 
                     // Badges logic simplified
                     const isMsi = tx.installmentPurchaseId && !isExp;
+                    const isFirst = index === 0;
+                    const isLast = index === txs.length - 1;
 
                     return (
                       <SwipeableItem
                         key={tx.id}
+                        className={`${isFirst ? 'rounded-t-2xl' : ''} ${isLast ? 'rounded-b-2xl' : ''}`}
                         // Swipe RIGHT -> muestra leftAction (Editar)
-                        leftAction={{ icon: 'edit', color: 'var(--app-primary)', label: 'Editar' }}
+                        leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                         onSwipeRight={() => handleEditClick(tx)}
                         // Swipe LEFT -> muestra rightAction (Eliminar)
                         rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}

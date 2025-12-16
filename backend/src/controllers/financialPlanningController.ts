@@ -367,6 +367,53 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       }
     }
 
+    // 2.5 Include OVERDUE unpaid items from previous periods
+    // These are recurring transactions whose nextDueDate is BEFORE periodStart but haven't been paid
+    for (const rt of recurringTransactions) {
+      const nextDue = new Date(rt.nextDueDate);
+      nextDue.setHours(12, 0, 0, 0);
+
+      // Only process if the nextDueDate is BEFORE the current period start (truly overdue)
+      if (nextDue < periodStart) {
+        // Check if there's a payment for this specific date
+        const existingPayments = await prisma.transaction.findMany({
+          where: {
+            recurringTransactionId: rt.id,
+            deletedAt: null,
+          },
+          select: { date: true }
+        });
+
+        const paidDates = new Set(
+          existingPayments.map(p => new Date(p.date).toISOString().split('T')[0])
+        );
+
+        const dueDateStr = nextDue.toISOString().split('T')[0];
+        const uniqueId = `${rt.id}-overdue-${dueDateStr}`;
+
+        // If not paid and not already added, include as overdue in current period
+        if (!paidDates.has(dueDateStr) && !globalAddedIds.has(uniqueId)) {
+          globalAddedIds.add(uniqueId);
+
+          const item = {
+            id: rt.id,
+            uniqueId,
+            description: rt.description,
+            amount: rt.amount,
+            dueDate: nextDue,
+            category: rt.category,
+            isOverdue: true  // Always true since it's from a previous period
+          };
+
+          if (rt.type === 'income') {
+            expectedIncome.push(item);
+          } else {
+            expectedExpenses.push(item);
+          }
+        }
+      }
+    }
+
     // 3. Credit Card Payment Logic (Robust Version)
 
     const creditAccounts = await prisma.account.findMany({
@@ -690,7 +737,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     const isSufficient = disposableIncome >= 0;
     const shortfall = isSufficient ? 0 : Math.abs(disposableIncome);
 
-    // 5. 50/30/20 Analysis (Projected)
+    // 5. 50/30/20 Analysis (Projected + Actual)
     const budgetAnalysis = {
       needs: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.5 },
       wants: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.3 },
@@ -706,8 +753,50 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       else budgetAnalysis.needs.projected += amount; // Default to needs
     };
 
+    // 5.1 Include ACTUAL expenses from this period
+    const actualExpenses = await prisma.transaction.findMany({
+      where: {
+        userId,
+        type: 'expense',
+        date: { gte: periodStart, lte: periodEnd },
+        deletedAt: null
+      },
+      include: {
+        category: true,
+        loan: true // Need this to identify loan type
+      }
+    });
+
+    for (const tx of actualExpenses) {
+      if (tx.loan) {
+        // Handle Loan Transactions
+        if (tx.loan.loanType === 'lent') {
+          // I lent money = Asset allocation = SAVINGS
+          categorize(tx.amount, 'SAVINGS');
+        } else {
+          // I paid debt = Obligation = NEEDS
+          categorize(tx.amount, 'NEEDS');
+        }
+      } else {
+        // Standard expense
+        categorize(tx.amount, tx.category?.budgetType || 'NEEDS');
+      }
+    }
+
+    // 5.2 Include PROJECTED (Future) expenses
+
     expectedExpenses.forEach(bg => categorize(bg.amount, bg.category?.budgetType || 'NEEDS'));
     msiPaymentsDue.forEach(msi => categorize(msi!.amount, msi!.category?.budgetType || 'NEEDS'));
+
+    // Include loan collections (lent) as Savings in 50/30/20 analysis
+    // These are filtered by expectedPayDate in the period (line 193-200), so only loans
+    // with a payment date within the period are included
+    expectedIncome
+      .filter((income: any) => income.isLoan)
+      .forEach((loanIncome: any) => {
+        // Préstamos que te van a pagar = Ahorro (es capital tuyo que regresa)
+        budgetAnalysis.savings.projected += loanIncome.amount;
+      });
 
     // Generate warnings (Smart Logic)
     const warnings: string[] = [];

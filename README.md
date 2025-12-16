@@ -656,16 +656,43 @@ VITE_API_URL=http://localhost:4000
 
 ### 🔧 Comandos Útiles
 
-```bash
-# Script de deploy (si usas Cloudflare)
-./deploy.sh start    # Iniciar servicios
-./deploy.sh stop     # Detener servicios
-./deploy.sh logs     # Ver logs
-./deploy.sh update   # Actualizar desde Git y reiniciar
-./deploy.sh backup   # Backup de la base de datos
-./deploy.sh migrate  # Ejecutar migraciones de Prisma
+#### Script de Deploy (`deploy.sh`)
 
-# Docker Compose directo
+Script de automatización para gestionar la aplicación en producción:
+
+```bash
+./deploy.sh start     # Inicia todos los servicios
+./deploy.sh stop      # Detiene todos los servicios
+./deploy.sh restart   # Reinicia todos los servicios
+./deploy.sh update    # Pull de Git + rebuild + migraciones
+./deploy.sh logs      # Muestra logs en tiempo real (Ctrl+C para salir)
+./deploy.sh status    # Muestra estado de los contenedores
+./deploy.sh backup    # Crea backup de la BD (guardado en ./backups/)
+./deploy.sh migrate   # Ejecuta migraciones de Prisma
+./deploy.sh shell     # Abre shell en el container backend
+./deploy.sh db        # Conecta a PostgreSQL CLI
+./deploy.sh help      # Muestra ayuda
+```
+
+#### Script de Reset de Contraseña (`reset_password.sh`)
+
+Utilidad para resetear contraseñas de usuarios directamente en la BD:
+
+```bash
+./reset_password.sh <email> <nueva_contraseña>
+
+# Ejemplos:
+./reset_password.sh usuario@email.com NuevaPassword123
+./reset_password.sh admin@finanzas.com MiClaveSegura!
+```
+
+> **Nota**: Requiere que los contenedores estén corriendo (`docker compose up`).
+
+#### Docker Compose Directo
+
+Si prefieres no usar el script de deploy:
+
+```bash
 docker compose up -d --build     # Iniciar
 docker compose down              # Detener
 docker compose logs -f           # Ver logs

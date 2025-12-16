@@ -1,8 +1,54 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-app-bg: var(--bg-canvas);
+  --color-app-surface: var(--bg-surface);
+  --color-app-subtle: var(--bg-subtle);
+  --color-app-elevated: var(--bg-elevated);
+  --color-app-card: var(--bg-surface);
+  --color-app-border: var(--border-default);
+  --color-app-border-strong: var(--border-strong);
+  --color-app-text: var(--text-main);
+  --color-app-muted: var(--text-muted);
+  --color-app-inverted: var(--text-inverted);
+  --color-app-primary: var(--brand-primary);
+  --color-app-primary-dark: var(--brand-primary-dark);
+  --color-app-success: var(--semantic-success);
+  --color-app-danger: var(--semantic-danger);
+  --color-app-warning: var(--semantic-warning);
+  --color-app-info: var(--semantic-info);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-dark: var(--brand-primary-dark);
+
+  /* Account Colors */
+  --color-account-credit: var(--color-account-credit);
+  --color-account-credit-bg: var(--color-account-credit-bg);
+  --color-account-debit: var(--color-account-debit);
+  --color-account-debit-bg: var(--color-account-debit-bg);
+  --color-account-cash: var(--color-account-cash);
+  --color-account-cash-bg: var(--color-account-cash-bg);
+  --color-msi: var(--color-msi);
+  --color-msi-bg: var(--color-msi-bg);
+
+  /* Fonts */
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-numbers: Inter, sans-serif;
+
+  /* Radius */
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark Mode Class Override */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ==========================================================================
    1. Clean SaaS Design System (The "Monarch/Linear" Look)

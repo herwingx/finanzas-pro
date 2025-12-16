@@ -599,7 +599,7 @@ chmod +x deploy.sh
 ./deploy.sh migrate
 ```
 
-Ver [DEPLOYMENT_PLAN.md](./DEPLOYMENT_PLAN.md) para instrucciones detalladas de Cloudflare Tunnels.
+Ver [docs/guia-despliegue-cloudflare.md](./docs/guia-despliegue-cloudflare.md) para instrucciones detalladas de configuración (incluyendo interfaz de Cloudflare y specs de LXC).
 
 ---
 

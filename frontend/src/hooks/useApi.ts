@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as apiService from '../services/apiService';
-import { Transaction, Profile, Category, RecurringTransaction, Account, InstallmentPurchase } from '../types';
+import { Transaction, Profile, Category, RecurringTransaction, Account, InstallmentPurchase, Loan } from '../types';
 
 export const useInstallmentPurchases = () => {
     return useQuery<InstallmentPurchase[], Error>({
@@ -384,5 +384,12 @@ export const useRevertStatementPayment = () => {
             queryClient.invalidateQueries({ queryKey: ['installments'] });
             queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
         },
+    });
+};
+
+export const useLoans = () => {
+    return useQuery<Loan[], Error>({
+        queryKey: ['loans'],
+        queryFn: apiService.getLoans,
     });
 };

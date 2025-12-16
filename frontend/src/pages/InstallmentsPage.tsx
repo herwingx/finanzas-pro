@@ -122,7 +122,7 @@ const InstallmentsPage: React.FC = () => {
                                 <SwipeableItem
                                     key={purchase.id}
                                     onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`)}
-                                    leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                                    leftAction={{ icon: 'edit', color: 'var(--app-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
                                     className="mb-3" // Margen para la tarjeta swipeable
@@ -134,7 +134,7 @@ const InstallmentsPage: React.FC = () => {
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex items-start gap-3">
                                                 <div className="mt-1 size-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500">
-                                                    <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                                                    <span className="material-symbols-outlined text-[18px]">credit_score</span>
                                                 </div>
                                                 <div>
                                                     <h3 className="text-sm font-bold text-app-text group-hover:text-app-primary transition-colors">{purchase.description}</h3>
@@ -159,7 +159,7 @@ const InstallmentsPage: React.FC = () => {
                                                     className="h-full rounded-full transition-all duration-500 ease-out"
                                                     style={{
                                                         width: `${percent}%`,
-                                                        backgroundColor: activeTab === 'active' ? 'var(--brand-primary)' : 'var(--text-muted)'
+                                                        backgroundColor: activeTab === 'active' ? 'var(--app-primary)' : 'var(--text-muted)'
                                                     }}
                                                 />
                                             </div>

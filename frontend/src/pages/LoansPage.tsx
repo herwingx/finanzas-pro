@@ -8,6 +8,7 @@ import { toastSuccess, toastError, toast } from '../utils/toast';
 import { PageHeader } from '../components/PageHeader';
 import { SkeletonTransactionList } from '../components/Skeleton';
 import { Button } from '../components/Button';
+import { useAccounts } from '../hooks/useApi';
 
 // --- Sub-Components (Inline for brevity but could be split) ---
 
@@ -15,13 +16,16 @@ import { Button } from '../components/Button';
 const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) => {
   const [isPaymentMode, setIsPaymentMode] = useState(false);
   const [amount, setAmount] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState(loan.accountId || '');
 
+  const { data: accounts } = useAccounts();
   const queryClient = useQueryClient();
   const paymentMutation = useMutation({
     mutationFn: (data: any) => registerLoanPayment(loan.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toastSuccess('Abono registrado');
       onClose();
     },
@@ -32,6 +36,12 @@ const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) =
   const percentPaid = Math.min(100, Math.round(((loan.originalAmount - loan.remainingAmount) / loan.originalAmount) * 100));
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
+
+  // Filter accounts - for 'borrowed' show non-credit accounts to pay from; for 'lent' show all (receiving money)
+  const availableAccounts = useMemo(() => {
+    if (!accounts) return [];
+    return accounts.filter(acc => !['CREDIT', 'credit', 'Credit Card'].includes(acc.type));
+  }, [accounts]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200">
@@ -57,17 +67,38 @@ const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) =
             {formatCurrency(loan.remainingAmount)}
           </div>
           {loan.remainingAmount !== loan.originalAmount && (
-            <div className="mt-3 w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+            <div className="mt-3 w-full bg-app-subtle h-1.5 rounded-full overflow-hidden">
               <div className={`h-full ${isLent ? 'bg-violet-500' : 'bg-rose-500'}`} style={{ width: `${percentPaid}%` }} />
             </div>
           )}
         </div>
 
         {isPaymentMode ? (
-          <form onSubmit={(e) => { e.preventDefault(); paymentMutation.mutate({ amount: parseFloat(amount) }); }} className="space-y-4 animate-fade-in">
+          <form onSubmit={(e) => { e.preventDefault(); paymentMutation.mutate({ amount: parseFloat(amount), accountId: selectedAccountId || undefined }); }} className="space-y-4 animate-fade-in">
             <div>
               <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">Monto a abonar</label>
               <input autoFocus type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()} value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-lg font-bold outline-none focus:ring-2 focus:ring-app-primary no-spin-button" placeholder="0.00" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">
+                {isLent ? 'Recibir en cuenta' : 'Pagar desde cuenta'}
+              </label>
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-app-primary appearance-none"
+              >
+                <option value="">Sin afectar cuentas</option>
+                {availableAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-app-muted mt-1 ml-1">
+                {selectedAccountId
+                  ? (isLent ? 'Se sumará a esta cuenta' : 'Se restará de esta cuenta')
+                  : 'Solo se actualizará el saldo del préstamo'
+                }
+              </p>
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="ghost" onClick={() => setIsPaymentMode(false)} fullWidth>Cancelar</Button>

@@ -22,18 +22,21 @@ export const calculateNextDueDate = (currentDate: Date, frequency: string): Date
       break;
     case 'biweekly_15_30':
       const day = nextDate.getDate();
+      const currentMonth = nextDate.getMonth();
+      const currentYear = nextDate.getFullYear();
+
       if (day < 15) {
         // Si estamos antes del 15, el siguiente es el 15 de este mes
         nextDate.setDate(15);
       } else if (day === 15) {
-        // Si es el 15, el siguiente es el último día del mes
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        nextDate.setDate(0); // Último día del mes actual
+        // Si es el 15, el siguiente es el último día de este mes
+        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        nextDate.setDate(lastDayOfMonth);
       } else {
-        // Si es después del 15 (o fin de mes), el siguiente es el 15 del próximo mes
-        nextDate.setDate(1); // Primero vamos al 1 del siguiente mes para evitar problemas con meses cortos
-        nextDate.setMonth(nextDate.getMonth() + 1);
+        // Si es después del 15 (fin de mes), el siguiente es el 15 del próximo mes
+        // IMPORTANTE: Primero día 15, luego mes siguiente para evitar saltos (e.g. 31 Ene -> 15 Mar)
         nextDate.setDate(15);
+        nextDate.setMonth(currentMonth + 1);
       }
       break;
   }

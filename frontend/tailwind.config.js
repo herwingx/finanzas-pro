@@ -19,12 +19,23 @@ export default {
           bg: 'var(--bg-canvas)',
           surface: 'var(--bg-surface)',
           subtle: 'var(--bg-subtle)',
+          elevated: 'var(--bg-elevated)',
+          card: 'var(--bg-surface)',
           border: 'var(--border-default)',
+          'border-strong': 'var(--border-strong)',
           text: 'var(--text-main)',
           muted: 'var(--text-muted)',
           primary: 'var(--brand-primary)',
+          'primary-dark': 'var(--brand-primary-dark)',
           success: 'var(--semantic-success)',
           danger: 'var(--semantic-danger)',
+          warning: 'var(--semantic-warning)',
+          info: 'var(--semantic-info)',
+        },
+        // Brand shortcuts for gradients
+        brand: {
+          primary: 'var(--brand-primary)',
+          'primary-dark': 'var(--brand-primary-dark)',
         }
       },
       // Sombras estilo "Stripe/Linear"

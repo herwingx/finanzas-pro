@@ -42,7 +42,7 @@ const ForgotPasswordPage: React.FC = () => {
 
       {/* Background Decoration */}
       <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-brand-primary/5 rounded-full blur-[120px] animate-pulse delay-1000" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-app-primary/5 rounded-full blur-[120px] animate-pulse delay-1000" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[100px]" />
       </div>
 
@@ -50,7 +50,7 @@ const ForgotPasswordPage: React.FC = () => {
 
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="size-16 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-brand-primary shadow-xl shadow-black/5 mb-4">
+          <div className="size-16 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-app-primary shadow-xl shadow-black/5 mb-4">
             <span className="material-symbols-outlined text-[32px]">lock_reset</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-app-text text-center">Recuperar Contraseña</h1>
@@ -69,7 +69,7 @@ const ForgotPasswordPage: React.FC = () => {
                 Correo Electrónico
               </label>
               <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-app-primary transition-colors material-symbols-outlined text-[20px]">
                   mail
                 </span>
                 <input
@@ -77,7 +77,7 @@ const ForgotPasswordPage: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
+                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-app-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
                   placeholder="usuario@ejemplo.com"
                   required
                   autoFocus
@@ -109,7 +109,7 @@ const ForgotPasswordPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-dark text-white font-bold rounded-xl shadow-lg shadow-brand-primary/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-app-primary hover:bg-app-primary-dark text-white font-bold rounded-xl shadow-lg shadow-app-primary/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>

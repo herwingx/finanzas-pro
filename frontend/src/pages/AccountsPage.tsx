@@ -138,7 +138,7 @@ const AccountsPage: React.FC = () => {
                                 <SwipeableItem
                                     key={account.id}
                                     onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`)}
-                                    leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                                    leftAction={{ icon: 'edit', color: 'var(--app-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(account)}
                                     rightAction={{ icon: 'delete', color: '#EF4444', label: 'Eliminar' }}
                                     className="mb-3"

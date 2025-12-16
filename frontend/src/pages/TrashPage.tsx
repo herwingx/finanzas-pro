@@ -85,7 +85,7 @@ const TrashPage: React.FC = () => {
                   <SwipeableItem
                     key={tx.id}
                     onSwipeRight={() => !msiPlanDead && handleRestore(tx)}
-                    leftAction={msiPlanDead ? undefined : { icon: 'restore_from_trash', color: 'var(--brand-primary)', label: 'Restaurar' }}
+                    leftAction={msiPlanDead ? undefined : { icon: 'restore_from_trash', color: 'var(--app-primary)', label: 'Restaurar' }}
                     onSwipeLeft={() => handlePermanentDelete(tx)}
                     rightAction={{ icon: 'delete_forever', color: '#ef4444', label: 'Eliminar Ya' }}
                     className="mb-3"

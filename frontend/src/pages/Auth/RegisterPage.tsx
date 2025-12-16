@@ -44,14 +44,14 @@ const RegisterPage: React.FC = () => {
 
             {/* Background Decoration */}
             <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-brand-primary/5 rounded-full blur-[120px] animate-pulse delay-700" />
+                <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-app-primary/5 rounded-full blur-[120px] animate-pulse delay-700" />
                 <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px]" />
             </div>
 
             <div className="w-full max-w-[400px] animate-fade-in">
                 {/* Header Brand */}
                 <div className="flex flex-col items-center mb-8">
-                    <div className="size-14 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-brand-primary shadow-lg mb-3">
+                    <div className="size-14 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-app-primary shadow-lg mb-3">
                         <span className="material-symbols-outlined text-[28px]">person_add</span>
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight text-app-text">Crear Cuenta</h1>
@@ -68,7 +68,7 @@ const RegisterPage: React.FC = () => {
                         <div>
                             <label className="block text-xs font-bold uppercase text-app-muted tracking-wider mb-1.5 ml-1">Nombre Completo</label>
                             <div className="relative group">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-app-primary transition-colors material-symbols-outlined text-[20px]">
                                     badge
                                 </span>
                                 <input
@@ -77,7 +77,7 @@ const RegisterPage: React.FC = () => {
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="Tu Nombre"
                                     required
-                                    className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
+                                    className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-app-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
                                 />
                             </div>
                         </div>
@@ -86,7 +86,7 @@ const RegisterPage: React.FC = () => {
                         <div>
                             <label className="block text-xs font-bold uppercase text-app-muted tracking-wider mb-1.5 ml-1">Email</label>
                             <div className="relative group">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-app-primary transition-colors material-symbols-outlined text-[20px]">
                                     mail
                                 </span>
                                 <input
@@ -95,7 +95,7 @@ const RegisterPage: React.FC = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="hola@ejemplo.com"
                                     required
-                                    className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
+                                    className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-app-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
                                 />
                             </div>
                         </div>
@@ -104,7 +104,7 @@ const RegisterPage: React.FC = () => {
                         <div>
                             <label className="block text-xs font-bold uppercase text-app-muted tracking-wider mb-1.5 ml-1">Contraseña</label>
                             <div className="relative group">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-app-primary transition-colors material-symbols-outlined text-[20px]">
                                     lock
                                 </span>
                                 <input
@@ -114,7 +114,7 @@ const RegisterPage: React.FC = () => {
                                     placeholder="Min. 8 caracteres"
                                     required
                                     minLength={6}
-                                    className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
+                                    className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-app-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface"
                                 />
                             </div>
                         </div>
@@ -123,7 +123,7 @@ const RegisterPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-dark text-white font-bold rounded-xl shadow-lg shadow-brand-primary/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                            className="w-full py-3.5 bg-app-primary hover:bg-app-primary-dark text-white font-bold rounded-xl shadow-lg shadow-app-primary/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
                         >
                             {isLoading ? (
                                 <>

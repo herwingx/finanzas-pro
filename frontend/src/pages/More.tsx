@@ -49,25 +49,24 @@ const More: React.FC = () => {
     {
       title: 'Gestión',
       items: [
-        { path: '/categories', icon: 'category', title: 'Categorías', description: 'Organiza tus gastos', colorClass: 'text-indigo-600 dark:text-indigo-400', bgClass: 'bg-indigo-50 dark:bg-indigo-900/20' },
-        { path: '/reports', icon: 'bar_chart', title: 'Reportes y Análisis', description: null, colorClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-50 dark:bg-blue-900/20' },
-        { path: '/recurring', icon: 'update', title: 'Recurrentes', description: 'Suscripciones y fijos', colorClass: 'text-purple-600 dark:text-purple-400', bgClass: 'bg-purple-50 dark:bg-purple-900/20' },
-        { path: '/installments', icon: 'credit_card_clock', title: 'Meses Sin Intereses', description: null, colorClass: 'text-pink-600 dark:text-pink-400', bgClass: 'bg-pink-50 dark:bg-pink-900/20' },
-        { path: '/loans', icon: 'handshake', title: 'Préstamos', description: 'Dinero que te deben', colorClass: 'text-violet-600 dark:text-violet-400', bgClass: 'bg-violet-50 dark:bg-violet-900/20' },
+        { path: '/categories', icon: 'category', title: 'Categorías', description: 'Organiza tus gastos', colorClass: 'text-indigo-600 dark:text-indigo-400', bgClass: 'bg-indigo-100 dark:bg-indigo-900/30' },
+        { path: '/reports', icon: 'analytics', title: 'Reportes y Análisis', description: null, colorClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-100 dark:bg-blue-900/30' },
+        { path: '/recurring', icon: 'event_repeat', title: 'Recurrentes', description: 'Suscripciones y fijos', colorClass: 'text-purple-600 dark:text-purple-400', bgClass: 'bg-purple-100 dark:bg-purple-900/30' },
+        { path: '/installments', icon: 'credit_score', title: 'Meses Sin Intereses', description: null, colorClass: 'text-indigo-600 dark:text-indigo-400', bgClass: 'bg-indigo-100 dark:bg-indigo-900/30' },
+        { path: '/loans', icon: 'handshake', title: 'Préstamos', description: 'Dinero que te deben', colorClass: 'text-amber-600 dark:text-amber-400', bgClass: 'bg-amber-100 dark:bg-amber-900/30' },
       ]
     },
     {
       title: 'Configuración',
       items: [
-        // { path: '/profile', icon: 'badge', title: 'Perfil', description: 'Moneda y datos', colorClass: 'text-teal-600', bgClass: 'bg-teal-50 dark:bg-teal-900/20' }, // Se movió a la tarjeta superior
         { path: '/settings', icon: 'tune', title: 'Preferencias', description: 'Tema y apariencia', colorClass: 'text-zinc-600 dark:text-zinc-400', bgClass: 'bg-zinc-100 dark:bg-zinc-800' },
-        { path: '/backup', icon: 'cloud_upload', title: 'Copias de Seguridad', description: 'Exportar datos', colorClass: 'text-sky-600 dark:text-sky-400', bgClass: 'bg-sky-50 dark:bg-sky-900/20' },
+        { path: '/backup', icon: 'cloud_sync', title: 'Copias de Seguridad', description: 'Exportar datos', colorClass: 'text-sky-600 dark:text-sky-400', bgClass: 'bg-sky-100 dark:bg-sky-900/30' },
       ]
     },
     {
       title: 'Sistema',
       items: [
-        { path: '/trash', icon: 'delete_history', title: 'Papelera', description: 'Restaurar items', colorClass: 'text-rose-600 dark:text-rose-400', bgClass: 'bg-rose-50 dark:bg-rose-900/20' },
+        { path: '/trash', icon: 'delete_sweep', title: 'Papelera', description: 'Restaurar items', colorClass: 'text-rose-600 dark:text-rose-400', bgClass: 'bg-rose-100 dark:bg-rose-900/30' },
       ]
     }
   ];
@@ -88,7 +87,7 @@ const More: React.FC = () => {
           to="/profile"
           className="flex items-center gap-4 p-4 bg-app-surface border border-app-border rounded-2xl shadow-sm hover:border-app-border/80 hover:shadow-md transition-all active:scale-[0.99]"
         >
-          <div className="size-16 rounded-full bg-gradient-to-br from-brand-primary to-indigo-600 flex items-center justify-center text-white shadow-inner shrink-0 text-xl font-bold">
+          <div className="size-16 rounded-full bg-gradient-to-br from-app-primary to-indigo-600 flex items-center justify-center text-white shadow-inner shrink-0 text-xl font-bold">
             {profile?.avatar ? (
               <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover rounded-full" />
             ) : (

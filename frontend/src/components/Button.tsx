@@ -41,7 +41,7 @@ const getButtonClasses = (
   fullWidth: boolean = false,
   className: string = ''
 ) => {
-  const base = "inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand-primary";
+  const base = "inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-app-primary";
 
   const width = fullWidth ? 'w-full' : '';
 
@@ -54,7 +54,7 @@ const getButtonClasses = (
 
   const variants = {
     // Solid Primary (Brand Color)
-    primary: "bg-app-primary hover:bg-brand-primary-dark text-white shadow-lg shadow-brand-primary/20 hover:shadow-brand-primary/30",
+    primary: "bg-app-primary hover:bg-app-primary-dark text-white shadow-lg shadow-app-primary/20 hover:shadow-app-primary/30",
 
     // Surface Secondary (Card background with border)
     secondary: "bg-app-surface text-app-text border border-app-border hover:bg-app-subtle hover:border-app-strong shadow-sm",
@@ -63,7 +63,7 @@ const getButtonClasses = (
     ghost: "bg-transparent text-app-text hover:bg-app-subtle text-app-muted hover:text-app-text",
 
     // Outline (Border only, brand colored)
-    outline: "bg-transparent border border-app-border hover:border-brand-primary text-app-muted hover:text-brand-primary hover:bg-brand-primary/5",
+    outline: "bg-transparent border border-app-border hover:border-app-primary text-app-muted hover:text-app-primary hover:bg-app-primary/5",
 
     // Danger (Destructive)
     danger: "bg-semantic-danger text-white hover:opacity-90 shadow-md shadow-semantic-danger/20",

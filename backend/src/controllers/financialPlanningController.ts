@@ -153,11 +153,73 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       }
     });
 
-    // 1. Process Income (Recurrent Income)
+    // ... (Existing code fetching transactions)
+
+    // 0. Fetch Active Loans for Projection
+    const activeLoans = await prisma.loan.findMany({
+      where: {
+        userId,
+        status: { in: ['active', 'partial'] },
+        expectedPayDate: {
+          gte: periodStart,
+          lte: periodEnd
+        }
+      },
+      include: { account: true }
+    });
+
+    // 1. Process Income (Recurrent Income + Loan Collections)
     const expectedIncome: any[] = [];
 
-    // 2. Process Expenses (Recurrent Expenses - Multi-instance Projection)
+    activeLoans.filter((l: any) => l.loanType === 'lent').forEach((l: any) => {
+      expectedIncome.push({
+        id: l.id,
+        uniqueId: `loan-inc-${l.id}`,
+        description: `Cobrar: ${l.borrowerName}`, // Short description
+        amount: l.remainingAmount,
+        dueDate: l.expectedPayDate,
+        category: { name: 'Préstamos', color: '#f59e0b', icon: 'credit_score', budgetType: 'savings' }, // Using 'savings' budgetType for income? Or null. 
+        isOverdue: l.expectedPayDate ? new Date(l.expectedPayDate) < new Date() : false,
+        isLoan: true
+      });
+    });
+
+    // 2. Process Expenses (Recurrent Expenses + Loan Payments)
     const expectedExpenses: any[] = [];
+
+    activeLoans.filter((l: any) => l.loanType === 'borrowed').forEach((l: any) => {
+      const uniqueId = `loan-exp-${l.id}`;
+      expectedExpenses.push({
+        id: l.id,
+        uniqueId,
+        description: `Pagar: ${l.borrowerName}`, // Short description
+        amount: l.remainingAmount,
+        dueDate: l.expectedPayDate,
+        category: { name: 'Préstamos', color: '#f59e0b', icon: 'credit_score', budgetType: 'need' }, // Debt is a NEED
+        isOverdue: l.expectedPayDate ? new Date(l.expectedPayDate) < new Date() : false,
+        isLoan: true
+      });
+    });
+
+    // ... (Existing Recurring Expenses Processing)
+
+    // ... (Existing logic continues with for loops for recurring) 
+
+    // Need to carefully weave this into the existing file structure without breaking the flow.
+    // The current file structure has:
+    // 1. fetch recurringTransactions
+    // 2. Process Income arrays init
+    // 3. Process Expenses arrays init
+    // 4. Loop recurringTransactions -> push to arrays
+    // 5. Credit Card Logic ...
+
+    // I will construct the Replacement carefully. The tool call requires contiguous block.
+    // Lines 156-160 are where arrays are init. I will insert Loan fetching and pushing there.
+
+    // ...
+
+    // GLOBAL deduplication to prevent any duplicate uniqueIds
+    const globalAddedIds = new Set<string>();
 
     // Dynamic limit based on period type (ensures we project enough instances)
     const maxInstances: Record<string, number> = {
@@ -170,19 +232,36 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     };
     const projectionLimit = maxInstances[periodType] || 50;
 
+    console.log(`[DEBUG] Planning: ${periodType}, Mode: ${mode}, Limit: ${projectionLimit}`);
+    console.log(`[DEBUG] Period: ${periodStart.toISOString()} -> ${periodEnd.toISOString()}`);
+
     // Helper to calculate next date for projection
     const getNextDate = (date: Date, freq: string): Date => {
       const d = new Date(date);
-      if (freq === 'DAILY') d.setDate(d.getDate() + 1);
-      if (freq === 'WEEKLY') d.setDate(d.getDate() + 7);
-      if (freq === 'BIWEEKLY') d.setDate(d.getDate() + 14);
-      if (freq === 'MONTHLY') d.setMonth(d.getMonth() + 1);
-      if (freq === 'YEARLY') d.setFullYear(d.getFullYear() + 1);
-      // Compatibility
-      if (freq === 'daily') d.setDate(d.getDate() + 1);
-      if (freq === 'weekly') d.setDate(d.getDate() + 7);
-      if (freq === 'biweekly') d.setDate(d.getDate() + 14);
-      if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
+      if (freq === 'DAILY' || freq === 'daily') d.setDate(d.getDate() + 1);
+      else if (freq === 'WEEKLY' || freq === 'weekly') d.setDate(d.getDate() + 7);
+      else if (freq === 'BIWEEKLY' || freq === 'biweekly') d.setDate(d.getDate() + 14);
+      else if (freq === 'biweekly_15_30' || freq === 'BIWEEKLY_15_30') {
+        // Quincena mexicana: días 15 y último del mes
+        const day = d.getDate();
+        const currentMonth = d.getMonth();
+        const currentYear = d.getFullYear();
+
+        if (day <= 15) {
+          // Si estamos en el 15 o antes, próximo es fin de este mes
+          // getDate(0) del MES SIGUIENTE da el último día del mes actual
+          const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+          d.setDate(lastDayOfMonth);
+        } else {
+          // Si estamos después del 15 (fin de mes), próximo es el 15 del siguiente mes
+          // IMPORTANTE: Primero cambiamos al día 15 (que existe en todos los meses) para evitar
+          // que setMonth salte un mes si venimos de un día 31 y vamos a un mes de 30 días.
+          d.setDate(15);
+          d.setMonth(currentMonth + 1);
+        }
+      }
+      else if (freq === 'MONTHLY' || freq === 'monthly') d.setMonth(d.getMonth() + 1);
+      else if (freq === 'YEARLY' || freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
       return d;
     };
 
@@ -193,8 +272,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       let instanceCount = 0;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayEnd = new Date(today);
-      todayEnd.setHours(23, 59, 59, 999);
 
       // Check for existing payments linked to this recurring transaction
       const existingPayments = await prisma.transaction.findMany({
@@ -202,7 +279,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
           recurringTransactionId: rt.id,
           deletedAt: null,
         },
-        select: { date: true, amount: true }
+        select: { date: true }
       });
 
       // Create a set of paid dates (normalized to date string)
@@ -210,49 +287,36 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         existingPayments.map(p => new Date(p.date).toISOString().split('T')[0])
       );
 
-      // If nextDueDate is in the FUTURE, project it and continue projecting more
-      // No "overdue" logic applies to future dates
-      if (projectionDate > todayEnd) {
-        // Future date - project if within period
-        while (isWithinInterval(projectionDate, { start: periodStart, end: periodEnd }) && instanceCount < projectionLimit) {
-          const projDateStr = projectionDate.toISOString().split('T')[0];
-          if (!paidDates.has(projDateStr)) {
-            const item = {
-              id: rt.id,
-              uniqueId: `${rt.id}-${projDateStr}`,
-              description: rt.description,
-              amount: rt.amount,
-              dueDate: new Date(projectionDate),
-              category: rt.category,
-              isOverdue: false  // Future dates are never overdue
-            };
-
-            if (rt.type === 'income') {
-              expectedIncome.push(item);
-            } else {
-              expectedExpenses.push(item);
-            }
-          }
-          projectionDate = getNextDate(projectionDate, rt.frequency);
-          instanceCount++;
-        }
-        continue; // Move to next recurring transaction
-      }
-
-      // nextDueDate is TODAY or in the PAST
-      // Check if there's an OVERDUE instance (before today but not paid)
-      if (projectionDate < today) {
+      // Project instances within period (simplified unified logic)
+      while (instanceCount < projectionLimit) {
         const projDateStr = projectionDate.toISOString().split('T')[0];
-        if (!paidDates.has(projDateStr)) {
-          // This is overdue and unpaid - show it!
+        const uniqueId = `${rt.id}-${projDateStr}`;
+
+        // Check if within period
+        const isInPeriod = isWithinInterval(projectionDate, { start: periodStart, end: periodEnd });
+
+        // If we've gone past the period end, stop projecting
+        if (projectionDate > periodEnd) {
+          break;
+        }
+
+        // Only add if in period, not already added globally, and not paid
+        if (isInPeriod && !globalAddedIds.has(uniqueId) && !paidDates.has(projDateStr)) {
+          if (rt.description === 'Ingreso Recurrente') {
+            console.log(`[DEBUG] Adding Recurrente: ${uniqueId} | Count: ${instanceCount}`);
+          }
+          globalAddedIds.add(uniqueId);
+
+          const isOverdue = projectionDate < today;
+
           const item = {
             id: rt.id,
-            uniqueId: `${rt.id}-${projDateStr}`,
+            uniqueId,
             description: rt.description,
             amount: rt.amount,
             dueDate: new Date(projectionDate),
             category: rt.category,
-            isOverdue: true
+            isOverdue
           };
 
           if (rt.type === 'income') {
@@ -261,45 +325,21 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             expectedExpenses.push(item);
           }
         }
-        // Advance to next instance
+
+        // Advance to next date
+        const prevTime = projectionDate.getTime();
         projectionDate = getNextDate(projectionDate, rt.frequency);
-      }
 
-      // Now project current and future instances within period
-      while (isWithinInterval(projectionDate, { start: periodStart, end: periodEnd }) && instanceCount < projectionLimit) {
-        const projDateStr = projectionDate.toISOString().split('T')[0];
-
-        // Skip if already paid
-        if (paidDates.has(projDateStr)) {
-          projectionDate = getNextDate(projectionDate, rt.frequency);
-          instanceCount++;
-          continue;
+        // Safety: prevent infinite loop
+        if (projectionDate.getTime() === prevTime) {
+          projectionDate.setDate(projectionDate.getDate() + 1);
         }
 
-        const item = {
-          id: rt.id,
-          uniqueId: `${rt.id}-${projDateStr}`,
-          description: rt.description,
-          amount: rt.amount,
-          dueDate: new Date(projectionDate),
-          category: rt.category,
-          isOverdue: projectionDate < today
-        };
-
-        if (rt.type === 'income') {
-          expectedIncome.push(item);
-        } else {
-          expectedExpenses.push(item);
-        }
-
-        projectionDate = getNextDate(projectionDate, rt.frequency);
         instanceCount++;
       }
     }
 
     // 3. Credit Card Payment Logic (Robust Version)
-    const startLog = `Financial Planning: Validating period ${periodStart.toISOString()} - ${periodEnd.toISOString()}`;
-    console.log(startLog);
 
     const creditAccounts = await prisma.account.findMany({
       where: {
@@ -321,7 +361,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       }
     });
 
-    console.log(`Financial Planning: Found ${creditAccounts.length} credit accounts for user.`);
 
     const msiPaymentsDue: any[] = [];
     const isLongPeriod = ['bimestral', 'semestral', 'anual'].includes(periodType);
@@ -331,11 +370,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     if (!isLongPeriod) {
       for (const account of creditAccounts) {
         if (!account.cutoffDay || !account.paymentDay) {
-          console.log(`Account ${account.name} missing cutoff/payment day config.`);
           continue;
         }
 
-        console.log(`Analyzing Account: ${account.name}. Cutoff: ${account.cutoffDay}, Payment: ${account.paymentDay}`);
 
         // We look for PAYMENT DATES that fall within the user's view period.
         // E.g. User views "December". Payment Date is Dec 30.
@@ -350,7 +387,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
           payDate.setHours(12, 0, 0, 0);
 
           if (isWithinInterval(payDate, { start: periodStart, end: periodEnd })) {
-            console.log(`>> Found relevant payment date: ${payDate.toISOString().split('T')[0]}`);
 
             // 1. Calculate the Cutoff Date associated with this Payment Date
             // Usually Payment is ~20 days after Cutoff.
@@ -372,7 +408,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             cycleStartDate.setDate(cycleStartDate.getDate() + 1);
             cycleStartDate.setHours(0, 0, 0, 0);
 
-            console.log(`   Billing Cycle: ${cycleStartDate.toISOString().split('T')[0]} to ${cutoffDate.toISOString().split('T')[0]}`);
 
             // 3.0 Check for existing payments in this cycle (to exclude already-paid items)
             const existingMsiPayments = await prisma.transaction.findMany({
@@ -390,7 +425,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             });
 
             const paidMsiIds = new Set(existingMsiPayments.map(p => p.installmentPurchaseId));
-            console.log(`   Already paid MSI in this cycle: ${paidMsiIds.size}`);
 
             // Check for existing regular purchase payments (transfers without MSI link)
             const existingRegularPayments = await prisma.transaction.aggregate({
@@ -416,7 +450,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             const accountMsiDue = account.installmentPurchases.filter(msi => {
               // Skip if already paid in this cycle
               if (paidMsiIds.has(msi.id)) {
-                console.log(`      [SKIP] MSI '${msi.description}' already paid this cycle.`);
                 return false;
               }
 
@@ -439,7 +472,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
               const valid2 = candidate2 >= cycleStartDate && candidate2 <= cutoffDate && candidate2 >= purchaseDate;
 
               if (valid1 || valid2) {
-                console.log(`      [MATCH] MSI '${msi.description}' (Day ${purchaseDay}) falls in this cycle.`);
                 return true;
               }
               return false;
@@ -514,7 +546,6 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     // 3.5 For LONG periods (bimestral+), project ALL future MSI payments
     // This ensures we see all upcoming installments, not just the next billing cycle
     if (isLongPeriod) {
-      console.log(`Processing extended MSI projection for ${periodType} period...`);
 
       for (const account of creditAccounts) {
         for (const msi of account.installmentPurchases) {

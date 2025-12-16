@@ -177,31 +177,31 @@ const FinancialAnalysis: React.FC = () => {
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSaldoProj" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--brand-primary)" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="var(--brand-primary)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-default)" strokeOpacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" strokeOpacity={0.3} />
                 <XAxis
                   dataKey="fecha"
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  tick={{ fill: '#9ca3af', fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                   minTickGap={40}
                 />
                 <YAxis
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  tick={{ fill: '#9ca3af', fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
                   width={50}
                   tickFormatter={formatAxisValue}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '4 4' }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6b7280', strokeDasharray: '4 4' }} />
                 <Area
                   type="monotone"
                   dataKey="Saldo"
-                  stroke="var(--brand-primary)"
+                  stroke="#6366f1"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#colorSaldoProj)"

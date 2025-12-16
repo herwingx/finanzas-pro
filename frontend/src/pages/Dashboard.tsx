@@ -9,6 +9,29 @@ import { toastInfo } from '../utils/toast';
 
 // --- Sub-components para modularidad visual ---
 
+const CustomTooltip = ({ active, payload, formatter }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white dark:bg-zinc-900 border border-app-border rounded-xl shadow-xl p-3 min-w-[120px] animate-fade-in ring-1 ring-black/5 dark:ring-white/10 z-50 opacity-100">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className="size-2 rounded-full ring-2 ring-white dark:ring-black"
+            style={{ backgroundColor: data.color }}
+          />
+          <span className="text-[10px] font-bold text-app-muted uppercase tracking-wider truncate max-w-[90px]">
+            {data.name}
+          </span>
+        </div>
+        <p className="text-sm font-black text-app-text font-numbers leading-none">
+          {formatter(data.value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const DashboardHeader: React.FC<{
   name?: string;
   avatar?: string;
@@ -200,13 +223,7 @@ const TopCategoriesChart: React.FC<{
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number) => format(value)}
-              contentStyle={{
-                backgroundColor: 'var(--bg-surface)',
-                borderColor: 'var(--border-default)',
-                borderRadius: '8px',
-                fontSize: '11px'
-              }}
+              content={<CustomTooltip formatter={format} />}
             />
           </PieChart>
         </ResponsiveContainer>

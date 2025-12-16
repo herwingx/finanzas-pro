@@ -132,7 +132,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
             {account && (
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-app-subtle flex items-center justify-center">
-                  <span className="material-symbols-outlined text-app-muted text-xl">account_balance_wallet</span>
+                  <span className="material-symbols-outlined text-app-muted text-xl">account_balance</span>
                 </div>
                 <div>
                   <p className="text-[10px] text-app-muted uppercase font-bold">

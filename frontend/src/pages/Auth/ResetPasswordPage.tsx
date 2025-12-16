@@ -86,14 +86,14 @@ const ResetPasswordPage: React.FC = () => {
 
       {/* Decoration */}
       <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-primary/5 rounded-full blur-[100px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-app-primary/5 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[100px]" />
       </div>
 
       <div className="w-full max-w-[400px] animate-fade-in">
 
         <div className="flex flex-col items-center mb-8">
-          <div className="size-16 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-brand-primary shadow-xl shadow-black/5 mb-4">
+          <div className="size-16 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-app-primary shadow-xl shadow-black/5 mb-4">
             <span className="material-symbols-outlined text-[32px]">vpn_key</span>
           </div>
           <h1 className="text-2xl font-bold text-app-text text-center tracking-tight">Nueva Contraseña</h1>
@@ -111,7 +111,7 @@ const ResetPasswordPage: React.FC = () => {
                 Contraseña Nueva
               </label>
               <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-app-primary transition-colors material-symbols-outlined text-[20px]">
                   lock
                 </span>
                 <input
@@ -122,7 +122,7 @@ const ResetPasswordPage: React.FC = () => {
                   placeholder="••••••••"
                   required
                   disabled={!token || isLoading}
-                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface disabled:opacity-50"
+                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-app-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface disabled:opacity-50"
                 />
               </div>
             </div>
@@ -133,7 +133,7 @@ const ResetPasswordPage: React.FC = () => {
                 Confirmar
               </label>
               <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-brand-primary transition-colors material-symbols-outlined text-[20px]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-muted group-focus-within:text-app-primary transition-colors material-symbols-outlined text-[20px]">
                   lock_reset
                 </span>
                 <input
@@ -144,7 +144,7 @@ const ResetPasswordPage: React.FC = () => {
                   placeholder="••••••••"
                   required
                   disabled={!token || isLoading}
-                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-brand-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface disabled:opacity-50"
+                  className="w-full pl-12 pr-4 py-3 bg-app-bg border-2 border-transparent focus:border-app-primary/20 rounded-xl outline-none transition-all placeholder:text-app-muted/40 font-medium focus:bg-app-surface disabled:opacity-50"
                 />
               </div>
             </div>
@@ -162,7 +162,7 @@ const ResetPasswordPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading || !token}
-                className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-dark text-white font-bold rounded-xl shadow-lg shadow-brand-primary/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-app-primary hover:bg-app-primary-dark text-white font-bold rounded-xl shadow-lg shadow-app-primary/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>

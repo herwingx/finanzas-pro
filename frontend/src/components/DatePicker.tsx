@@ -65,7 +65,7 @@ export function DatePicker({
             </span>
             <span className="font-medium truncate block">
               {date ? (
-                format(date, "EEE, d 'de' MMMM, yyyy", { locale: es })
+                format(date, "EEE, d 'de' MMM", { locale: es })
               ) : (
                 <span className="opacity-70 font-normal">{placeholder}</span>
               )}

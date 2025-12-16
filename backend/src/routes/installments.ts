@@ -35,7 +35,6 @@ router.get('/', async (req: AuthRequest, res) => {
             const paidInstallmentsReal = Math.floor((totalPaidReal + 0.01) / purchase.monthlyPayment);
 
             if (Math.abs(totalPaidReal - purchase.paidAmount) > 0.05 || paidInstallmentsReal !== purchase.paidInstallments) {
-                console.log(`Auto-Correcting MSI ${purchase.description}: Paid ${purchase.paidAmount}->${totalPaidReal}, Inst ${purchase.paidInstallments}->${paidInstallmentsReal}`);
                 await prisma.installmentPurchase.update({
                     where: { id: purchase.id },
                     data: {
@@ -162,7 +161,6 @@ router.get('/:id', async (req: AuthRequest, res) => {
 
         // If DB state differs from Reality, Auto-Correct it.
         if (Math.abs(totalPaidReal - purchase.paidAmount) > 0.01 || paidInstallmentsReal !== purchase.paidInstallments) {
-            console.log(`Self-Healing MSI ${id}: Correcting paidAmount ${purchase.paidAmount} -> ${totalPaidReal}, paidInstallments ${purchase.paidInstallments} -> ${paidInstallmentsReal}`);
 
             purchase = await prisma.installmentPurchase.update({
                 where: { id },
@@ -312,7 +310,6 @@ router.delete('/:id', async (req: AuthRequest, res) => {
             if (!purchase) {
                 throw new Error('Installment purchase not found or you do not have permission to delete it.');
             }
-            console.log(`[DELETE MSI] Found purchase to delete: ${purchase.description}`);
 
             // Step 2: For every payment made from a different account (transfers), refund the source account.
             const paymentTransactions = purchase.generatedTransactions.filter(
@@ -320,10 +317,8 @@ router.delete('/:id', async (req: AuthRequest, res) => {
             );
 
             if (paymentTransactions.length > 0) {
-                console.log(`[DELETE MSI] Found ${paymentTransactions.length} payment transactions to revert.`);
                 for (const payment of paymentTransactions) {
                     if (payment.accountId) { // accountId is the source of the transfer
-                        console.log(`[DELETE MSI] Refunding ${payment.amount} to source account ${payment.accountId}.`);
                         await tx.account.update({
                             where: { id: payment.accountId },
                             data: { balance: { increment: payment.amount } },
@@ -336,18 +331,15 @@ router.delete('/:id', async (req: AuthRequest, res) => {
             // The net debt added to the card is Total Amount - Paid Amount. We need to reverse this.
             const remainingDebt = purchase.totalAmount - purchase.paidAmount;
             
-            console.log(`[DELETE MSI] Original amount: ${purchase.totalAmount}, Paid: ${purchase.paidAmount}, Remaining Debt: ${remainingDebt}`);
 
             // To revert the net debt on a CREDIT account, we must DECREMENT its balance.
             if (purchase.account.type === 'CREDIT') {
-                console.log(`[DELETE MSI] Reverting remaining debt of ${remainingDebt} on CREDIT account ${purchase.accountId}.`);
                 await tx.account.update({
                     where: { id: purchase.accountId },
                     data: { balance: { decrement: remainingDebt } },
                 });
             } else {
                 // This case should ideally not happen based on creation logic, but handle it for safety.
-                console.log(`[DELETE MSI] Reverting remaining debt of ${remainingDebt} on non-credit account ${purchase.accountId}.`);
                 await tx.account.update({
                     where: { id: purchase.accountId },
                     data: { balance: { increment: remainingDebt } },
@@ -364,7 +356,6 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                 where: { id },
             });
 
-            console.log(`[DELETE MSI] Successfully deleted purchase ${id} and reverted financial impact.`);
         });
         res.status(204).send();
     } catch (error: any) {

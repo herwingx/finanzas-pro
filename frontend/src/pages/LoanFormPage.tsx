@@ -251,7 +251,7 @@ const LoanFormPage: React.FC = () => {
             <div className="bg-app-surface border border-app-border rounded-3xl p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
                 <div className={`size-8 rounded-lg flex items-center justify-center ${themeClass}`}>
-                  <span className="material-symbols-outlined text-lg">account_balance_wallet</span>
+                  <span className="material-symbols-outlined text-lg">account_balance</span>
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-app-text">Movimiento de dinero</h3>

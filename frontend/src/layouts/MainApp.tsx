@@ -24,6 +24,7 @@ import LoanFormPage from '../pages/LoanFormPage';
 
 // Components
 import BottomNav from '../components/BottomNav';
+import { AppLogo } from '../components/AppLogo';
 
 // Pages that show the mobile bottom nav
 const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
@@ -32,12 +33,13 @@ const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
 // Este componente vive aquí para proveer navegación consistente en escritorio
 const DesktopSidebar = () => {
   const links = [
-    { to: '/', label: 'Panel Principal', icon: 'dashboard' },
+    { to: '/', label: 'Panel Principal', icon: 'space_dashboard' },
     { to: '/history', label: 'Movimientos', icon: 'receipt_long' },
-    { to: '/accounts', label: 'Mis Cuentas', icon: 'account_balance_wallet' },
-    { to: '/analysis', label: 'Análisis', icon: 'monitoring' },
-    { to: '/installments', label: 'Meses (MSI)', icon: 'credit_card_clock' },
-    { to: '/recurring', label: 'Fijos', icon: 'update' },
+    { to: '/accounts', label: 'Mis Cuentas', icon: 'account_balance' },
+    { to: '/analysis', label: 'Análisis', icon: 'analytics' },
+    { to: '/reports', label: 'Reportes', icon: 'summarize' },
+    { to: '/installments', label: 'Meses (MSI)', icon: 'credit_score' },
+    { to: '/recurring', label: 'Fijos', icon: 'event_repeat' },
     { to: '/loans', label: 'Préstamos', icon: 'handshake' },
   ];
 
@@ -58,9 +60,7 @@ const DesktopSidebar = () => {
     <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 flex-col bg-app-surface border-r border-app-border z-40">
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="size-10 bg-gradient-to-br from-app-primary to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-app-primary/30">
-            <span className="material-symbols-outlined text-2xl">spa</span>
-          </div>
+          <AppLogo size={40} className="rounded-xl shadow-lg shadow-app-primary/30" />
           <span className="text-xl font-black text-app-text tracking-tighter">FINANZAS</span>
         </div>
       </div>

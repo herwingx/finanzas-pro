@@ -80,11 +80,32 @@ const NewRecurringPage: React.FC = () => {
     nextDate.setHours(12, 0, 0, 0);
 
     if (alreadyPaidCurrent) {
-      if (frequency === 'daily') nextDate.setDate(nextDate.getDate() + 1);
-      else if (frequency === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
-      else if (frequency === 'biweekly') nextDate.setDate(nextDate.getDate() + 14);
-      else if (frequency === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
-      else if (frequency === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
+      if (frequency === 'daily') {
+        nextDate.setDate(nextDate.getDate() + 1);
+      } else if (frequency === 'weekly') {
+        nextDate.setDate(nextDate.getDate() + 7);
+      } else if (frequency === 'biweekly') {
+        nextDate.setDate(nextDate.getDate() + 14);
+      } else if (frequency === 'biweekly_15_30') {
+        // Quincena mexicana: días 15 y 30/31 del mes
+        const day = nextDate.getDate();
+        const currentMonth = nextDate.getMonth();
+        const currentYear = nextDate.getFullYear();
+
+        if (day <= 15) {
+          // Si estamos en el 15 o antes, próximo es fin de este mes
+          const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+          nextDate.setDate(lastDayOfMonth);
+        } else {
+          // Si estamos después del 15, próximo es el 15 del siguiente mes
+          nextDate.setMonth(currentMonth + 1);
+          nextDate.setDate(15);
+        }
+      } else if (frequency === 'monthly') {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+      } else if (frequency === 'yearly') {
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+      }
     }
     return nextDate;
   };
@@ -132,7 +153,7 @@ const NewRecurringPage: React.FC = () => {
   // Frequency Configuration
   const freqOptions: { value: FrequencyType; label: string; days: string }[] = [
     { value: 'weekly', label: 'Semanal', days: '7d' },
-    { value: 'biweekly', label: 'Quincenal', days: '15d' },
+    { value: 'biweekly_15_30', label: 'Quincenal', days: '15/30' },
     { value: 'monthly', label: 'Mensual', days: '1m' },
     { value: 'yearly', label: 'Anual', days: '1a' },
   ];
@@ -216,7 +237,7 @@ const NewRecurringPage: React.FC = () => {
                 <select
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full h-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none appearance-none"
+                  className="w-full min-h-[46px] bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none appearance-none"
                 >
                   {availableAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
                 </select>
@@ -249,7 +270,7 @@ const NewRecurringPage: React.FC = () => {
               {/* Native Toggle Switch styled with Tailwind */}
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" checked={alreadyPaidCurrent} onChange={() => setAlreadyPaidCurrent(!alreadyPaidCurrent)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-app-primary/50 dark:peer-focus:ring-app-primary/30 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-app-primary"></div>
+                <div className="w-11 h-6 bg-app-subtle peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-app-primary/50 dark:peer-focus:ring-app-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-app-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
               </label>
             </div>
 

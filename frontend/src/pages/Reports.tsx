@@ -1,15 +1,41 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useTransactions, useCategories, useProfile } from '../hooks/useApi';
+import { useTransactions, useCategories, useProfile, useRecurringTransactions, useInstallmentPurchases, useLoans } from '../hooks/useApi';
 import { SkeletonDashboard } from '../components/Skeleton';
 import { PageHeader } from '../components/PageHeader';
+
+const CustomTooltip = ({ active, payload, formatter }: any) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+            <div className="bg-white dark:bg-zinc-900 border border-app-border rounded-xl shadow-xl p-3 min-w-[140px] animate-fade-in ring-1 ring-black/5 dark:ring-white/10 opacity-100 z-50">
+                <div className="flex items-center gap-2 mb-1.5">
+                    <span
+                        className="size-2 rounded-full ring-2 ring-white dark:ring-black"
+                        style={{ backgroundColor: data.color }}
+                    />
+                    <span className="text-xs font-semibold text-app-muted uppercase tracking-wide truncate max-w-[100px]">
+                        {data.name}
+                    </span>
+                </div>
+                <p className="text-base font-black text-app-text font-numbers leading-none">
+                    {formatter(data.value)}
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
 
 const Reports: React.FC = () => {
     // --- Data Hooks ---
     const { data: transactions, isLoading: loadingTx } = useTransactions();
     const { data: categories, isLoading: loadingCat } = useCategories();
     const { data: profile, isLoading: loadingProf } = useProfile();
+    const { data: recurringTxs, isLoading: loadingRec } = useRecurringTransactions();
+    const { data: installments, isLoading: loadingInst } = useInstallmentPurchases();
+    const { data: loansData, isLoading: loadingLoans } = useLoans();
 
     // --- Helpers ---
     const formatCurrency = (val: number) => {
@@ -20,53 +46,206 @@ const Reports: React.FC = () => {
         }).format(val);
     };
 
-    // --- Calculation Logic (50/30/20 Rule) ---
+    // --- Calculation Logic (50/30/20 Rule + Projections) ---
     const analysis = useMemo(() => {
-        if (!transactions || !categories) return null;
+        if (!transactions || !categories || !recurringTxs || !installments || !loansData) return null;
 
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const monthTxs = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
 
-        const income = monthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
-        const expense = monthTxs.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+        // --- 1. Income Projection ---
+        // Separate Regular Income (for Budget) vs Total Income (for Liquidity)
 
-        let needs = 0, wants = 0, savings = 0, unclassified = 0;
+        // A. Actual Income
+        const totalActualIncome = monthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
 
-        monthTxs.filter(tx => tx.type === 'expense').forEach(tx => {
-            const cat = categories.find(c => c.id === tx.categoryId);
-            if (cat?.budgetType === 'need') needs += tx.amount;
-            else if (cat?.budgetType === 'want') wants += tx.amount;
-            else if (cat?.budgetType === 'savings') savings += tx.amount;
-            else unclassified += tx.amount;
+        // Regular Actual Income = Total - New Debt (Borrowed Loans)
+        // BUT include Loan Repayments (Lent Loans) as this is 'money returning to me'
+        const regularActualIncome = monthTxs
+            .filter(tx => tx.type === 'income')
+            .filter(tx => {
+                // Check if linked to Loan
+                if (tx.loanId) {
+                    const loan = loansData.find(l => l.id === tx.loanId);
+                    // If it's a "Lent" loan, and this is income, it means they are paying me back.
+                    // This IS disposable money I can use. KEEP IT.
+                    if (loan && (loan as any).loanType === 'lent') return true;
+
+                    // If it's a "Borrowed" loan, and this is income, it means I am receiving the bank's money.
+                    // This is DEBT. EXCLUDE IT.
+                    return false;
+                }
+
+                // If not linked to loan, check category
+                const cat = categories.find(c => c.id === tx.categoryId);
+                // Exclude if category is explicitly Préstamos (Manual entry assumed to be debt/borrowing if not linked)
+                // If user manually enters "Cobro a Juan" without linking, it might get excluded here.
+                // But safer to exclude potential debt than include it.
+                return !cat || (cat.name !== 'Préstamos' && cat.name !== 'Prestamos' && cat.name !== 'Deudas');
+            })
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        // B. Recurring Income
+        const monthlyRecurringIncome = recurringTxs
+            .filter(rt => rt.active && rt.type === 'income')
+            .reduce((sum, rt) => {
+                let monthlyAmount = rt.amount;
+                switch (rt.frequency) {
+                    case 'daily': monthlyAmount = rt.amount * 30; break;
+                    case 'weekly': monthlyAmount = rt.amount * 4; break;
+                    case 'biweekly': monthlyAmount = rt.amount * 2; break;
+                    case 'biweekly_15_30': monthlyAmount = rt.amount * 2; break;
+                    case 'monthly': monthlyAmount = rt.amount; break;
+                    case 'yearly': monthlyAmount = rt.amount / 12; break;
+                }
+                return sum + monthlyAmount;
+            }, 0);
+
+        // Projected Totals
+        // For Liquidity: Use Total Actual (including loans) vs Recurring
+        const totalProjectedIncome = Math.max(totalActualIncome, monthlyRecurringIncome);
+
+        // For Budget (50/30/20): Use Regular Actual (excluding loans) vs Recurring
+        const regularProjectedIncome = Math.max(regularActualIncome, monthlyRecurringIncome);
+
+        // --- 2. Expense Projection (The "Projected" View) ---
+        // We combine:
+        // A. Active Recurring Expenses (Monthly equivalent)
+        // B. Active MSI Installments (Monthly payment)
+        // C. "Manual" Expenses this month (Non-recurring, Non-MSI) - e.g. unplanned groceries, dining out
+
+        let needs = 0, wants = 0, savings = 0, loans = 0, unclassified = 0;
+        let projectedExpenseTotal = 0;
+
+        // Helper to classify amount by category ID and Description
+        const classify = (amount: number, categoryId?: string, isLoan?: boolean, description: string = '') => {
+            projectedExpenseTotal += amount;
+
+            if (isLoan) {
+                loans += amount;
+                return;
+            }
+
+            // Keyword check for loans if not explicitly categorized
+            const lowerDesc = description.toLowerCase();
+            const isLoanKeyword = lowerDesc.includes('prestamo') || lowerDesc.includes('préstamo') || lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito');
+
+            if (isLoanKeyword && !categoryId) {
+                loans += amount;
+                return;
+            }
+
+            if (!categoryId) {
+                // Double check if it matches a category name directly? No, categories have IDs.
+                unclassified += amount;
+                return;
+            }
+
+            const cat = categories.find(c => c.id === categoryId);
+            if (!cat) {
+                unclassified += amount;
+                return;
+            }
+
+            // Catch-all for "Préstamos" category by name
+            if (cat.name === 'Préstamos' || cat.name === 'Prestamos' || cat.name === 'Deudas') {
+                loans += amount;
+                return;
+            }
+
+            if (isLoanKeyword) {
+                // If it has a category but description says "Prestamo", do we force it?
+                // Maybe the category is "Others" or "Unclassified".
+                // Let's stick to category type if present, unless category is generic.
+                // For now, respect category if present.
+            }
+
+            if (cat.budgetType === 'need') needs += amount;
+            else if (cat.budgetType === 'want') wants += amount;
+            else if (cat.budgetType === 'savings') savings += amount;
+            else unclassified += amount;
+        };
+
+        // A. Recurring Expenses
+        recurringTxs.filter(rt => rt.active && rt.type === 'expense').forEach(rt => {
+            let monthlyAmount = rt.amount;
+            switch (rt.frequency) {
+                case 'daily': monthlyAmount = rt.amount * 30; break;
+                case 'weekly': monthlyAmount = rt.amount * 4; break;
+                case 'biweekly': monthlyAmount = rt.amount * 2; break;
+                case 'biweekly_15_30': monthlyAmount = rt.amount * 2; break;
+                case 'monthly': monthlyAmount = rt.amount; break;
+                case 'yearly': monthlyAmount = rt.amount / 12; break;
+            }
+            classify(monthlyAmount, rt.categoryId, false, rt.description);
         });
 
+        // B. MSI Installments
+        installments.forEach(inst => {
+            const remaining = inst.installments - inst.paidInstallments;
+            if (remaining > 0) {
+                classify(inst.monthlyPayment, inst.categoryId, false, inst.description);
+            }
+        });
+
+        // C. Manual Expenses
+        monthTxs.filter(tx => tx.type === 'expense').forEach(tx => {
+            if (tx.recurringTransactionId) return;
+            if (tx.installmentPurchaseId) return;
+
+            if (tx.loanId) {
+                classify(tx.amount, undefined, true, tx.description);
+                return;
+            }
+
+            classify(tx.amount, tx.categoryId, false, tx.description);
+        });
+
+        // --- 3. Disposable & Surplus Calculation ---
+        const budgetBase = Math.max(0, regularProjectedIncome - loans);
+        const totalOperationalExpenses = needs + wants + savings + unclassified;
+        const surplus = Math.max(0, budgetBase - totalOperationalExpenses);
+
+        // Add surplus to savings (Potential Savings)
+        const totalSavings = savings + surplus;
+
         // Chart segments with modern colors
+        // NOTE: Exclude 'Préstamos' from the 50/30/20 chart
+        // 'Ahorro' now includes unspent disposable income (Surplus)
         const data = [
             { name: 'Necesidades', value: needs, color: '#f43f5e', ideal: 50, icon: 'home' },
             { name: 'Deseos', value: wants, color: '#a855f7', ideal: 30, icon: 'favorite' },
-            { name: 'Ahorro', value: savings, color: '#10b981', ideal: 20, icon: 'savings' },
+            { name: 'Ahorro', value: totalSavings, color: '#10b981', ideal: 20, icon: 'savings' },
+            // { name: 'Préstamos', value: loans, color: '#f59e0b', ideal: 0, icon: 'credit_score' }, // Excluded
             { name: 'Sin clasificar', value: unclassified, color: '#64748b', ideal: 0, icon: 'help' },
         ].filter(i => i.value > 0);
 
         return {
-            income,
-            expense,
-            balance: income - expense,
+            income: totalActualIncome,
+            expense: projectedExpenseTotal,
+            actualExpense: monthTxs.filter(tx => tx.type === 'expense').reduce((s, t) => s + t.amount, 0),
+            totalProjectedIncome, // Total (Liquidity)
+            regularProjectedIncome, // Regular (Budget Base Source)
+            budgetBase, // Net Disposable Income
+            loanExpenses: loans,
+            balance: totalProjectedIncome - projectedExpenseTotal,
             chartData: data,
-            totalAllocated: needs + wants + savings + unclassified,
+            totalAllocated: needs + wants + totalSavings + unclassified, // Should equal budgetBase (if no deficit)
+            surplus, // Export surplus for UI
             hasUnclassified: unclassified > 0
         };
-    }, [transactions, categories]);
+    }, [transactions, categories, recurringTxs, installments, loansData]);
 
-    const isLoading = loadingTx || loadingCat || loadingProf;
+    const isLoading = loadingTx || loadingCat || loadingProf || loadingRec || loadingInst || loadingLoans;
 
     if (isLoading) return <SkeletonDashboard />;
     if (!analysis) return <div className="p-8 text-center text-app-muted">Sin datos suficientes</div>;
 
     const hasData = analysis.chartData.length > 0;
-    // Usar gastos totales como base si no hay ingresos
-    const baseAmount = analysis.income > 0 ? analysis.income : analysis.expense;
+
+    // Base Amount (Calculated in useMemo)
+    const { budgetBase, surplus } = analysis;
 
     return (
         <div className="min-h-dvh bg-app-bg text-app-text font-sans pb-safe">
@@ -78,25 +257,28 @@ const Reports: React.FC = () => {
                 <div className="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row gap-6 sm:gap-12 justify-between">
                         <div className="flex-1">
-                            <p className="text-xs font-bold text-app-muted uppercase tracking-wider mb-1">Balance Neto</p>
-                            <p className={`text-4xl font-black tracking-tight font-numbers ${analysis.balance >= 0 ? 'text-app-text' : 'text-rose-500'}`}>
-                                {formatCurrency(analysis.balance)}
+                            <div className="flex items-center gap-2 mb-1">
+                                <p className="text-xs font-bold text-app-muted uppercase tracking-wider">Balance Estimado</p>
+                                <span className="material-symbols-outlined text-[14px] text-app-muted cursor-help" title="Ingresos Recurrentes - Gastos Actuales">help</span>
+                            </div>
+                            <p className={`text-4xl font-black tracking-tight font-numbers ${(analysis.totalProjectedIncome - analysis.expense) >= 0 ? 'text-app-text' : 'text-rose-500'}`}>
+                                {formatCurrency(analysis.totalProjectedIncome - analysis.expense)}
                             </p>
                         </div>
                         <div className="flex gap-8">
                             <div>
                                 <div className="flex items-center gap-1.5 mb-1">
                                     <span className="size-2 rounded-full bg-emerald-500"></span>
-                                    <span className="text-[10px] font-bold text-app-muted uppercase">Ingresos</span>
+                                    <span className="text-[10px] font-bold text-app-muted uppercase">Ingresos Est.</span>
                                 </div>
                                 <p className="text-lg font-bold font-numbers text-emerald-600 dark:text-emerald-400">
-                                    {formatCurrency(analysis.income)}
+                                    {formatCurrency(analysis.totalProjectedIncome)}
                                 </p>
                             </div>
                             <div>
                                 <div className="flex items-center gap-1.5 mb-1">
                                     <span className="size-2 rounded-full bg-rose-500"></span>
-                                    <span className="text-[10px] font-bold text-app-muted uppercase">Gastos</span>
+                                    <span className="text-[10px] font-bold text-app-muted uppercase">Gastos Est.</span>
                                 </div>
                                 <p className="text-lg font-bold font-numbers text-rose-600 dark:text-rose-400">
                                     {formatCurrency(analysis.expense)}
@@ -114,7 +296,7 @@ const Reports: React.FC = () => {
                         </div>
                         <div>
                             <h2 className="font-bold text-sm text-app-text">Análisis de Presupuesto</h2>
-                            <p className="text-xs text-app-muted">Regla 50/30/20</p>
+                            <p className="text-xs text-app-muted">Regla 50/30/20 (Operativo)</p>
                         </div>
                     </div>
 
@@ -140,15 +322,8 @@ const Reports: React.FC = () => {
                                             ))}
                                         </Pie>
                                         <Tooltip
-                                            formatter={(value: number) => formatCurrency(value)}
-                                            contentStyle={{
-                                                backgroundColor: 'var(--bg-surface)',
-                                                borderColor: 'var(--border-default)',
-                                                borderRadius: '12px',
-                                                fontSize: '12px',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                            }}
-                                            itemStyle={{ color: 'var(--text-main)' }}
+                                            content={<CustomTooltip formatter={formatCurrency} />}
+                                            cursor={{ stroke: 'var(--border-default)', strokeWidth: 1 }}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>
@@ -163,7 +338,7 @@ const Reports: React.FC = () => {
                             {/* Legend / Breakdown List */}
                             <div className="w-full space-y-4 flex-1">
                                 {analysis.chartData.map((item, index) => {
-                                    const pct = baseAmount > 0 ? (item.value / baseAmount) * 100 : 0;
+                                    const pct = budgetBase > 0 ? (item.value / budgetBase) * 100 : 0;
                                     const diff = pct - item.ideal;
 
                                     return (
@@ -200,15 +375,24 @@ const Reports: React.FC = () => {
 
                                             {/* Meta comparison */}
                                             <div className="flex justify-between text-[11px] mt-1.5">
-                                                <span className="text-app-muted">
-                                                    {pct.toFixed(1)}% del {analysis.income > 0 ? 'ingreso' : 'gasto total'}
-                                                </span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-app-muted">
+                                                        {pct.toFixed(1)}% del disp. neto
+                                                    </span>
+                                                    {item.name === 'Ahorro' && surplus > 0 && (
+                                                        <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 italic">
+                                                            Inc. {formatCurrency(surplus)} sobrante
+                                                        </span>
+                                                    )}
+                                                </div>
+
                                                 {item.ideal > 0 && (
-                                                    <span className={`font-semibold ${diff > 10 ? 'text-rose-500' :
-                                                            diff > 0 ? 'text-amber-500' :
-                                                                'text-emerald-500'
+                                                    <span className={`font-semibold flex items-center gap-1 ${diff > 10 ? 'text-rose-500' :
+                                                        diff > 0 ? 'text-green-600' :
+                                                            'text-emerald-500'
                                                         }`}>
-                                                        Meta: {item.ideal}% ({diff > 0 ? '+' : ''}{diff.toFixed(0)}%)
+                                                        <span>Meta: {formatCurrency(budgetBase * (item.ideal / 100))}</span>
+                                                        <span className="text-[9px] opacity-80">({item.ideal}%)</span>
                                                     </span>
                                                 )}
                                             </div>

@@ -248,7 +248,7 @@ const NewTransaction: React.FC = () => {
                       </span>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked={isMsiPay} onChange={e => setIsMsiPay(e.target.checked)} className="sr-only peer" />
-                        <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-app-primary"></div>
+                        <div className="w-9 h-5 bg-app-subtle peer-focus:ring-2 peer-focus:ring-app-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-app-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-app-primary"></div>
                       </label>
                     </div>
 

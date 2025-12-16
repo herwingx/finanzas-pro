@@ -199,7 +199,7 @@ const History: React.FC = () => {
                       <SwipeableItem
                         key={tx.id}
                         // Swipe RIGHT -> muestra leftAction (Editar)
-                        leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                        leftAction={{ icon: 'edit', color: 'var(--app-primary)', label: 'Editar' }}
                         onSwipeRight={() => handleEditClick(tx)}
                         // Swipe LEFT -> muestra rightAction (Eliminar)
                         rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}

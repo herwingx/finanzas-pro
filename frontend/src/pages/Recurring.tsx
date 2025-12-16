@@ -152,8 +152,8 @@ const Recurring: React.FC = () => {
 
     const getFrequencyLabel = (freq: string) => {
         const labels: Record<string, string> = {
-            'daily': 'Diario', 'weekly': 'Semanal', 'biweekly': 'Quincenal',
-            'monthly': 'Mensual', 'yearly': 'Anual'
+            'daily': 'Diario', 'weekly': 'Semanal', 'biweekly': 'Cada 2 semanas',
+            'biweekly_15_30': 'Quincenal', 'monthly': 'Mensual', 'yearly': 'Anual'
         };
         return labels[freq?.toLowerCase()] || freq;
     };
@@ -235,7 +235,7 @@ const Recurring: React.FC = () => {
                 <div className="bento-card p-5 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
                     <div className="flex gap-4">
                         <div className="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
-                            <span className="material-symbols-outlined">update</span>
+                            <span className="material-symbols-outlined">event_repeat</span>
                         </div>
                         <div>
                             <h3 className="font-bold text-sm text-app-text">Control de Suscripciones</h3>

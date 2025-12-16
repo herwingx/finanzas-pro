@@ -76,27 +76,45 @@ router.put('/:id', async (req: AuthRequest, res) => {
   const { amount, description, type, frequency, startDate, categoryId, accountId } = req.body || {};
 
   try {
-    const updated = await prisma.recurringTransaction.updateMany({
-      where: { id, userId },
+    // Get existing record to compare
+    const existing = await prisma.recurringTransaction.findFirst({
+      where: { id, userId }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Transacción recurrente no encontrada.' });
+    }
+
+    // Determine if we need to recalculate nextDueDate
+    const newStartDate = startDate ? new Date(startDate) : existing.startDate;
+    const newFrequency = frequency || existing.frequency;
+
+    // If startDate or frequency changed, recalculate nextDueDate
+    let newNextDueDate = existing.nextDueDate;
+    if (startDate || frequency) {
+      // Use the new start date as the next due date
+      // This way if user sets it to Dec 15, it shows Dec 15 as pending
+      newNextDueDate = newStartDate;
+    }
+
+    const updated = await prisma.recurringTransaction.update({
+      where: { id },
       data: {
         amount: amount ? parseFloat(amount) : undefined,
         description,
         type,
-        frequency,
-        startDate: startDate ? new Date(startDate) : undefined,
+        frequency: newFrequency,
+        startDate: newStartDate,
+        nextDueDate: newNextDueDate,
         categoryId,
         accountId,
       },
     });
 
-    if (updated.count === 0) {
-      return res.status(404).json({ message: 'Transacción recurrente no encontrada o sin permiso para actualizar.' });
-    }
-
-    const updatedTx = await prisma.recurringTransaction.findFirst({ where: { id } });
-    res.json(updatedTx);
+    res.json(updated);
 
   } catch (error) {
+    console.error('Error updating recurring:', error);
     res.status(500).json({ message: 'Error al actualizar la transacción recurrente.' });
   }
 });

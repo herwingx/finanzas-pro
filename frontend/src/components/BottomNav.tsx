@@ -11,11 +11,11 @@ interface NavItemProps {
 }
 
 const QUICK_ACTIONS = [
-  { icon: 'shopping_bag', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense' },
-  { icon: 'monetization_on', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income' },
-  { icon: 'sync_alt', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer' },
-  { icon: 'calendar_month', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
-  { icon: 'credit_card', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
+  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense' },
+  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income' },
+  { icon: 'swap_horiz', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer' },
+  { icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
+  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
   { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new' },
 ];
 
@@ -145,7 +145,7 @@ const BottomNav: React.FC = () => {
 
           <NavItem
             to="/"
-            icon="dashboard"
+            icon="space_dashboard"
             label="Inicio"
             isActive={location.pathname === '/'}
           />
@@ -176,15 +176,15 @@ const BottomNav: React.FC = () => {
 
           <NavItem
             to="/accounts"
-            icon="wallet"
-            label="Cartera"
+            icon="account_balance"
+            label="Cuentas"
             isActive={location.pathname.startsWith('/accounts')}
           />
 
           <NavItem
             to="/more"
-            icon="grid_view"
-            label="Menú"
+            icon="apps"
+            label="Más"
             isActive={location.pathname === '/more'}
           />
 

@@ -148,10 +148,17 @@ const Reports: React.FC = () => {
             const lowerDesc = description.toLowerCase();
             const isLoanKeyword = lowerDesc.includes('prestamo') || lowerDesc.includes('préstamo') || lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito');
 
-            if (isLoanKeyword && !categoryId) {
-                // Ambiguous manual entry. Assume Paying Debt -> Needs.
+            if (!categoryId && isLoanKeyword) {
+                // Ambiguous manual entry without category.
                 loanExpenses += amount;
-                needs += amount;
+                // Default hypothesis: "Prestamo" in description often means I lent it (Savings) or Paid Debt (Needs).
+                // "Deuda" -> Needs. "Prestamo" -> Ambiguous.
+                if (lowerDesc.includes('deuda') || lowerDesc.includes('credito') || lowerDesc.includes('crédito')) {
+                    needs += amount;
+                } else {
+                    // Assume "Prestamo" means I lent money (Asset) -> Savings
+                    savings += amount;
+                }
                 return;
             }
 
@@ -166,11 +173,30 @@ const Reports: React.FC = () => {
                 return;
             }
 
-            // 3. Handle 'Préstamos' Category explicitly
-            if (cat.name === 'Préstamos' || cat.name === 'Prestamos' || cat.name === 'Deudas') {
+            // 3. Handle 'Préstamos' Category explicitly (if not already handled by budgetType)
+            // Expand match list to include singular and variations
+            const catName = cat.name.toLowerCase();
+            if (catName === 'préstamos' || catName === 'prestamos' || catName === 'préstamo' || catName === 'prestamo' || catName === 'deudas' || catName === 'deuda') {
                 loanExpenses += amount;
-                // Assume generic Préstamos category is Debt Repayment -> Needs
-                needs += amount;
+
+                // Respect user's explicit budget setting if present
+                if (cat.budgetType === 'need') { needs += amount; return; }
+                if (cat.budgetType === 'want') { wants += amount; return; }
+                if (cat.budgetType === 'savings') { savings += amount; return; }
+
+                // Fallback Disambiguation based on Description + Category Name
+                // If it's "Deudas" -> Needs
+                if (catName.includes('deuda')) {
+                    needs += amount;
+                }
+                // If description implies repayment (pago, abono, tarjeta) -> Needs
+                else if (lowerDesc.includes('pago') || lowerDesc.includes('abono') || lowerDesc.includes('tarjeta') || lowerDesc.includes('credito') || lowerDesc.includes('crédito')) {
+                    needs += amount;
+                }
+                // Default Assumption: I am giving a loan -> Savings
+                else {
+                    savings += amount;
+                }
                 return;
             }
 

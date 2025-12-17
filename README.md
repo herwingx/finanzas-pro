@@ -609,7 +609,11 @@ chmod +x deploy.sh
 ./deploy.sh migrate
 ```
 
-Ver [docs/guia-despliegue-cloudflare.md](./docs/guia-despliegue-cloudflare.md) para instrucciones detalladas de configuración.
+./deploy.sh migrate
+```
+
+- ☁️ **Cloudflare:** Ver [docs/GUIA_CLOUDFLARE.md](./docs/GUIA_CLOUDFLARE.md) (Recomendado)
+- 🐳 **Self-Hosted:** Ver [docs/GUIA_SELFHOSTED.md](./docs/GUIA_SELFHOSTED.md) (Tradicional)
 
 > 📘 **Para el día a día:** Consulta [docs/FLUJO_TRABAJO.md](./docs/FLUJO_TRABAJO.md) para ver cómo desarrollar features nuevas y desplegarlas sin romper nada.
 

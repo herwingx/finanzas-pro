@@ -69,7 +69,11 @@ check_env() {
         log_info "Copia .env.production.example a .env.production y configura los valores"
     fi
     
-    # Usar .env.production si existe, sino .env
+    # Cargar variables de entorno (Prioridad: .env.production > .env)
+    if [ -f ".env" ]; then
+        export $(cat .env | grep -v '^#' | xargs)
+    fi
+    
     if [ -f ".env.production" ]; then
         export $(cat .env.production | grep -v '^#' | xargs)
     fi

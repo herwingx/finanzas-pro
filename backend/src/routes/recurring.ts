@@ -41,7 +41,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 // Create recurring transaction
 router.post('/', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { amount, description, type, frequency, startDate, categoryId, accountId, nextDueDate } = req.body || {}; // Provide a default empty object
+  const { amount, description, type, frequency, startDate, categoryId, accountId, nextDueDate, endDate } = req.body || {};
 
   if (!amount || !description || !type || !frequency || !startDate || !categoryId || !accountId) {
     return res.status(400).json({ message: 'Missing required fields.' });
@@ -55,8 +55,9 @@ router.post('/', async (req: AuthRequest, res) => {
         type,
         frequency,
         startDate: new Date(startDate),
-        nextDueDate: nextDueDate ? new Date(nextDueDate) : new Date(startDate), // Use frontend-calculated date if provided
-        lastRun: null, // Not run yet
+        nextDueDate: nextDueDate ? new Date(nextDueDate) : new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null, // Fecha límite opcional
+        lastRun: null,
         categoryId,
         accountId,
         userId,
@@ -73,7 +74,7 @@ router.post('/', async (req: AuthRequest, res) => {
 router.put('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
   const { id } = req.params;
-  const { amount, description, type, frequency, startDate, categoryId, accountId } = req.body || {};
+  const { amount, description, type, frequency, startDate, categoryId, accountId, endDate } = req.body || {};
 
   try {
     // Get existing record to compare
@@ -92,9 +93,15 @@ router.put('/:id', async (req: AuthRequest, res) => {
     // If startDate or frequency changed, recalculate nextDueDate
     let newNextDueDate = existing.nextDueDate;
     if (startDate || frequency) {
-      // Use the new start date as the next due date
-      // This way if user sets it to Dec 15, it shows Dec 15 as pending
       newNextDueDate = newStartDate;
+    }
+
+    // Handle endDate: null means remove it, undefined means don't change, date means set it
+    let newEndDate: Date | null | undefined = undefined;
+    if (endDate === null) {
+      newEndDate = null; // Explicitly remove end date
+    } else if (endDate) {
+      newEndDate = new Date(endDate);
     }
 
     const updated = await prisma.recurringTransaction.update({
@@ -106,6 +113,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
         frequency: newFrequency,
         startDate: newStartDate,
         nextDueDate: newNextDueDate,
+        endDate: newEndDate,
         categoryId,
         accountId,
       },

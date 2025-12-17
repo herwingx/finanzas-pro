@@ -88,10 +88,25 @@ const RecurringDetailSheet = ({
                         </p>
                     </div>
                 </div>
+                {/* End Date - shown if exists */}
+                {item.endDate && (
+                    <div className="col-span-2 rounded-xl p-3 border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-bold mb-1">Fecha Límite</p>
+                        <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-amber-500">event_busy</span>
+                            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                                {formatDateUTC(new Date(item.endDate), { style: 'long' })}
+                            </p>
+                        </div>
+                        <p className="text-[10px] text-amber-600/70 dark:text-amber-400/70 mt-1">
+                            No se proyectará después de esta fecha
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Type Badge */}
-            <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.type === 'income'
                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                     : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
@@ -100,6 +115,11 @@ const RecurringDetailSheet = ({
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
                     🔄 Recurrente
                 </span>
+                {item.endDate && (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        ⏰ Con fecha límite
+                    </span>
+                )}
             </div>
 
         </SwipeableBottomSheet>
@@ -324,7 +344,14 @@ const Recurring: React.FC = () => {
                                         </div>
 
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-sm text-app-text truncate">{tx.description}</h4>
+                                            <div className="flex items-center gap-1.5">
+                                                <h4 className="font-bold text-sm text-app-text truncate">{tx.description}</h4>
+                                                {tx.endDate && (
+                                                    <span className="material-symbols-outlined text-[14px] text-amber-500" title="Tiene fecha límite">
+                                                        schedule
+                                                    </span>
+                                                )}
+                                            </div>
 
                                             <div className="flex items-center gap-1.5 mt-1 text-[11px] text-app-muted font-medium">
                                                 <span className="capitalize">{getFrequencyLabel(tx.frequency)}</span>

@@ -39,6 +39,8 @@ const NewRecurringPage: React.FC = () => {
   const [accountId, setAccountId] = useState('');
   const [frequency, setFrequency] = useState<FrequencyType>('monthly');
   const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(null); // Fecha límite opcional
+  const [hasEndDate, setHasEndDate] = useState(false); // Toggle para mostrar/ocultar fecha límite
   const [alreadyPaidCurrent, setAlreadyPaidCurrent] = useState(false);
 
   // Derived Data
@@ -70,6 +72,11 @@ const NewRecurringPage: React.FC = () => {
       setAccountId(recurringToEdit.accountId);
       setFrequency(recurringToEdit.frequency);
       setStartDate(new Date(recurringToEdit.startDate));
+      // Cargar fecha límite si existe
+      if (recurringToEdit.endDate) {
+        setEndDate(new Date(recurringToEdit.endDate));
+        setHasEndDate(true);
+      }
     }
   }, [recurringToEdit, isEditMode]);
 
@@ -130,6 +137,7 @@ const NewRecurringPage: React.FC = () => {
       frequency,
       active: true,
       nextDueDate: nextDueDate.toISOString(),
+      endDate: hasEndDate && endDate ? endDate.toISOString() : null, // Fecha límite opcional
     };
 
     try {
@@ -281,6 +289,60 @@ const NewRecurringPage: React.FC = () => {
                 Próxima generación: <strong className="text-app-text">{formatDateUTC(calculateNextDueDate(), { style: 'full' })}</strong>
               </p>
             </div>
+          </div>
+
+          {/* End Date Toggle - Fecha Límite */}
+          <div className="p-4 bg-app-surface border border-app-border rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-3">
+                <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${hasEndDate ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-app-subtle'}`}>
+                  <span className={`material-symbols-outlined ${hasEndDate ? 'text-amber-600 dark:text-amber-400' : 'text-app-muted'}`}>
+                    event_busy
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-app-text">¿Tiene fecha límite?</p>
+                  <p className="text-xs text-app-muted">
+                    {hasEndDate ? 'No se proyectará después de la fecha límite' : 'Se proyectará indefinidamente'}
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasEndDate}
+                  onChange={() => {
+                    setHasEndDate(!hasEndDate);
+                    if (!hasEndDate && !endDate) {
+                      // Establecer una fecha por defecto (3 meses desde hoy)
+                      const defaultEnd = new Date();
+                      defaultEnd.setMonth(defaultEnd.getMonth() + 3);
+                      setEndDate(defaultEnd);
+                    }
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-app-subtle peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-500/50 dark:peer-focus:ring-amber-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-app-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+
+            {/* End Date Picker - shown only when toggle is on */}
+            {hasEndDate && (
+              <div className="mt-4 pt-4 border-t border-app-subtle">
+                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">
+                  Fecha de finalización
+                </label>
+                <DatePicker
+                  date={endDate || new Date()}
+                  onDateChange={(d) => d && setEndDate(d)}
+                  className="bg-app-bg border-amber-200 dark:border-amber-900"
+                />
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">info</span>
+                  Después de esta fecha, no aparecerá en proyecciones
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="pt-6 pb-4">

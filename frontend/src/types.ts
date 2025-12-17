@@ -45,6 +45,7 @@ export interface RecurringTransaction {
   frequency: FrequencyType;
   startDate: string;
   nextDueDate: string;
+  endDate?: string; // Fecha límite opcional - después de esta fecha no se proyectan más pagos
   active: boolean;
   categoryId: string;
   category?: Category;

@@ -318,6 +318,12 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         existingPayments.map(p => new Date(p.date).toISOString().split('T')[0])
       );
 
+      // Get the end date limit for this recurring transaction (if any)
+      const endDateLimit = rt.endDate ? new Date(rt.endDate) : null;
+      if (endDateLimit) {
+        endDateLimit.setHours(23, 59, 59, 999); // End of the day
+      }
+
       // Project instances within period (simplified unified logic)
       while (instanceCount < projectionLimit) {
         const projDateStr = projectionDate.toISOString().split('T')[0];
@@ -328,6 +334,11 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
         // If we've gone past the period end, stop projecting
         if (projectionDate > periodEnd) {
+          break;
+        }
+
+        // If we've gone past the end date limit, stop projecting this recurring
+        if (endDateLimit && projectionDate > endDateLimit) {
           break;
         }
 
@@ -344,7 +355,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             amount: rt.amount,
             dueDate: new Date(projectionDate),
             category: rt.category,
-            isOverdue
+            isOverdue,
+            hasEndDate: !!endDateLimit,
+            endDate: endDateLimit
           };
 
           if (rt.type === 'income') {
@@ -372,6 +385,12 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     for (const rt of recurringTransactions) {
       const nextDue = new Date(rt.nextDueDate);
       nextDue.setHours(12, 0, 0, 0);
+
+      // Skip if this recurring has an end date that has already passed
+      const endDateLimit = rt.endDate ? new Date(rt.endDate) : null;
+      if (endDateLimit && nextDue > endDateLimit) {
+        continue; // Don't show as overdue if it's past its end date
+      }
 
       // Only process if the nextDueDate is BEFORE the current period start (truly overdue)
       if (nextDue < periodStart) {
@@ -402,7 +421,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             amount: rt.amount,
             dueDate: nextDue,
             category: rt.category,
-            isOverdue: true  // Always true since it's from a previous period
+            isOverdue: true,  // Always true since it's from a previous period
+            hasEndDate: !!endDateLimit,
+            endDate: endDateLimit
           };
 
           if (rt.type === 'income') {

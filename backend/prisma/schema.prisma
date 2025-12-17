@@ -122,6 +122,7 @@ model RecurringTransaction {
   frequency    String
   startDate    DateTime
   nextDueDate  DateTime
+  endDate      DateTime?     // Fecha límite opcional - después de esta fecha no se proyectan más pagos
   active       Boolean       @default(true)
   lastRun      DateTime?
   userId       String

@@ -20,6 +20,7 @@
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [API Endpoints](#-api-endpoints)
 - [Configuración y Despliegue](#-configuración-y-despliegue)
+- [🔒 Seguridad](#-seguridad)
 - [Flujos de Usuario](#-flujos-de-usuario)
 
 ---
@@ -99,6 +100,8 @@
 | **PostgreSQL** | 16 | Base de datos relacional |
 | **bcrypt** | 6.0 | Hash de contraseñas |
 | **jsonwebtoken** | 9.0 | Autenticación JWT |
+| **helmet** | 8.0 | Headers de seguridad HTTP |
+| **express-rate-limit** | 7.5 | Protección contra fuerza bruta |
 | **Nodemailer** | 6.9 | Envío de emails (SMTP) |
 | **multer** | 2.0 | Upload de archivos |
 | **date-fns-tz** | 3.2 | Manejo de zonas horarias |
@@ -653,6 +656,47 @@ docker compose logs -f           # Ver logs
 docker compose exec backend sh   # Shell en el backend
 docker compose exec db psql -U finanzas -d finanzas_pro  # PostgreSQL CLI
 ```
+
+---
+
+## 🔒 Seguridad
+
+Finanzas Pro implementa múltiples capas de seguridad para proteger tus datos:
+
+| Característica | Descripción |
+|----------------|-------------|
+| **Contraseñas** | Hasheadas con bcrypt (salt rounds: 10) |
+| **Autenticación** | JWT con expiración de 24 horas |
+| **Rate Limiting** | Protección contra fuerza bruta en login/registro |
+| **CORS** | Control de orígenes permitidos |
+| **Helmet** | Headers de seguridad HTTP |
+| **Logs Sanitizados** | Nunca se loguean contraseñas ni tokens |
+
+### Configuración Rápida
+
+```bash
+# En backend/.env
+
+# Restringir orígenes (producción)
+ALLOWED_ORIGINS="https://finanzas.tudominio.com"
+
+# Deshabilitar registro público (recomendado para uso personal)
+REGISTRATION_ENABLED="false"
+
+# Rate limiting (siempre habilitado en producción)
+RATE_LIMIT_ENABLED="true"
+```
+
+### Rate Limits por Endpoint
+
+| Endpoint | Límite | Ventana |
+|----------|--------|---------|
+| `/api/*` (general) | 100 req | 15 min |
+| `/api/auth/login` | 5 intentos | 15 min |
+| `/api/auth/register` | 5 intentos | 15 min |
+| `/api/auth/request-reset` | 3 intentos | 1 hora |
+
+📘 **Guía completa:** Ver [docs/SEGURIDAD.md](./docs/SEGURIDAD.md) para configuración detallada, mejores prácticas y recomendaciones para homelab.
 
 ---
 

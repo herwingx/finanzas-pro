@@ -2,14 +2,20 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../services/database';
+import {
+  authLimiter,
+  resetLimiter,
+  registrationGuard,
+  securityLogger
+} from '../middleware/security';
 
 const router = express.Router();
 
-// User registration
-router.post('/register', async (req, res) => {
+// User registration (with rate limiting and registration guard)
+router.post('/register', authLimiter, registrationGuard, async (req, res) => {
   const { email, password, name } = req.body;
 
-  console.log('📝 Register attempt:', { email, name, hasPassword: !!password });
+  securityLogger('Registration attempt', { email, name });
 
   if (!email || !password || !name) {
     console.log('❌ Registration failed: Missing fields', { email: !!email, password: !!password, name: !!name });
@@ -25,7 +31,7 @@ router.post('/register', async (req, res) => {
         name,
       },
     });
-    console.log('✅ User registered successfully:', user.email);
+    securityLogger('Registration successful', { email: user.email });
     res.status(201).json({ id: user.id, email: user.email, name: user.name });
   } catch (error) {
     console.log('❌ Registration error:', error);
@@ -33,11 +39,11 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// User login
-router.post('/login', async (req, res) => {
+// User login (with rate limiting)
+router.post('/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
-  console.log('🔐 Login attempt:', { email, hasPassword: !!password });
+  securityLogger('Login attempt', { email });
 
   if (!email || !password) {
     console.log('❌ Login failed: Missing credentials');
@@ -63,7 +69,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    console.log('✅ Login successful:', email);
+    securityLogger('Login successful', { email });
     res.json({
       token,
       user: { id: user.id, email: user.email, name: user.name },
@@ -74,11 +80,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Request password reset
-router.post('/request-reset', async (req, res) => {
+// Request password reset (with strict rate limiting)
+router.post('/request-reset', resetLimiter, async (req, res) => {
   const { email } = req.body;
 
-  console.log('🔄 Password reset request for:', email);
+  securityLogger('Password reset requested', { email });
 
   if (!email) {
     return res.status(400).json({ message: 'Email is required' });
@@ -106,11 +112,9 @@ router.post('/request-reset', async (req, res) => {
     });
 
     // In production, you would send an email here
-    // For development, we'll log the token
-    console.log('✅ Reset token generated for:', email);
-    console.log('🔑 Token:', resetToken);
-    console.log('⏰ Expires:', resetTokenExpiry);
-    console.log('🔗 Reset URL: http://192.168.1.105/reset-password?token=' + resetToken);
+    // Note: Token is NOT logged for security (use database or email)
+    securityLogger('Reset token generated', { email, expiresAt: resetTokenExpiry.toISOString() });
+    // If you need to debug, check the database directly for the resetToken
 
     res.json({ message: 'If that email exists, a reset link has been sent' });
   } catch (error) {
@@ -119,11 +123,11 @@ router.post('/request-reset', async (req, res) => {
   }
 });
 
-// Reset password with token
-router.post('/reset-password', async (req, res) => {
+// Reset password with token (with rate limiting)
+router.post('/reset-password', authLimiter, async (req, res) => {
   const { token, newPassword } = req.body;
 
-  console.log('🔐 Password reset attempt with token');
+  securityLogger('Password reset attempt', { hasToken: !!token });
 
   if (!token || !newPassword) {
     return res.status(400).json({ message: 'Token and new password are required' });

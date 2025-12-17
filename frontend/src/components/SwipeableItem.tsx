@@ -204,35 +204,35 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         </div>
       )}
 
-      {/* Desktop Hover Actions Layer - Solo en pantallas grandes */}
-      {!isMobile && (
-        <div className="absolute inset-y-0 right-0 z-20 flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
-          {/* Gradient fade para no tapar bruscamente */}
-          <div className="w-16 h-full bg-gradient-to-r from-transparent to-app-surface" />
-
-          {/* Botones con fondo sólido */}
-          <div className="flex items-center gap-1 pr-2 bg-app-surface h-full">
-            {leftAction && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onSwipeRight && onSwipeRight(); }}
-                className="p-1.5 rounded-lg transition-all hover:scale-110 active:scale-95 hover:bg-app-subtle"
-                title={leftAction.label}
-                style={{ color: leftAction.color }}
-              >
-                <span className="material-symbols-outlined text-lg">{leftAction.icon}</span>
-              </button>
-            )}
-            {rightAction && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onSwipeLeft && onSwipeLeft(); }}
-                className="p-1.5 rounded-lg transition-all hover:scale-110 active:scale-95 hover:bg-app-subtle"
-                title={rightAction.label}
-                style={{ color: rightAction.color }}
-              >
-                <span className="material-symbols-outlined text-lg">{rightAction.icon}</span>
-              </button>
-            )}
-          </div>
+      {/* Desktop Hover Actions - estilo widget de Planning */}
+      {!isMobile && (leftAction || rightAction) && (
+        <div className="absolute inset-y-0 right-0 z-20 flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+          {leftAction && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSwipeRight && onSwipeRight(); }}
+              className="size-7 flex items-center justify-center rounded-full transition-all hover:scale-110 active:scale-95"
+              style={{
+                backgroundColor: `${leftAction.color}15`,
+                color: leftAction.color
+              }}
+              title={leftAction.label}
+            >
+              <span className="material-symbols-outlined text-[14px]">{leftAction.icon}</span>
+            </button>
+          )}
+          {rightAction && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSwipeLeft && onSwipeLeft(); }}
+              className="size-7 flex items-center justify-center rounded-full transition-all hover:scale-110 active:scale-95"
+              style={{
+                backgroundColor: `${rightAction.color}15`,
+                color: rightAction.color
+              }}
+              title={rightAction.label}
+            >
+              <span className="material-symbols-outlined text-[14px]">{rightAction.icon}</span>
+            </button>
+          )}
         </div>
       )}
 

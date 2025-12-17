@@ -92,7 +92,7 @@ const DesktopSidebar = () => {
       </nav>
 
       <div className="p-4 border-t border-app-border bg-app-subtle/30">
-        <div className="bg-gradient-to-br from-app-elevated to-app-card border border-app-border p-3 rounded-xl flex items-center gap-3">
+        <div className="bg-linear-to-br from-app-elevated to-app-card border border-app-border p-3 rounded-xl flex items-center gap-3">
           <div className="size-8 rounded-full bg-app-subtle flex items-center justify-center text-xs font-bold text-app-muted border border-app-border">
             PR
           </div>

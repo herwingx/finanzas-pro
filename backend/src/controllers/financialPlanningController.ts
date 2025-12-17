@@ -644,6 +644,10 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     if (isLongPeriod) {
 
       for (const account of creditAccounts) {
+        // Skip accounts without defined cutoff/payment days for projection alignment
+        // (If not defined, fallback to old logic or skip, but better to be safe)
+        const hasCycleInfo = account.cutoffDay && account.paymentDay;
+
         for (const msi of account.installmentPurchases) {
           // Calculate remaining installments
           const paidInstallments = Math.floor(msi.paidAmount / msi.monthlyPayment);
@@ -652,21 +656,55 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
           if (remainingInstallments <= 0) continue;
 
           const purchaseDate = new Date(msi.purchaseDate);
-          const purchaseDay = purchaseDate.getDate();
 
           // Project each remaining installment
           for (let i = 0; i < remainingInstallments; i++) {
-            // Calculate the installment date (same day of month as purchase, but months forward)
-            const installmentDate = new Date(purchaseDate);
-            installmentDate.setMonth(installmentDate.getMonth() + paidInstallments + i + 1);
+            // 1. Calculate the 'theoretical' charge date (when the store charges the card)
+            // This happens on the anniversary of the purchase each month
+            const chargeDate = new Date(purchaseDate);
+            chargeDate.setMonth(chargeDate.getMonth() + paidInstallments + i + 1);
+
+            let finalPaymentDate = new Date(chargeDate);
+
+            // 2. If account has cycle info, align to the correct Card Payment Date
+            if (hasCycleInfo && account.cutoffDay && account.paymentDay) {
+              // Logic:
+              // If ChargeDate <= CutoffDay (of that month) -> It falls in THIS month's cycle -> Payment is this month's PaymentDay (or next month if PaymentDay < CutoffDay)
+              // If ChargeDate > CutoffDay -> It falls in NEXT month's cycle -> Payment is NEXT month's PaymentDay
+
+              // Construct Cutoff Date for the Charge Month
+              const cutoffThisMonth = new Date(chargeDate.getFullYear(), chargeDate.getMonth(), account.cutoffDay);
+              cutoffThisMonth.setHours(23, 59, 59, 999);
+
+              if (chargeDate <= cutoffThisMonth) {
+                // Falls in current cycle
+                // Payment date is derived from this cycle's cutoff
+                // Usually payment is ~20 days after cutoff.
+                // Impl: Set year/month to this cycle's month, then set day to paymentDay.
+                // IF paymentDay < cutoffDay, it means payment is in NEXT month.
+                finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth(), account.paymentDay);
+                if (account.paymentDay < account.cutoffDay) {
+                  finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
+                }
+              } else {
+                // Falls in next cycle (after cutoff)
+                // So it enters the NEXT statement.
+                // Payment will be roughly 1 month + 20 days later.
+                // Start with Next Month
+                finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth() + 1, account.paymentDay);
+                if (account.paymentDay < account.cutoffDay) {
+                  finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
+                }
+              }
+            }
 
             // Ensure we're within the period and haven't already added this payment
-            if (installmentDate >= periodStart && installmentDate <= periodEnd) {
+            if (finalPaymentDate >= periodStart && finalPaymentDate <= periodEnd) {
               // Check if this specific payment was already added in the regular cycle logic
               const alreadyAdded = msiPaymentsDue.some(
                 (p: any) => p.id === msi.id &&
-                  new Date(p.dueDate).getMonth() === installmentDate.getMonth() &&
-                  new Date(p.dueDate).getFullYear() === installmentDate.getFullYear()
+                  new Date(p.dueDate).getMonth() === finalPaymentDate.getMonth() &&
+                  new Date(p.dueDate).getFullYear() === finalPaymentDate.getFullYear()
               );
 
               if (!alreadyAdded) {
@@ -680,7 +718,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                     : `Cuota ${paidInstallments + i + 1}/${msi.installments} - ${msi.description}`,
                   purchaseName: msi.description,
                   amount: msi.monthlyPayment,
-                  dueDate: installmentDate,
+                  dueDate: finalPaymentDate,
                   category: msi.category,
                   accountId: account.id,
                   accountName: account.name,

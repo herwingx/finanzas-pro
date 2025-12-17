@@ -59,47 +59,66 @@ export const SwipeableBottomSheet: React.FC<SwipeableBottomSheetProps> = ({
   }, [isOpen]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    // Only allow dragging from top area (handle) or when at scroll top
     const sheet = sheetRef.current;
     if (!sheet) return;
 
     const touch = e.touches[0];
-    const touchY = touch.clientY;
     const sheetRect = sheet.getBoundingClientRect();
     const handleArea = sheetRect.top + 60; // First 60px is the handle area
 
-    // Allow drag if touching handle area OR if content is scrolled to top
-    if (touchY <= handleArea || sheet.scrollTop === 0) {
-      startY.current = touch.clientY;
-      currentY.current = touch.clientY;
+    startY.current = touch.clientY;
+    currentY.current = touch.clientY;
+
+    // If touching the handle handle, drag immediately
+    if (touch.clientY <= handleArea) {
       setIsDragging(true);
+    }
+    // If touching content, DO NOT set dragging yet. We verify intention in TouchMove.
+    // But reset 'isDragging' to ensure we don't carry over state.
+    else {
+      setIsDragging(false);
     }
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging) return;
+    const sheet = sheetRef.current;
+    if (!sheet) return;
 
     const touch = e.touches[0];
     currentY.current = touch.clientY;
     const deltaY = currentY.current - startY.current;
 
-    // Only allow downward movement (positive deltaY)
-    if (deltaY > 0) {
-      // Add resistance as you drag further
+    // Logic to determine if we should start dragging (if not already)
+    const isAtTop = sheet.scrollTop <= 0;
+    const isPullingDown = deltaY > 0;
+
+    // If we are already dragging, OR if we are at the top and pulling down
+    if (isDragging || (isAtTop && isPullingDown)) {
+      // If we weren't dragging before, start now
+      if (!isDragging) {
+        setIsDragging(true);
+      }
+
+      // Prevent native scroll/refresh ONLY if we are actively dragging the sheet
+      // Note: This relies on the event not being passive, which can be tricky in React.
+      // But 'overscroll-behavior: contain' on the parent helps too.
+      // e.preventDefault(); 
+
+      // Apply resistance
       const resistance = 0.6;
       setTranslateY(deltaY * resistance);
     }
+    // Otherwise, let native scroll happen (do nothing here)
   }, [isDragging]);
 
   const handleTouchEnd = useCallback(() => {
-    if (!isDragging) return;
+    if (!isDragging && translateY === 0) return;
 
     setIsDragging(false);
 
     // If dragged past threshold, close the sheet
     if (translateY > closeThreshold) {
       setIsClosing(true);
-      // Animate out
       setTranslateY(window.innerHeight);
       setTimeout(() => {
         onClose();
@@ -132,6 +151,7 @@ export const SwipeableBottomSheet: React.FC<SwipeableBottomSheetProps> = ({
       {/* Sheet */}
       <div
         ref={sheetRef}
+        onClick={(e) => e.stopPropagation()}
         className={`
                     relative w-full max-w-md max-h-[90vh] overflow-y-auto
                     bg-app-surface border-t sm:border border-app-border

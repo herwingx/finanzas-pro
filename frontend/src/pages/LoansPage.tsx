@@ -115,7 +115,7 @@ const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) =
             )}
           </div>
           {/* Edit/Delete Buttons */}
-          <div className="flex gap-3 pt-2 border-t border-app-border">
+          <div className="hidden md:flex gap-3 pt-2 border-t border-app-border">
             <button
               onClick={onEdit}
               className="flex-1 py-3 rounded-xl bg-app-subtle text-app-text font-bold text-sm hover:bg-app-subtle/80 active:scale-95 transition-all flex items-center justify-center gap-2"

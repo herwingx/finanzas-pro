@@ -123,7 +123,7 @@ const RecurringDetailSheet = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="hidden md:flex gap-3">
                 <button
                     onClick={onEdit}
                     className="flex-1 py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"

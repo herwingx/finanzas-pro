@@ -544,78 +544,16 @@ Accede a `http://localhost:5173` (frontend) y `http://localhost:4000` (API).
 
 ---
 
-### 🐳 Opción 2: Self-Hosted con Docker
+### 🚀 Despliegue en Servidor
 
-Ideal para uso en red local o detrás de un reverse proxy existente.
+Para despliegues en producción (VPS, Proxmox, Raspberry Pi), consulta nuestras guías detalladas:
 
-```bash
-# Clonar repositorio
-git clone https://github.com/tu-usuario/finanzas-pro.git
-cd finanzas-pro
+- ☁️ **Opción Recomendada (Cloudflare):** Ver [docs/GUIA_CLOUDFLARE.md](./docs/GUIA_CLOUDFLARE.md)
+    *   *Seguro (HTTPS), sin abrir puertos, ideal para Home Lab.*
+- 🐳 **Opción Tradicional (Self-Hosted):** Ver [docs/GUIA_SELFHOSTED.md](./docs/GUIA_SELFHOSTED.md)
+    *   *Puertos expuestos, proxy inverso propio, ideal para VPS o LAN.*
 
-# Configurar variables de entorno
-cp backend/.env.example backend/.env
-# Editar backend/.env (cambiar localhost por 'db' en DATABASE_URL)
-
-# Crear .env en la raíz
-cat > .env << EOF
-POSTGRES_USER=finanzas
-POSTGRES_PASSWORD=tu_password_segura
-POSTGRES_DB=finanzas_pro
-EOF
-
-# Iniciar servicios
-docker compose -f docker-compose.selfhosted.yml up -d --build
-
-# Ejecutar migraciones
-docker compose -f docker-compose.selfhosted.yml exec backend npx prisma migrate deploy
-
-# Ver logs
-docker compose -f docker-compose.selfhosted.yml logs -f
-```
-
-**Puertos expuestos:**
-- Frontend: `http://tu-ip:3000`
-- API: `http://tu-ip:4000`
-- PostgreSQL: `tu-ip:5432`
-- Nginx (opcional): `http://tu-ip:80`
-
----
-
-### ☁️ Opción 3: Producción con Cloudflare Tunnels
-
-Ideal para exponer la app a internet sin abrir puertos (ISPs que bloquean 80/443).
-
-```bash
-# Clonar repositorio
-git clone https://github.com/tu-usuario/finanzas-pro.git
-cd finanzas-pro
-
-# Configurar variables de entorno
-cp backend/.env.example backend/.env
-# Editar backend/.env
-
-# Crear .env en la raíz con token de Cloudflare
-cat > .env << EOF
-POSTGRES_USER=finanzas
-POSTGRES_PASSWORD=tu_password_segura
-POSTGRES_DB=finanzas_pro
-CLOUDFLARE_TUNNEL_TOKEN=tu_token_de_cloudflare
-EOF
-
-# Iniciar con script de deploy
-chmod +x deploy.sh
-./deploy.sh start
-./deploy.sh migrate
-```
-
-./deploy.sh migrate
-```
-
-- ☁️ **Cloudflare:** Ver [docs/GUIA_CLOUDFLARE.md](./docs/GUIA_CLOUDFLARE.md) (Recomendado)
-- 🐳 **Self-Hosted:** Ver [docs/GUIA_SELFHOSTED.md](./docs/GUIA_SELFHOSTED.md) (Tradicional)
-
-> 📘 **Para el día a día:** Consulta [docs/FLUJO_TRABAJO.md](./docs/FLUJO_TRABAJO.md) para ver cómo desarrollar features nuevas y desplegarlas sin romper nada.
+> 📘 **Workflow:** Consulta [docs/FLUJO_TRABAJO.md](./docs/FLUJO_TRABAJO.md) para ver cómo desarrollar features nuevas y desplegarlas sin romper nada.
 
 ---
 

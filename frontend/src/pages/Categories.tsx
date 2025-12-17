@@ -9,7 +9,82 @@ import { SwipeableItem } from '../components/SwipeableItem';
 import { CategorySelector } from '../components/CategorySelector';
 import { Button } from '../components/Button';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 import { getValidIcon } from '../utils/icons';
+
+// ============== CATEGORY DETAIL SHEET ==============
+const CategoryDetailSheet = ({
+    category,
+    onClose,
+    onEdit,
+    onDelete
+}: {
+    category: Category | null;
+    onClose: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+}) => {
+    if (!category) return null;
+
+    const budgetLabels: Record<string, string> = {
+        need: 'Necesidad (50%)',
+        NEEDS: 'Necesidad (50%)',
+        want: 'Deseo (30%)',
+        WANTS: 'Deseo (30%)',
+        savings: 'Ahorro (20%)',
+        SAVINGS: 'Ahorro (20%)'
+    };
+
+    return (
+        <SwipeableBottomSheet isOpen={!!category} onClose={onClose}>
+            <div className="text-center mb-6">
+                <div
+                    className="size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm"
+                    style={{ backgroundColor: `${category.color}20`, color: category.color }}
+                >
+                    <span className="material-symbols-outlined">{getValidIcon(category.icon)}</span>
+                </div>
+                <h2 className="text-xl font-bold text-app-text">{category.name}</h2>
+                <p className="text-sm text-app-muted capitalize">{category.type === 'expense' ? 'Gasto' : 'Ingreso'}</p>
+            </div>
+
+            {/* Info Card */}
+            <div className="bg-app-subtle rounded-2xl p-5 mb-6 border border-app-border/50">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Tipo</p>
+                        <p className="text-sm font-semibold text-app-text capitalize">
+                            {category.type === 'expense' ? 'Gasto' : 'Ingreso'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Regla 50/30/20</p>
+                        <p className="text-sm font-semibold text-app-text">
+                            {category.budgetType ? budgetLabels[category.budgetType] || category.budgetType : 'Sin asignar'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+                <button
+                    onClick={onEdit}
+                    className="flex-1 py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                    <span className="material-symbols-outlined text-lg">edit</span>
+                    Editar
+                </button>
+                <button
+                    onClick={onDelete}
+                    className="py-3.5 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold hover:opacity-80 transition-opacity flex items-center justify-center"
+                >
+                    <span className="material-symbols-outlined text-lg">delete</span>
+                </button>
+            </div>
+        </SwipeableBottomSheet>
+    );
+};
 
 const Categories: React.FC = () => {
     const navigate = useNavigate();
@@ -20,6 +95,7 @@ const Categories: React.FC = () => {
     const [reassignData, setReassignData] = useState<{ categoryToDelete: Category } | null>(null);
     const [reassignTargetId, setReassignTargetId] = useState<string>('');
     const [deleteConfirmation, setDeleteConfirmation] = useState<Category | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
     // Derived Data
     const expenses = useMemo(() => categories?.filter(c => c.type === 'expense') || [], [categories]);
@@ -80,7 +156,9 @@ const Categories: React.FC = () => {
                         rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
                         className="rounded-2xl"
                     >
-                        <div className="bg-app-surface border border-app-border rounded-2xl p-3.5 flex items-center gap-3.5">
+                        <div
+                            onClick={() => setSelectedCategory(cat)}
+                            className="bg-app-surface border border-app-border rounded-2xl p-3.5 flex items-center gap-3.5 cursor-pointer hover:border-app-primary/30 active:scale-[0.98] transition-all">
                             <div
                                 className="size-11 rounded-xl flex items-center justify-center shrink-0"
                                 style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
@@ -205,6 +283,24 @@ const Categories: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Category Detail Sheet */}
+            <CategoryDetailSheet
+                category={selectedCategory}
+                onClose={() => setSelectedCategory(null)}
+                onEdit={() => {
+                    if (selectedCategory) {
+                        handleEdit(selectedCategory);
+                        setSelectedCategory(null);
+                    }
+                }}
+                onDelete={() => {
+                    if (selectedCategory) {
+                        handleDeleteClick(selectedCategory);
+                        setSelectedCategory(null);
+                    }
+                }}
+            />
         </div>
     );
 };

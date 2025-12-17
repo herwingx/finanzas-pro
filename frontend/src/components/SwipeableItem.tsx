@@ -206,15 +206,18 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
 
       {/* Desktop Hover Actions - estilo widget de Planning */}
       {!isMobile && (leftAction || rightAction) && (
-        <div className="absolute inset-y-0 right-0 z-20 flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+        <div className="absolute inset-y-0 right-0 z-20 flex items-center gap-1.5 pr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
           {leftAction && (
             <button
               onClick={(e) => { e.stopPropagation(); onSwipeRight && onSwipeRight(); }}
-              className="size-7 flex items-center justify-center rounded-full transition-all hover:scale-110 active:scale-95"
+              className="size-7 flex items-center justify-center rounded-full transition-all hover:scale-110 active:scale-95 hover:!text-white"
               style={{
                 backgroundColor: `${leftAction.color}15`,
-                color: leftAction.color
-              }}
+                color: leftAction.color,
+                '--hover-bg': leftAction.color
+              } as React.CSSProperties}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = leftAction.color}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${leftAction.color}15`}
               title={leftAction.label}
             >
               <span className="material-symbols-outlined text-[14px]">{leftAction.icon}</span>
@@ -223,11 +226,13 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
           {rightAction && (
             <button
               onClick={(e) => { e.stopPropagation(); onSwipeLeft && onSwipeLeft(); }}
-              className="size-7 flex items-center justify-center rounded-full transition-all hover:scale-110 active:scale-95"
+              className="size-7 flex items-center justify-center rounded-full transition-all hover:scale-110 active:scale-95 hover:!text-white"
               style={{
                 backgroundColor: `${rightAction.color}15`,
                 color: rightAction.color
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = rightAction.color}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${rightAction.color}15`}
               title={rightAction.label}
             >
               <span className="material-symbols-outlined text-[14px]">{rightAction.icon}</span>
@@ -246,7 +251,9 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         style={{
           transform: `translate3d(${offset}px, 0, 0)`,
           transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
-          borderRadius: 'inherit'
+          borderRadius: 'inherit',
+          // Agregar padding derecho en desktop cuando hay acciones para que no se tape el contenido
+          paddingRight: !isMobile && (leftAction || rightAction) ? '70px' : undefined
         }}
         className="relative bg-app-surface w-full h-full"
       >

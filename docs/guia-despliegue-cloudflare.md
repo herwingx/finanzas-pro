@@ -68,39 +68,33 @@
 
 ---
 
-## 💻 Especificaciones del LXC
+## 💻 Requisitos del Servidor
 
-### Recursos Mínimos Recomendados
+Esta guía funciona en cualquier entorno Linux basado en Debian/Ubuntu, ya sea un **VPS** (DigitalOcean, Hetzner, AWS), una **Máquina Virtual** (Proxmox, ESXi), o hardware físico (Raspberry Pi, Mini PC).
 
-| Recurso | Especificación | Justificación |
-|---------|---------------|--------------|
-| **CPU** | 2 cores | React build + Express + PostgreSQL |
-| **RAM** | 2GB (mínimo) / 4GB (recomendado) | PostgreSQL + Node.js + Docker overhead |
-| **Disco** | 20GB SSD | SO + Docker images + DB + backups |
-| **Red** | Bridge mode | Acceso directo a la red local |
-| **Template** | Debian 12 / Ubuntu 22.04 | Mejor soporte para Docker |
+### Recursos Mínimos
+Para ejecutar el stack completo (Frontend + Backend + DB + Cloudflared):
 
-### Configuración Proxmox (si usas Proxmox)
+| Recurso | Mínimo | Recomendado | Notas |
+|---------|--------|-------------|-------|
+| **CPU** | 1 Core | 2 Cores | Build de React consume CPU momentáneamente |
+| **RAM** | 2 GB | 4 GB | Postgres y Node.js necesitan memoria |
+| **Disco** | 10 GB | 20 GB SSD | Logs y backups ocupan espacio con el tiempo |
+| **OS** | Debian 11+ / Ubuntu 20.04+ | Debian 12 / Ubuntu 22.04 | Compatible con Docker Engine |
+
+### Opcional: Notas para Proxmox (LXC)
+Si despliegas en un contenedor LXC en Proxmox, asegúrate de habilitar **nesting** y **keyctl** para que Docker funcione correctamente.
 
 ```bash
-# Crear LXC en Proxmox
-pct create 200 local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst \
-  --hostname finanzas-pro \
-  --memory 4096 \
-  --swap 1024 \
-  --cores 2 \
-  --rootfs local-lvm:20 \
-  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
-  --features nesting=1 \
-  --unprivileged 1
-
-# Iniciar
-pct start 200
+# Ejemplo de creación (solo referencia)
+pct create 200 local:vztmpl/debian-12-standard... \
+  --cores 2 --memory 4096 --swap 1024 \
+  --features nesting=1  # <--- CRÍTICO
 ```
 
-> ⚠️ **Importante**: `nesting=1` es **OBLIGATORIO** para Docker
+---
 
-### Recursos Desglosados
+### Distribución de Recursos (Estimado)
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -108,22 +102,10 @@ pct start 200
 ├─────────────────────────────────────────────────┤
 │ PostgreSQL:        ~500MB - 1GB                 │
 │ Backend (Node):    ~200MB - 400MB               │
-│ Frontend (Nginx):  ~50MB - 100MB                │
-│ cloudflared:       ~50MB - 100MB                │
-│ Docker overhead:   ~200MB                       │
-│ Sistema:           ~500MB                       │
-│ Disponible:        ~1.5GB buffer                │
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│              Disk Distribution (20GB)           │
-├─────────────────────────────────────────────────┤
-│ Sistema Operativo:  ~3GB                        │
-│ Docker images:      ~2GB                        │
-│ PostgreSQL data:    ~5GB (con margen)           │
-│ Logs y cache:       ~2GB                        │
-│ Backups locales:    ~3GB                        │
-│ Disponible:         ~5GB buffer                 │
+│ Frontend (Nginx):  ~50MB                    	  │
+│ cloudflared:       ~50MB                        │
+│ Sistema/Docker:    ~500MB                       │
+│ Disponible:        ~2GB (Buffer y Cache)        │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -182,7 +164,7 @@ Y agregar otro hostname para la API:
 
 ### Script de Setup Inicial
 
-Ejecuta esto en tu LXC:
+Ejecuta esto en tu servidor (como `root` o con acceso `sudo`):
 
 ```bash
 #!/bin/bash

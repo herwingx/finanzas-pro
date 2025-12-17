@@ -31,15 +31,55 @@ const FinancialAnalysis: React.FC = () => {
     return points;
   }, [summary]);
 
+  // State for expanded sections
+  const [expandedExpenses, setExpandedExpenses] = useState(false);
+  const [expandedMsi, setExpandedMsi] = useState(false);
+
   // Upcoming payments grouped
   const upcomingPayments = useMemo(() => {
-    if (!summary) return { expenses: [], msi: [], income: [], msiEnding: [] };
-    const expenses = summary.expectedExpenses.slice(0, 5);
-    const msi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment).slice(0, 5);
+    if (!summary) return { expenses: [], msi: [], income: [], msiEnding: [], recurringEnding: [], totalExpenses: 0, totalMsi: 0, hasMoreExpenses: false, hasMoreMsi: false };
+
+    const COLLAPSED_LIMIT = 5;
+    const EXPANDED_LIMIT = 15; // Max items to show in expanded view before suggesting full page
+
+    // All expenses
+    const allExpenses = summary.expectedExpenses;
+    // Collapsed: 5, Expanded: up to 15
+    const expenses = expandedExpenses
+      ? allExpenses.slice(0, EXPANDED_LIMIT)
+      : allExpenses.slice(0, COLLAPSED_LIMIT);
+
+    // MSI payments (excluding last installments)
+    const allMsi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment);
+    const msi = expandedMsi
+      ? allMsi.slice(0, EXPANDED_LIMIT)
+      : allMsi.slice(0, COLLAPSED_LIMIT);
+
+    // MSI that end in this period
     const msiEnding = summary.msiPaymentsDue.filter((m: any) => m.isLastInstallment);
+
+    // Recurring transactions that end in this period (have endDate and it's within the period)
+    const periodEnd = new Date(summary.periodEnd);
+    const recurringEnding = summary.expectedExpenses.filter((e: any) => {
+      if (!e.hasEndDate || !e.endDate) return false;
+      const endDate = new Date(e.endDate);
+      return endDate <= periodEnd;
+    });
+
     const income = summary.expectedIncome.slice(0, 3);
-    return { expenses, msi, income, msiEnding };
-  }, [summary]);
+
+    return {
+      expenses,
+      msi,
+      income,
+      msiEnding,
+      recurringEnding,
+      totalExpenses: allExpenses.length,
+      totalMsi: allMsi.length,
+      hasMoreExpenses: allExpenses.length > EXPANDED_LIMIT,
+      hasMoreMsi: allMsi.length > EXPANDED_LIMIT
+    };
+  }, [summary, expandedExpenses, expandedMsi]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
 
@@ -224,25 +264,55 @@ const FinancialAnalysis: React.FC = () => {
           </div>
         </div>
 
-        {/* MSI Ending Soon - Highlight */}
-        {upcomingPayments.msiEnding.length > 0 && (
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4">
+        {/* Commitments Ending Soon - Highlight Section */}
+        {(upcomingPayments.msiEnding.length > 0 || upcomingPayments.recurringEnding.length > 0) && (
+          <div className="bg-linear-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400">celebration</span>
-              <h4 className="font-bold text-sm text-emerald-800 dark:text-emerald-300">MSI que terminan en este período</h4>
+              <h4 className="font-bold text-sm text-emerald-800 dark:text-emerald-300">Compromisos que terminan en este período</h4>
             </div>
             <div className="space-y-2">
+              {/* MSI Ending */}
               {upcomingPayments.msiEnding.map((msi: any, i: number) => (
-                <div key={i} className="flex items-center justify-between bg-white/60 dark:bg-zinc-900/40 rounded-xl p-3">
+                <div key={`msi-${i}`} className="flex items-center justify-between bg-white/60 dark:bg-zinc-900/40 rounded-xl p-3">
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-emerald-500 text-lg">check_circle</span>
+                    <div className="size-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-base">credit_card</span>
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold text-app-text">{msi.description}</p>
-                      <p className="text-[11px] text-app-muted">{formatDateUTC(msi.dueDate, { style: 'short' })}</p>
+                      <p className="text-sm font-semibold text-app-text">{msi.purchaseName || msi.description}</p>
+                      <p className="text-[11px] text-app-muted">MSI • Última cuota • {formatDateUTC(msi.dueDate, { style: 'short' })}</p>
                     </div>
                   </div>
                   <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                     {formatCurrency(msi.amount)}
+                  </span>
+                </div>
+              ))}
+              {/* Recurring Ending */}
+              {upcomingPayments.recurringEnding.map((rec: any, i: number) => (
+                <div key={`rec-${i}`} className="flex items-center justify-between bg-white/60 dark:bg-zinc-900/40 rounded-xl p-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="size-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${rec.category?.color || '#64748b'}20` }}
+                    >
+                      <span
+                        className="material-symbols-outlined text-base"
+                        style={{ color: rec.category?.color || '#64748b' }}
+                      >
+                        {rec.category?.icon || 'event_repeat'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-app-text">{rec.description}</p>
+                      <p className="text-[11px] text-app-muted">
+                        Termina: {formatDateUTC(rec.endDate, { style: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    {formatCurrency(rec.amount)}
                   </span>
                 </div>
               ))}
@@ -258,22 +328,54 @@ const FinancialAnalysis: React.FC = () => {
               <h4 className="font-bold text-sm text-app-text flex items-center gap-2">
                 <span className="material-symbols-outlined text-rose-500 text-lg">receipt_long</span>
                 Compromisos Pendientes
+                {upcomingPayments.totalExpenses > 0 && (
+                  <span className="text-[10px] text-app-muted font-normal">({upcomingPayments.totalExpenses})</span>
+                )}
               </h4>
-              <Link to="/recurring" className="text-xs text-app-primary font-medium hover:underline">Ver todos</Link>
+              {upcomingPayments.totalExpenses > 5 && (
+                <button
+                  onClick={() => setExpandedExpenses(!expandedExpenses)}
+                  className="text-xs text-app-primary font-medium hover:underline flex items-center gap-1"
+                >
+                  {expandedExpenses ? 'Mostrar menos' : 'Ver todos'}
+                  <span className={`material-symbols-outlined text-sm transition-transform ${expandedExpenses ? 'rotate-180' : ''}`}>
+                    expand_more
+                  </span>
+                </button>
+              )}
             </div>
-            <div className="space-y-2">
+            <div className={`space-y-2 ${expandedExpenses ? 'max-h-80 overflow-y-auto pr-1' : ''}`}>
               {upcomingPayments.expenses.length === 0 ? (
                 <p className="text-xs text-app-muted text-center py-4">Sin gastos programados</p>
               ) : (
-                upcomingPayments.expenses.map((e: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-app-subtle transition-colors">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-app-text truncate">{e.description}</p>
-                      <p className="text-[10px] text-app-muted">{formatDateUTC(e.dueDate, { style: 'short' })}</p>
+                <>
+                  {upcomingPayments.expenses.map((e: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-app-subtle transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-app-text truncate">{e.description}</p>
+                          {e.hasEndDate && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded font-medium shrink-0">
+                              Temporal
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-app-muted">{formatDateUTC(e.dueDate, { style: 'short' })}</p>
+                      </div>
+                      <span className="text-sm font-bold text-app-text tabular-nums ml-2">-{formatCurrency(e.amount)}</span>
                     </div>
-                    <span className="text-sm font-bold text-app-text tabular-nums ml-2">-{formatCurrency(e.amount)}</span>
-                  </div>
-                ))
+                  ))}
+                  {/* Show link to full page if there are more items */}
+                  {expandedExpenses && upcomingPayments.hasMoreExpenses && (
+                    <Link
+                      to="/recurring"
+                      className="flex items-center justify-center gap-1 p-2 text-xs text-app-primary font-medium hover:bg-app-subtle rounded-lg transition-colors"
+                    >
+                      <span>Ver los {upcomingPayments.totalExpenses} compromisos</span>
+                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </Link>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -284,26 +386,51 @@ const FinancialAnalysis: React.FC = () => {
               <h4 className="font-bold text-sm text-app-text flex items-center gap-2">
                 <span className="material-symbols-outlined text-indigo-500 text-lg">credit_card</span>
                 Pagos MSI
+                {upcomingPayments.totalMsi > 0 && (
+                  <span className="text-[10px] text-app-muted font-normal">({upcomingPayments.totalMsi})</span>
+                )}
               </h4>
-              <Link to="/installments" className="text-xs text-app-primary font-medium hover:underline">Ver todos</Link>
+              {upcomingPayments.totalMsi > 5 && (
+                <button
+                  onClick={() => setExpandedMsi(!expandedMsi)}
+                  className="text-xs text-app-primary font-medium hover:underline flex items-center gap-1"
+                >
+                  {expandedMsi ? 'Mostrar menos' : 'Ver todos'}
+                  <span className={`material-symbols-outlined text-sm transition-transform ${expandedMsi ? 'rotate-180' : ''}`}>
+                    expand_more
+                  </span>
+                </button>
+              )}
             </div>
-            <div className="space-y-2">
+            <div className={`space-y-2 ${expandedMsi ? 'max-h-80 overflow-y-auto pr-1' : ''}`}>
               {upcomingPayments.msi.length === 0 ? (
                 <p className="text-xs text-app-muted text-center py-4">Sin MSI activos</p>
               ) : (
-                upcomingPayments.msi.map((m: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-app-subtle transition-colors">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-app-text truncate">{m.description}</p>
-                      <p className="text-[10px] text-app-muted">
-                        {m.accountName} • {formatDateUTC(m.dueDate, { style: 'short' })}
-                      </p>
+                <>
+                  {upcomingPayments.msi.map((m: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-app-subtle transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-app-text truncate">{m.description}</p>
+                        <p className="text-[10px] text-app-muted">
+                          {m.accountName} • {formatDateUTC(m.dueDate, { style: 'short' })}
+                        </p>
+                      </div>
+                      <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tabular-nums ml-2">
+                        -{formatCurrency(m.amount)}
+                      </span>
                     </div>
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tabular-nums ml-2">
-                      -{formatCurrency(m.amount)}
-                    </span>
-                  </div>
-                ))
+                  ))}
+                  {/* Show link to full page if there are more items */}
+                  {expandedMsi && upcomingPayments.hasMoreMsi && (
+                    <Link
+                      to="/installments"
+                      className="flex items-center justify-center gap-1 p-2 text-xs text-app-primary font-medium hover:bg-app-subtle rounded-lg transition-colors"
+                    >
+                      <span>Ver los {upcomingPayments.totalMsi} pagos MSI</span>
+                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </Link>
+                  )}
+                </>
               )}
             </div>
           </div>

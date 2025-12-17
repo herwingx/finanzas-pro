@@ -609,7 +609,9 @@ chmod +x deploy.sh
 ./deploy.sh migrate
 ```
 
-Ver [docs/guia-despliegue-cloudflare.md](./docs/guia-despliegue-cloudflare.md) para instrucciones detalladas de configuración (incluyendo interfaz de Cloudflare y specs de LXC).
+Ver [docs/guia-despliegue-cloudflare.md](./docs/guia-despliegue-cloudflare.md) para instrucciones detalladas de configuración.
+
+> 📘 **Para el día a día:** Consulta [docs/FLUJO_TRABAJO.md](./docs/FLUJO_TRABAJO.md) para ver cómo desarrollar features nuevas y desplegarlas sin romper nada.
 
 ---
 

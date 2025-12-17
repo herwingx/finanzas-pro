@@ -1,17 +1,122 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { PageHeader } from '../components/PageHeader';
 import { SkeletonAccountList } from '../components/Skeleton';
 import { useAccounts, useProfile, useDeleteAccount } from '../hooks/useApi';
 import { toastSuccess, toastError, toast } from '../utils/toast';
-import { AccountType } from '../types';
+import { AccountType, Account } from '../types';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+
+// ============== ACCOUNT DETAIL SHEET ==============
+const AccountDetailSheet = ({
+    account,
+    onClose,
+    onEdit,
+    onDelete,
+    formatCurrency
+}: {
+    account: Account | null;
+    onClose: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    formatCurrency: (val: number) => string;
+}) => {
+    if (!account) return null;
+
+    const getAccountConfig = (type: AccountType) => {
+        switch (type) {
+            case 'CREDIT': return { icon: 'credit_card', bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', label: 'Tarjeta de Crédito' };
+            case 'DEBIT': return { icon: 'account_balance', bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', label: 'Cuenta de Débito' };
+            case 'CASH': return { icon: 'payments', bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', label: 'Efectivo' };
+            default: return { icon: 'account_balance_wallet', bg: 'bg-zinc-100 dark:bg-zinc-800', text: 'text-zinc-600 dark:text-zinc-400', label: 'Cuenta' };
+        }
+    };
+
+    const conf = getAccountConfig(account.type);
+    const isCredit = account.type === 'CREDIT';
+    const usagePercent = isCredit && account.creditLimit ? (account.balance / account.creditLimit) * 100 : 0;
+    const available = isCredit && account.creditLimit ? account.creditLimit - account.balance : account.balance;
+
+    return (
+        <SwipeableBottomSheet isOpen={!!account} onClose={onClose}>
+            {/* Header */}
+            <div className="text-center mb-6">
+                <div className={`size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm ${conf.bg} ${conf.text}`}>
+                    <span className="material-symbols-outlined">{conf.icon}</span>
+                </div>
+                <h2 className="text-xl font-bold text-app-text">{account.name}</h2>
+                <p className="text-sm text-app-muted">{conf.label}</p>
+            </div>
+
+            {/* Balance Card */}
+            <div className="bg-app-subtle rounded-2xl p-5 mb-4 text-center border border-app-border/50">
+                <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">
+                    {isCredit ? 'Deuda Actual' : 'Saldo Disponible'}
+                </p>
+                <div className={`text-4xl font-black tabular-nums tracking-tight ${isCredit ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {isCredit ? '-' : ''}{formatCurrency(account.balance)}
+                </div>
+
+                {/* Credit Card Progress */}
+                {isCredit && account.creditLimit && (
+                    <div className="mt-4">
+                        <div className="w-full h-2 bg-app-bg rounded-full overflow-hidden">
+                            <div
+                                className={`h-full rounded-full transition-all duration-700 ${usagePercent > 90 ? 'bg-rose-500' : usagePercent > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                style={{ width: `${Math.min(usagePercent, 100)}%` }}
+                            />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-app-muted font-medium mt-1.5">
+                            <span>{usagePercent.toFixed(0)}% utilizado</span>
+                            <span>Límite: {formatCurrency(account.creditLimit)}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="bg-app-bg border border-app-border rounded-xl p-3">
+                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Tipo</p>
+                    <p className="text-sm font-bold text-app-text">{conf.label}</p>
+                </div>
+                <div className="bg-app-bg border border-app-border rounded-xl p-3">
+                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">
+                        {isCredit ? 'Disponible' : 'Balance'}
+                    </p>
+                    <p className={`text-sm font-bold ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-app-text'}`}>
+                        {formatCurrency(available)}
+                    </p>
+                </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+                <button
+                    onClick={onEdit}
+                    className="flex-1 py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                    <span className="material-symbols-outlined text-lg">edit</span>
+                    Editar
+                </button>
+                <button
+                    onClick={onDelete}
+                    className="py-3.5 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold hover:opacity-80 transition-opacity flex items-center justify-center"
+                >
+                    <span className="material-symbols-outlined text-lg">delete</span>
+                </button>
+            </div>
+        </SwipeableBottomSheet>
+    );
+};
 
 const AccountsPage: React.FC = () => {
     const navigate = useNavigate();
     const { data: accounts, isLoading, isError } = useAccounts();
     const { data: profile } = useProfile();
     const deleteAccountMutation = useDeleteAccount();
+    const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
     const handleDelete = (account: any) => {
         toast.custom((t) => (
@@ -144,7 +249,7 @@ const AccountsPage: React.FC = () => {
                                     className="mb-3 rounded-2xl"
                                 >
                                     <div
-                                        onClick={() => navigate(`/accounts/edit/${account.id}`)}
+                                        onClick={() => setSelectedAccount(account)}
                                         className="bg-app-surface border border-app-border rounded-2xl p-4 md:p-5 flex gap-4 items-center hover:border-app-border/80 cursor-pointer transition-all active:scale-[0.99] shadow-sm hover:shadow-md"
                                     >
                                         <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${conf.bg} ${conf.text}`}>
@@ -200,6 +305,25 @@ const AccountsPage: React.FC = () => {
 
                 {/* FAB Mobile Only if bottomNav not used, otherwise rely on that */}
             </div>
+
+            {/* Account Detail Sheet */}
+            <AccountDetailSheet
+                account={selectedAccount}
+                onClose={() => setSelectedAccount(null)}
+                onEdit={() => {
+                    if (selectedAccount) {
+                        navigate(`/accounts/edit/${selectedAccount.id}?mode=edit`);
+                        setSelectedAccount(null);
+                    }
+                }}
+                onDelete={() => {
+                    if (selectedAccount) {
+                        handleDelete(selectedAccount);
+                        setSelectedAccount(null);
+                    }
+                }}
+                formatCurrency={formatCurrency}
+            />
         </div>
     );
 };

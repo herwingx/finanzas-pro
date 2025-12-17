@@ -115,11 +115,17 @@ export const SwipeableBottomSheet: React.FC<SwipeableBottomSheetProps> = ({
   if (!isOpen && !isClosing) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ overscrollBehavior: 'contain' }}
+    >
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
-        style={{ opacity: isClosing ? 0 : 1 - (translateY / 400) }}
+        style={{
+          opacity: isClosing ? 0 : 1 - (translateY / 400),
+          touchAction: 'none' // Prevent any touch gestures on backdrop
+        }}
         onClick={onClose}
       />
 
@@ -135,7 +141,9 @@ export const SwipeableBottomSheet: React.FC<SwipeableBottomSheetProps> = ({
                 `}
         style={{
           transform: `translateY(${translateY}px)`,
-          animation: !isDragging && !isClosing && translateY === 0 ? 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none'
+          animation: !isDragging && !isClosing && translateY === 0 ? 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+          overscrollBehaviorY: 'contain', // Prevent pull-to-refresh
+          touchAction: 'pan-y', // Allow vertical scroll, prevent other gestures
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

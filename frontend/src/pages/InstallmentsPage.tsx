@@ -126,12 +126,29 @@ const MSIDetailSheet = ({
             {!isSettled && (
                 <button
                     onClick={handleRegisterPayment}
-                    className="w-full py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2 mb-3"
                 >
                     <span className="material-symbols-outlined">payments</span>
                     Registrar Pago de {formatCurrency(nextPaymentAmt)}
                 </button>
             )}
+
+            {/* Edit/Delete Buttons */}
+            <div className="flex gap-3">
+                <button
+                    onClick={onEdit}
+                    className="flex-1 py-3 rounded-xl bg-app-subtle text-app-text font-bold text-sm hover:bg-app-subtle/80 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                    <span className="material-symbols-outlined text-lg">edit</span>
+                    Editar
+                </button>
+                <button
+                    onClick={onDelete}
+                    className="py-3 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold text-sm hover:opacity-80 transition-opacity flex items-center justify-center"
+                >
+                    <span className="material-symbols-outlined text-lg">delete</span>
+                </button>
+            </div>
         </SwipeableBottomSheet>
     );
 };

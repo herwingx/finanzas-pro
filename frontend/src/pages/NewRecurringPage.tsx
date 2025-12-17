@@ -76,35 +76,35 @@ const NewRecurringPage: React.FC = () => {
   // Logic
   const calculateNextDueDate = () => {
     const nextDate = new Date(startDate);
-    // Reset hours for cleaner calc
-    nextDate.setHours(12, 0, 0, 0);
+    // Reset to noon UTC for cleaner calc and to avoid timezone edge cases
+    nextDate.setUTCHours(12, 0, 0, 0);
 
     if (alreadyPaidCurrent) {
       if (frequency === 'daily') {
-        nextDate.setDate(nextDate.getDate() + 1);
+        nextDate.setUTCDate(nextDate.getUTCDate() + 1);
       } else if (frequency === 'weekly') {
-        nextDate.setDate(nextDate.getDate() + 7);
+        nextDate.setUTCDate(nextDate.getUTCDate() + 7);
       } else if (frequency === 'biweekly') {
-        nextDate.setDate(nextDate.getDate() + 14);
+        nextDate.setUTCDate(nextDate.getUTCDate() + 14);
       } else if (frequency === 'biweekly_15_30') {
         // Quincena mexicana: días 15 y 30/31 del mes
-        const day = nextDate.getDate();
-        const currentMonth = nextDate.getMonth();
-        const currentYear = nextDate.getFullYear();
+        const day = nextDate.getUTCDate();
+        const currentMonth = nextDate.getUTCMonth();
+        const currentYear = nextDate.getUTCFullYear();
 
         if (day <= 15) {
           // Si estamos en el 15 o antes, próximo es fin de este mes
-          const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-          nextDate.setDate(lastDayOfMonth);
+          const lastDayOfMonth = new Date(Date.UTC(currentYear, currentMonth + 1, 0)).getUTCDate();
+          nextDate.setUTCDate(lastDayOfMonth);
         } else {
           // Si estamos después del 15, próximo es el 15 del siguiente mes
-          nextDate.setMonth(currentMonth + 1);
-          nextDate.setDate(15);
+          nextDate.setUTCMonth(currentMonth + 1);
+          nextDate.setUTCDate(15);
         }
       } else if (frequency === 'monthly') {
-        nextDate.setMonth(nextDate.getMonth() + 1);
+        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
       } else if (frequency === 'yearly') {
-        nextDate.setFullYear(nextDate.getFullYear() + 1);
+        nextDate.setUTCFullYear(nextDate.getUTCFullYear() + 1);
       }
     }
     return nextDate;

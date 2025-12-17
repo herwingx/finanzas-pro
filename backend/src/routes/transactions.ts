@@ -192,41 +192,9 @@ router.post('/:id/restore', async (req: AuthRequest, res) => {
       if (recurringTransactionId) {
         const recurring = await tx.recurringTransaction.findUnique({ where: { id: recurringTransactionId } });
         if (recurring) {
-          // We need to calculate the version of the date that comes AFTER this transaction.
-          // Since we don't have the sophisticated calculation logic here easily, 
-          // we can try to rely on the transaction date + frequency.
-
-          // Simple naive recalculation for now:
-          // 1. Take transaction date (which is the due date we just paid)
-          // 2. Add frequency
-
-          let nextDate = new Date(date);
-          const freq = recurring.frequency;
-
-          if (freq === 'DAILY') nextDate = addDays(nextDate, 1);
-          else if (freq === 'WEEKLY') nextDate = addWeeks(nextDate, 1);
-          else if (freq === 'BIWEEKLY') nextDate = addWeeks(nextDate, 2);
-          else if (freq === 'biweekly_15_30' || freq === 'BIWEEKLY_15_30') {
-            // Quincena mexicana
-            const day = nextDate.getDate();
-            const currentMonth = nextDate.getMonth();
-            const currentYear = nextDate.getFullYear();
-
-            if (day <= 15) {
-              const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-              nextDate.setDate(lastDayOfMonth);
-            } else {
-              nextDate.setDate(15);
-              nextDate.setMonth(currentMonth + 1);
-            }
-          }
-          else if (freq === 'MONTHLY') nextDate = addMonths(nextDate, 1);
-          else if (freq === 'YEARLY') nextDate = addYears(nextDate, 1);
-          // lowercase compat
-          else if (freq === 'daily') nextDate = addDays(nextDate, 1);
-          else if (freq === 'weekly') nextDate = addWeeks(nextDate, 1);
-          else if (freq === 'biweekly') nextDate = addWeeks(nextDate, 2);
-          else if (freq === 'monthly') nextDate = addMonths(nextDate, 1);
+          // Use the centralized calculateNextDueDate function for consistency
+          const { calculateNextDueDate: calcNext } = require('../services/recurring');
+          const nextDate = calcNext(new Date(date), recurring.frequency.toLowerCase());
 
           await tx.recurringTransaction.update({
             where: { id: recurringTransactionId },

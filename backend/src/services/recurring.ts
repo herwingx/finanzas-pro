@@ -6,37 +6,37 @@ export const calculateNextDueDate = (currentDate: Date, frequency: string): Date
 
   switch (frequency) {
     case 'daily':
-      nextDate.setDate(nextDate.getDate() + 1);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 1);
       break;
     case 'weekly':
-      nextDate.setDate(nextDate.getDate() + 7);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 7);
       break;
     case 'biweekly':
-      nextDate.setDate(nextDate.getDate() + 14);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 14);
       break;
     case 'monthly':
-      nextDate.setMonth(nextDate.getMonth() + 1);
+      nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
       break;
     case 'yearly':
-      nextDate.setFullYear(nextDate.getFullYear() + 1);
+      nextDate.setUTCFullYear(nextDate.getUTCFullYear() + 1);
       break;
     case 'biweekly_15_30':
-      const day = nextDate.getDate();
-      const currentMonth = nextDate.getMonth();
-      const currentYear = nextDate.getFullYear();
+      const day = nextDate.getUTCDate();
+      const currentMonth = nextDate.getUTCMonth();
+      const currentYear = nextDate.getUTCFullYear();
 
       if (day < 15) {
         // Si estamos antes del 15, el siguiente es el 15 de este mes
-        nextDate.setDate(15);
+        nextDate.setUTCDate(15);
       } else if (day === 15) {
         // Si es el 15, el siguiente es el último día de este mes
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        nextDate.setDate(lastDayOfMonth);
+        const lastDayOfMonth = new Date(Date.UTC(currentYear, currentMonth + 1, 0)).getUTCDate();
+        nextDate.setUTCDate(lastDayOfMonth);
       } else {
         // Si es después del 15 (fin de mes), el siguiente es el 15 del próximo mes
         // IMPORTANTE: Primero día 15, luego mes siguiente para evitar saltos (e.g. 31 Ene -> 15 Mar)
-        nextDate.setDate(15);
-        nextDate.setMonth(currentMonth + 1);
+        nextDate.setUTCDate(15);
+        nextDate.setUTCMonth(currentMonth + 1);
       }
       break;
   }

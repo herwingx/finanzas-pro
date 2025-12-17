@@ -41,7 +41,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 // Create recurring transaction
 router.post('/', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { amount, description, type, frequency, startDate, categoryId, accountId } = req.body || {}; // Provide a default empty object
+  const { amount, description, type, frequency, startDate, categoryId, accountId, nextDueDate } = req.body || {}; // Provide a default empty object
 
   if (!amount || !description || !type || !frequency || !startDate || !categoryId || !accountId) {
     return res.status(400).json({ message: 'Missing required fields.' });
@@ -55,7 +55,7 @@ router.post('/', async (req: AuthRequest, res) => {
         type,
         frequency,
         startDate: new Date(startDate),
-        nextDueDate: new Date(startDate), // First run is on start date
+        nextDueDate: nextDueDate ? new Date(nextDueDate) : new Date(startDate), // Use frontend-calculated date if provided
         lastRun: null, // Not run yet
         categoryId,
         accountId,
@@ -157,7 +157,7 @@ router.post('/:id/pay', async (req: AuthRequest, res) => {
       const newTx = await createTransactionAndAdjustBalances(tx, {
         amount: amount ? parseFloat(amount) : recurring.amount,
         description: recurring.description, // Keep original description or append (Recurrente)?
-        date: date ? new Date(date) : new Date(),
+        date: date ? new Date(date) : recurring.nextDueDate, // Use due date, not payment date, so deletion restores correctly
         type: recurring.type as 'income' | 'expense',
         userId: recurring.userId,
         accountId: recurring.accountId,

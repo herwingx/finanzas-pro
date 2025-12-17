@@ -114,10 +114,6 @@ const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) =
               </>
             )}
           </div>
-          <div className="flex justify-center gap-6 pt-2">
-            <button onClick={onEdit} className="text-app-muted hover:text-app-text text-sm font-medium flex items-center gap-1 transition-colors"><span className="material-symbols-outlined text-[18px]">edit</span> Editar</button>
-            <button onClick={onDelete} className="text-app-danger hover:text-red-700 text-sm font-medium flex items-center gap-1 transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span> Eliminar</button>
-          </div>
         </div>
       )}
     </SwipeableBottomSheet>

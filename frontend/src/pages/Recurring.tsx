@@ -102,23 +102,6 @@ const RecurringDetailSheet = ({
                 </span>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3">
-                <button
-                    onClick={onEdit}
-                    className="flex-1 btn btn-secondary py-3 flex items-center justify-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-lg">edit</span>
-                    Editar
-                </button>
-                <button
-                    onClick={onDelete}
-                    className="flex-1 btn bg-rose-100 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/40 py-3 flex items-center justify-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-lg">delete</span>
-                    Eliminar
-                </button>
-            </div>
         </SwipeableBottomSheet>
     );
 };
@@ -233,7 +216,7 @@ const Recurring: React.FC = () => {
                 </div>
 
                 {/* Intro Card */}
-                <div className="bento-card p-5 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
+                <div className="bento-card p-5 bg-linear-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
                     <div className="flex gap-4">
                         <div className="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
                             <span className="material-symbols-outlined">event_repeat</span>

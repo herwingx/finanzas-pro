@@ -168,23 +168,6 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
           </div>
         )}
       </div>
-
-      {/* Actions */}
-      <div className="pt-4 border-t border-app-border flex gap-3 -mx-6 px-6 pb-safe">
-        <button
-          onClick={() => onEdit(transaction)}
-          className="flex-1 py-3.5 px-4 bg-app-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
-        >
-          <span className="material-symbols-outlined text-xl">edit</span>
-          Editar
-        </button>
-        <button
-          onClick={() => onDelete(transaction)}
-          className="py-3.5 px-4 bg-rose-50 dark:bg-rose-900/20 text-rose-500 font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
-        >
-          <span className="material-symbols-outlined text-xl">delete</span>
-        </button>
-      </div>
     </SwipeableBottomSheet>
   );
 };

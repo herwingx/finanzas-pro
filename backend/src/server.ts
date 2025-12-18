@@ -24,6 +24,14 @@ import loansRoutes from './routes/loans';
 const app = express();
 
 // =============================================================================
+// Proxy Trust Configuration (Required for nginx/Cloudflare)
+// =============================================================================
+// When running behind a reverse proxy (nginx, Cloudflare), Express needs to trust
+// the X-Forwarded-For header to correctly identify client IPs for rate limiting.
+// Value of 1 means trust the first proxy in the chain.
+app.set('trust proxy', 1);
+
+// =============================================================================
 // Security Middleware Chain
 // =============================================================================
 

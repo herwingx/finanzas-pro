@@ -266,7 +266,7 @@ const LoansPage: React.FC = () => {
                   key={loan.id}
                   // Swipe RIGHT -> muestra leftAction (Editar)
                   leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                  onSwipeRight={() => navigate(`/loans/${loan.id}`)}
+                  onSwipeRight={() => navigate(`/loans/${loan.id}`, { replace: true })}
                   // Swipe LEFT -> muestra rightAction (Eliminar)
                   rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
                   onSwipeLeft={() => setLoanToDelete(loan)}
@@ -315,7 +315,7 @@ const LoansPage: React.FC = () => {
             setSelectedLoan(null);
             setLoanToDelete(selectedLoan);
           }}
-          onEdit={() => navigate(`/loans/${selectedLoan.id}`)}
+          onEdit={() => navigate(`/loans/${selectedLoan.id}`, { replace: true })}
         />
       )}
 

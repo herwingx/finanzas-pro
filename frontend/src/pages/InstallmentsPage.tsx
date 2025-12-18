@@ -195,7 +195,7 @@ const InstallmentsPage: React.FC = () => {
 
     const handleEdit = (purchase: InstallmentPurchase) => {
         setSelectedItem(null);
-        navigate(`/installments/edit/${purchase.id}?mode=edit`);
+        navigate(`/installments/edit/${purchase.id}?mode=edit`, { replace: true });
     };
 
     if (isLoading) {
@@ -258,7 +258,7 @@ const InstallmentsPage: React.FC = () => {
                             return (
                                 <SwipeableItem
                                     key={purchase.id}
-                                    onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`)}
+                                    onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`, { replace: true })}
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}

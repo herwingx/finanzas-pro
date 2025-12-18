@@ -106,7 +106,7 @@ const Categories: React.FC = () => {
 
     // Handlers
     const handleEdit = (cat: Category) => {
-        navigate(`/categories/edit/${cat.id}`);
+        navigate(`/categories/edit/${cat.id}`, { replace: true });
     };
 
     const handleDeleteClick = (category: Category) => {

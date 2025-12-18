@@ -224,7 +224,7 @@ const Recurring: React.FC = () => {
 
     const handleEdit = (id: string) => {
         setSelectedItem(null);
-        navigate(`/recurring/edit/${id}`);
+        navigate(`/recurring/edit/${id}`, { replace: true });
     };
 
     const handleItemClick = (tx: any) => {

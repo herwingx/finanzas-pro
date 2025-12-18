@@ -242,7 +242,7 @@ const AccountsPage: React.FC = () => {
                             return (
                                 <SwipeableItem
                                     key={account.id}
-                                    onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`)}
+                                    onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`, { replace: true })}
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(account)}
                                     rightAction={{ icon: 'delete', color: '#EF4444', label: 'Eliminar' }}
@@ -312,7 +312,7 @@ const AccountsPage: React.FC = () => {
                 onClose={() => setSelectedAccount(null)}
                 onEdit={() => {
                     if (selectedAccount) {
-                        navigate(`/accounts/edit/${selectedAccount.id}?mode=edit`);
+                        navigate(`/accounts/edit/${selectedAccount.id}?mode=edit`, { replace: true });
                         setSelectedAccount(null);
                     }
                 }}

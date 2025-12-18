@@ -64,7 +64,7 @@ const History: React.FC = () => {
         description: 'Redirigiendo al detalle del préstamo...',
         duration: 1500
       });
-      navigate(`/loans`);
+      navigate(`/loans`, { replace: true });
       return;
     }
 
@@ -73,7 +73,7 @@ const History: React.FC = () => {
       return;
     }
 
-    navigate(`/new?editId=${tx.id}`);
+    navigate(`/new?editId=${tx.id}`, { replace: true });
   };
 
   // Deletion Logic

@@ -3,38 +3,44 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
   <title>Finanzas Pro - Gestor de Finanzas Personales</title>
-  
+
   <!-- Theme Script - Must run before CSS to prevent flash -->
   <script>
-    (function() {
+    (function () {
       const theme = localStorage.getItem('theme') || 'system';
       const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.classList.add(isDark ? 'dark' : 'light');
-      
+
+      // Set background color on html element for iOS overscroll
+      const bgColor = isDark ? '#09090B' : '#F9FAFB';
+      document.documentElement.style.backgroundColor = bgColor;
+
       // Update theme-color meta tag based on selected theme
       const themeColorMeta = document.querySelector('meta[name="theme-color"]');
       if (themeColorMeta) {
-        themeColorMeta.setAttribute('content', isDark ? '#09090B' : '#F9FAFB');
+        themeColorMeta.setAttribute('content', bgColor);
       }
     })();
   </script>
-  
+
   <!-- PWA Primary Tags -->
   <meta name="application-name" content="Finanzas Pro">
   <meta name="theme-color" content="#F9FAFB" />
-  <meta name="description" content="Aplicación completa para gestionar tus finanzas personales: presupuestos, transacciones, cuentas y más.">
-  
+  <meta name="description"
+    content="Aplicación completa para gestionar tus finanzas personales: presupuestos, transacciones, cuentas y más.">
+
   <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.webmanifest" />
-  
+
   <!-- iOS Safari Tags -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Finanzas Pro">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  
+
   <!-- Icons -->
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
   <link rel="icon" href="/favicon.ico" sizes="any" />

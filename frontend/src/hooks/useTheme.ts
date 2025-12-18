@@ -27,10 +27,13 @@ const useTheme = () => {
       root.classList.add('light');
     }
 
-    // Update theme-color meta tag for iOS Safari
+    // Update theme-color meta tag and html background for iOS Safari
+    const bgColor = isDark ? '#09090B' : '#F9FAFB';
+    root.style.backgroundColor = bgColor;
+
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) {
-      themeColorMeta.setAttribute('content', isDark ? '#09090B' : '#F9FAFB');
+      themeColorMeta.setAttribute('content', bgColor);
     }
 
     // Save the user's preference to localStorage
@@ -43,6 +46,15 @@ const useTheme = () => {
         const systemIsDark = mediaQuery.matches;
         root.classList.remove('light', 'dark');
         root.classList.add(systemIsDark ? 'dark' : 'light');
+
+        // Update colors for iOS Safari (status bar + overscroll)
+        const systemBgColor = systemIsDark ? '#09090B' : '#F9FAFB';
+        root.style.backgroundColor = systemBgColor;
+
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute('content', systemBgColor);
+        }
       }
     };
 

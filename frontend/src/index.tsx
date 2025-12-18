@@ -17,7 +17,22 @@ const updateSW = registerSW({
   },
 });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Data is considered fresh for 30 seconds
+      staleTime: 30 * 1000,
+      // Cache data for 5 minutes before garbage collection
+      gcTime: 5 * 60 * 1000,
+      // Always refetch when window regains focus
+      refetchOnWindowFocus: true,
+      // Refetch when component mounts if data is stale
+      refetchOnMount: true,
+      // Retry failed requests 2 times
+      retry: 2,
+    },
+  },
+});
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

@@ -75,6 +75,9 @@ export const useAccounts = () => {
     return useQuery<Account[], Error>({
         queryKey: ['accounts'],
         queryFn: apiService.getAccounts,
+        // Account balances are critical - keep them fresh
+        staleTime: 10 * 1000, // 10 seconds
+        refetchOnMount: 'always',
     });
 };
 

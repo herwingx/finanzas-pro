@@ -54,6 +54,8 @@ export function DatePicker({
             "hover:bg-app-subtle hover:border-app-border-medium",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/50 focus-visible:border-app-primary",
             "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-app-subtle",
+            // Active touch feedback for mobile
+            "active:scale-[0.99] active:bg-app-subtle",
             // Estado cuando está vacío vs lleno
             !date && "text-app-muted",
             className
@@ -65,7 +67,7 @@ export function DatePicker({
             </span>
             <span className="font-medium truncate block">
               {date ? (
-                format(date, "EEE, d 'de' MMM", { locale: es })
+                format(date, "EEE, d 'de' MMM yyyy", { locale: es })
               ) : (
                 <span className="opacity-70 font-normal">{placeholder}</span>
               )}
@@ -84,23 +86,23 @@ export function DatePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-auto p-3 rounded-2xl bg-app-surface border border-app-border shadow-premium backdrop-blur-3xl animate-in zoom-in-95 fade-in-0 duration-200"
+        className={cn(
+          "w-auto p-3 rounded-2xl bg-app-surface border border-app-border",
+          "shadow-premium backdrop-blur-3xl",
+          "animate-in zoom-in-95 fade-in-0 duration-200",
+          // Mobile: full width and centered, Desktop: auto width
+          "max-w-[calc(100vw-2rem)] sm:max-w-none"
+        )}
         align="start"
+        sideOffset={8}
       >
         <Calendar
           mode="single"
           selected={date}
           onSelect={handleDateSelect}
+          defaultMonth={date} // ← Opens calendar on the selected date's month
           initialFocus
-          disabled={disabledDays} // Dejar abierto por defecto o pasar lógica custom
-          classNames={{
-            // Overrides ligeros para asegurar que el Calendario interno use el tema
-            day_selected: "bg-app-primary text-white hover:bg-app-primary-dark focus:bg-app-primary focus:text-white",
-            day_today: "bg-app-subtle text-app-text font-bold",
-            day: "h-9 w-9 p-0 font-normal rounded-lg hover:bg-app-subtle focus:bg-app-subtle active:scale-95 transition-transform",
-            caption: "flex justify-center pt-1 relative items-center mb-2 font-bold text-app-text",
-            head_cell: "text-app-muted rounded-md w-9 font-normal text-[0.8rem] capitalize",
-          }}
+          disabled={disabledDays}
         />
       </PopoverContent>
     </Popover>

@@ -107,7 +107,7 @@ const Profile: React.FC = () => {
 
         {/* Avatar Hero Section */}
         <div className="relative group mb-6">
-          <div className="size-28 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl overflow-hidden ring-4 ring-app-surface relative">
+          <div className="size-28 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl overflow-hidden ring-4 ring-app-surface relative">
             {currentAvatar ? (
               <img src={currentAvatar} alt="Profile" className="w-full h-full object-cover transition-opacity duration-300" />
             ) : (

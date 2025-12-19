@@ -4,16 +4,42 @@ import './index.css';
 import App from './App';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { registerSW } from 'virtual:pwa-register';
+import { toast } from 'sonner';
 
-// Register PWA Service Worker
+// Register PWA Service Worker with update prompt
 const updateSW = registerSW({
   onNeedRefresh() {
-    // Show a prompt to user if a new version is available (optional for now, autoUpdate handles basics)
-    // For now we just let it handle itself, but logging is good
-    console.log('New content available, click on reload button to update.');
+    // Show persistent toast with update button
+    toast('Nueva versión disponible', {
+      description: 'Actualiza para obtener las últimas mejoras',
+      duration: Infinity, // Stay until user acts
+      action: {
+        label: 'Actualizar',
+        onClick: () => {
+          updateSW(true); // Force update and reload
+        },
+      },
+      cancel: {
+        label: 'Después',
+        onClick: () => {
+          // User dismissed, toast will close
+          console.log('Update postponed by user');
+        },
+      },
+    });
   },
   onOfflineReady() {
-    console.log('App ready to work offline');
+    toast.success('App lista para usar sin conexión', {
+      duration: 3000,
+    });
+  },
+  // Check for updates every 60 seconds when online
+  onRegisteredSW(swUrl, registration) {
+    if (registration) {
+      setInterval(() => {
+        registration.update();
+      }, 60 * 1000); // Check every minute
+    }
   },
 });
 

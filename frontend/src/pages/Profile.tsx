@@ -212,12 +212,38 @@ const Profile: React.FC = () => {
               Cerrar Sesión
             </button>
 
-            <div className="text-center space-y-1">
+            <div className="text-center space-y-3">
+              {/* Force Update Button */}
+              <button
+                onClick={() => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then((registrations) => {
+                      for (const registration of registrations) {
+                        registration.unregister();
+                      }
+                      // Clear caches
+                      caches.keys().then((names) => {
+                        for (const name of names) {
+                          caches.delete(name);
+                        }
+                      });
+                      toastSuccess('Cache limpiado. Recargando...', { duration: 1500 });
+                      setTimeout(() => window.location.reload(), 1500);
+                    });
+                  } else {
+                    window.location.reload();
+                  }
+                }}
+                className="text-xs text-app-muted hover:text-app-primary underline transition-colors"
+              >
+                Buscar actualizaciones
+              </button>
+
               <p className="text-[10px] text-app-muted uppercase tracking-widest font-bold">
                 Finanzas Pro
               </p>
               <p className="text-[10px] text-app-muted/60 font-mono">
-                v2.4.0
+                v2.4.1
               </p>
             </div>
           </div>

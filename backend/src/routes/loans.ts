@@ -311,7 +311,10 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
           borrowerPhone: borrowerPhone ?? existingLoan.borrowerPhone,
           borrowerEmail: borrowerEmail ?? existingLoan.borrowerEmail,
           reason: reason ?? existingLoan.reason,
-          expectedPayDate: expectedPayDate ? new Date(expectedPayDate) : existingLoan.expectedPayDate,
+          // Handle expectedPayDate: null = clear, undefined = keep existing, string = set new date
+          expectedPayDate: expectedPayDate === null
+            ? null
+            : (expectedPayDate ? new Date(expectedPayDate) : existingLoan.expectedPayDate),
           notes: notes ?? existingLoan.notes,
           originalAmount: originalAmount ? parseFloat(originalAmount) : undefined,
           remainingAmount: newRemainingAmount,

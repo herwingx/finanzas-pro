@@ -99,7 +99,8 @@ const LoanFormPage: React.FC = () => {
       borrowerPhone: formData.borrowerPhone || undefined,
       borrowerEmail: formData.borrowerEmail || undefined,
       reason: formData.reason || undefined,
-      expectedPayDate: formData.expectedPayDate || undefined,
+      // Send null explicitly when empty to clear the date, undefined would omit the field
+      expectedPayDate: formData.expectedPayDate || null,
       notes: formData.notes || undefined,
       accountId: formData.accountId || undefined,
       originalAmount: parseFloat(formData.originalAmount)

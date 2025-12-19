@@ -223,7 +223,7 @@ const LoanFormPage: React.FC = () => {
                 placeholder="Motivo (Ej. Renta, Emergencia...)"
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className={`grid gap-3 ${formData.expectedPayDate ? 'grid-cols-[1fr_1fr_auto]' : 'grid-cols-2'}`}>
                 <div>
                   <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1">Fecha {isLent ? 'Entrega' : 'Recepción'}</label>
                   <DatePicker
@@ -235,26 +235,26 @@ const LoanFormPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1 text-rose-500">Fecha Límite</label>
-                  <div className="flex items-center gap-2">
-                    <DatePicker
-                      date={formData.expectedPayDate ? new Date(formData.expectedPayDate + 'T00:00:00') : undefined}
-                      onDateChange={(d) => setFormData({ ...formData, expectedPayDate: d ? d.toISOString().split('T')[0] : '' })}
-                      className="flex-1 bg-app-bg border border-app-border rounded-xl font-medium focus-within:border-app-text"
-                      placeholder="Sin límite"
-                    />
-                    {/* Clear button - only shows when date is set */}
-                    {formData.expectedPayDate && (
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, expectedPayDate: '' })}
-                        className="size-10 shrink-0 rounded-xl bg-app-bg border border-app-border hover:bg-rose-100 hover:border-rose-300 dark:hover:bg-rose-900/30 dark:hover:border-rose-800 flex items-center justify-center transition-all active:scale-95 group"
-                        title="Quitar fecha límite"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-app-muted group-hover:text-rose-500">close</span>
-                      </button>
-                    )}
-                  </div>
+                  <DatePicker
+                    date={formData.expectedPayDate ? new Date(formData.expectedPayDate + 'T00:00:00') : undefined}
+                    onDateChange={(d) => setFormData({ ...formData, expectedPayDate: d ? d.toISOString().split('T')[0] : '' })}
+                    className="w-full bg-app-bg border border-app-border rounded-xl font-medium focus-within:border-app-text"
+                    placeholder="Sin límite"
+                  />
                 </div>
+                {/* Clear button - only shows when date is set */}
+                {formData.expectedPayDate && (
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, expectedPayDate: '' })}
+                      className="size-[46px] rounded-xl bg-app-bg border border-app-border hover:bg-rose-100 hover:border-rose-300 dark:hover:bg-rose-900/30 dark:hover:border-rose-800 flex items-center justify-center transition-all active:scale-95 group"
+                      title="Quitar fecha límite"
+                    >
+                      <span className="material-symbols-outlined text-[18px] text-app-muted group-hover:text-rose-500">close</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

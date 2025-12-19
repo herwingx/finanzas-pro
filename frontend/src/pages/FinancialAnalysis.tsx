@@ -59,12 +59,23 @@ const FinancialAnalysis: React.FC = () => {
     const msiEnding = summary.msiPaymentsDue.filter((m: any) => m.isLastInstallment);
 
     // Recurring transactions that end in this period (have endDate and it's within the period)
+    // IMPORTANT: Deduplicate by recurring transaction ID to avoid showing multiple instances
     const periodEnd = new Date(summary.periodEnd);
-    const recurringEnding = summary.expectedExpenses.filter((e: any) => {
+    const recurringWithEndDate = summary.expectedExpenses.filter((e: any) => {
       if (!e.hasEndDate || !e.endDate) return false;
       const endDate = new Date(e.endDate);
       return endDate <= periodEnd;
     });
+
+    // Group by recurring transaction ID and take only the LAST payment (closest to endDate)
+    const recurringById = new Map<string, any>();
+    for (const expense of recurringWithEndDate) {
+      const existingEntry = recurringById.get(expense.id);
+      if (!existingEntry || new Date(expense.dueDate) > new Date(existingEntry.dueDate)) {
+        recurringById.set(expense.id, expense);
+      }
+    }
+    const recurringEnding = Array.from(recurringById.values());
 
     const income = summary.expectedIncome.slice(0, 3);
 

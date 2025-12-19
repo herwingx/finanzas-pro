@@ -56,6 +56,8 @@ export function DatePicker({
             "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-app-subtle",
             // Active touch feedback for mobile
             "active:scale-[0.99] active:bg-app-subtle",
+            // Allow shrinking in flex/grid contexts
+            "min-w-0 overflow-hidden",
             // Estado cuando está vacío vs lleno
             !date && "text-app-muted",
             className

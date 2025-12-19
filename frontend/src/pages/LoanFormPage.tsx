@@ -224,7 +224,7 @@ const LoanFormPage: React.FC = () => {
               />
 
               <div className={`grid gap-3 ${formData.expectedPayDate ? 'grid-cols-[1fr_1fr_auto]' : 'grid-cols-2'}`}>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1">Fecha {isLent ? 'Entrega' : 'Recepción'}</label>
                   <DatePicker
                     date={new Date(formData.loanDate + 'T00:00:00')}
@@ -233,7 +233,7 @@ const LoanFormPage: React.FC = () => {
                     className="w-full bg-app-bg border border-app-border rounded-xl font-medium"
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1 text-rose-500">Fecha Límite</label>
                   <DatePicker
                     date={formData.expectedPayDate ? new Date(formData.expectedPayDate + 'T00:00:00') : undefined}

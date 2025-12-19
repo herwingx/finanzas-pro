@@ -235,12 +235,25 @@ const LoanFormPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1 text-rose-500">Fecha Límite</label>
-                  <DatePicker
-                    date={formData.expectedPayDate ? new Date(formData.expectedPayDate + 'T00:00:00') : undefined}
-                    onDateChange={(d) => setFormData({ ...formData, expectedPayDate: d ? d.toISOString().split('T')[0] : '' })}
-                    className="w-full bg-app-bg border border-app-border rounded-xl font-medium focus-within:border-app-text"
-                    placeholder="Sin fecha límite"
-                  />
+                  <div className="relative">
+                    <DatePicker
+                      date={formData.expectedPayDate ? new Date(formData.expectedPayDate + 'T00:00:00') : undefined}
+                      onDateChange={(d) => setFormData({ ...formData, expectedPayDate: d ? d.toISOString().split('T')[0] : '' })}
+                      className="w-full bg-app-bg border border-app-border rounded-xl font-medium focus-within:border-app-text"
+                      placeholder="Sin fecha límite"
+                    />
+                    {/* Clear button - only shows when date is set */}
+                    {formData.expectedPayDate && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, expectedPayDate: '' })}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 size-6 rounded-full bg-app-subtle hover:bg-rose-100 dark:hover:bg-rose-900/30 flex items-center justify-center transition-colors group"
+                        title="Quitar fecha límite"
+                      >
+                        <span className="material-symbols-outlined text-[14px] text-app-muted group-hover:text-rose-500">close</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

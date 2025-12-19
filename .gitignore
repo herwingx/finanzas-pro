@@ -51,3 +51,6 @@ backups/
 
 # Docker
 .dockerignore
+
+# Personal docs (not for public repo)
+docs/PRODUCTION_INSTALL.md

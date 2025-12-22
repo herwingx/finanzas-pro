@@ -20,6 +20,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="${PROJECT_DIR}/backups"
 
+# Cargar variables de entorno desde .env si existe
+if [ -f "${PROJECT_DIR}/.env" ]; then
+    # Exportar solo las líneas válidas (ignorar comentarios y líneas vacías)
+    set -a
+    source <(grep -v '^#' "${PROJECT_DIR}/.env" | grep -v '^$' | sed 's/\r$//')
+    set +a
+fi
+
 # Configuración de retención
 BACKUP_RETENTION_DAYS=7
 

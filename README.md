@@ -21,6 +21,7 @@
 - [API Endpoints](#-api-endpoints)
 - [Configuración y Despliegue](#-configuración-y-despliegue)
 - [🔒 Seguridad](#-seguridad)
+- [🔒 Backup y Recuperación](#-backup-y-recuperación)
 - [Flujos de Usuario](#-flujos-de-usuario)
 
 ---
@@ -697,6 +698,60 @@ RATE_LIMIT_ENABLED="true"
 | `/api/auth/request-reset` | 3 intentos | 1 hora |
 
 📘 **Guía completa:** Ver [docs/SEGURIDAD.md](./docs/SEGURIDAD.md) para configuración detallada, mejores prácticas y recomendaciones para homelab.
+
+---
+
+## 🔒 Backup y Recuperación
+
+### Sistema de Backups Automatizado
+
+Finanzas Pro incluye un sistema completo de backups con las siguientes características:
+
+| Característica | Descripción |
+|----------------|-------------|
+| 📅 **Backup Diario** | Ejecución automática a las 11:00 AM |
+| 🗓️ **Retención 7 días** | Limpieza automática de backups antiguos |
+| 📦 **Compresión gzip** | Ahorro de espacio significativo |
+| ☁️ **Google Drive** | Sincronización automática vía rclone |
+| 🔄 **Restauración fácil** | Menú interactivo para restaurar |
+
+### Uso Rápido
+
+```bash
+# Ver estado de backups
+./scripts/backup.sh --status
+
+# Ejecutar backup manual
+./scripts/backup.sh
+
+# Solo backup local (sin subir a la nube)
+./scripts/backup.sh --local-only
+
+# Restaurar desde un backup
+./scripts/backup.sh --restore
+
+# Configurar backup automático diario
+./scripts/backup.sh --setup-cron
+```
+
+### Configuración Inicial
+
+```bash
+# 1. Hacer el script ejecutable
+chmod +x scripts/backup.sh
+
+# 2. Probar backup local
+./scripts/backup.sh --local-only
+
+# 3. Instalar y configurar rclone (para Google Drive)
+curl https://rclone.org/install.sh | sudo bash
+rclone config  # Seguir asistente para configurar 'gdrive'
+
+# 4. Configurar cron job para backups automáticos
+./scripts/backup.sh --setup-cron
+```
+
+📘 **Guía completa:** Ver [docs/BACKUP_GUIDE.md](./docs/BACKUP_GUIDE.md) para configuración detallada, alternativas de almacenamiento (Backblaze B2, NAS, SSH), notificaciones por Telegram, y troubleshooting.
 
 ---
 

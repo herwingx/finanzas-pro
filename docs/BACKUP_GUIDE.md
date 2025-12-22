@@ -32,13 +32,54 @@ El script detectará automáticamente el contenedor de PostgreSQL y creará un b
 
 #### Instalar rclone
 
+Elige la opción que mejor se adapte a tu sistema operativo:
+
+**Linux (Debian/Ubuntu):**
 ```bash
-# Opción 1: Script oficial (recomendado)
+# Opción 1: Script oficial (recomendado, siempre última versión)
 curl https://rclone.org/install.sh | sudo bash
 
-# Opción 2: Via apt (Debian/Ubuntu)
+# Opción 2: Via apt (puede no ser la última versión)
 sudo apt install rclone
 ```
+
+**Linux (Fedora/RHEL/CentOS):**
+```bash
+sudo dnf install rclone
+```
+
+**Linux (Arch):**
+```bash
+sudo pacman -S rclone
+```
+
+**macOS:**
+```bash
+# Con Homebrew
+brew install rclone
+
+# O con el script oficial
+curl https://rclone.org/install.sh | sudo bash
+```
+
+**Windows:**
+```powershell
+# Con winget
+winget install Rclone.Rclone
+
+# Con Chocolatey
+choco install rclone
+
+# O descarga el ejecutable desde: https://rclone.org/downloads/
+```
+
+**Raspberry Pi / ARM:**
+```bash
+# El script oficial detecta la arquitectura automáticamente
+curl https://rclone.org/install.sh | sudo bash
+```
+
+> 📥 **Descarga directa:** También puedes descargar el ejecutable para tu sistema desde [rclone.org/downloads](https://rclone.org/downloads/)
 
 #### Configurar tu proveedor de nube
 
@@ -71,6 +112,97 @@ rclone listremotes
 # Probar conexión (lista archivos en tu Drive)
 rclone lsd gdrive:
 ```
+
+### 🖥️ Configurar rclone en servidor SIN navegador (LXC, VPS, Docker, etc.)
+
+Si la app está instalada en un servidor sin interfaz gráfica, necesitarás autenticarte desde otra máquina y luego transferir la configuración.
+
+#### Opción A: Usando el ejecutable de rclone (recomendado)
+
+**Paso 1: En tu PC/laptop con navegador**
+
+Instala rclone en tu máquina local según tu sistema operativo (ver sección anterior) y configúralo:
+
+```bash
+# Crear directorio para la configuración
+mkdir -p ~/.config/rclone
+
+# Ejecutar configuración
+rclone config
+```
+
+Sigue los pasos para Google Drive (o el proveedor que prefieras). Al terminar, tendrás el archivo `~/.config/rclone/rclone.conf`.
+
+**Paso 2: Copiar la configuración al servidor**
+
+```bash
+# Crear directorio en el servidor
+ssh usuario@tu-servidor "mkdir -p ~/.config/rclone"
+
+# Copiar archivo de configuración
+scp ~/.config/rclone/rclone.conf usuario@tu-servidor:~/.config/rclone/
+
+# Si usas Proxmox LXC:
+pct exec <CTID> -- mkdir -p /root/.config/rclone
+pct push <CTID> ~/.config/rclone/rclone.conf /root/.config/rclone/rclone.conf
+```
+
+**Paso 3: Instalar rclone en el servidor y verificar**
+
+```bash
+# En el servidor
+ssh usuario@tu-servidor
+
+# Instalar rclone
+curl https://rclone.org/install.sh | sudo bash
+
+# Verificar que funciona
+rclone listremotes
+rclone lsd gdrive:
+```
+
+#### Opción B: Usando Docker para configurar
+
+Si no quieres instalar rclone en tu máquina local, puedes usar Docker:
+
+**Paso 1: En tu PC/laptop con navegador**
+
+```bash
+mkdir -p ~/.config/rclone
+
+docker run -it --rm \
+  -v ~/.config/rclone:/config/rclone \
+  rclone/rclone:latest \
+  config
+```
+
+**Paso 2: Copiar al servidor** (igual que arriba)
+
+```bash
+scp ~/.config/rclone/rclone.conf usuario@tu-servidor:~/.config/rclone/
+```
+
+**Paso 3: En el servidor, instalar rclone**
+
+```bash
+curl https://rclone.org/install.sh | sudo bash
+rclone listremotes
+```
+
+#### Opción C: Usar rclone via Docker en el servidor (sin instalar)
+
+Si prefieres no instalar nada en el servidor:
+
+```bash
+# Agregar alias a ~/.bashrc
+echo "alias rclone='docker run --rm -v ~/.config/rclone:/config/rclone -v \$(pwd):/data rclone/rclone:latest'" >> ~/.bashrc
+source ~/.bashrc
+
+# Verificar
+rclone listremotes
+```
+
+> ⚠️ **Nota:** El script de backup espera que `rclone` sea un comando del sistema. Si usas Docker, necesitarás modificar el script o instalar rclone con el método tradicional.
 
 ### 4. Configurar backup automático diario
 

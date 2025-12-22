@@ -355,25 +355,51 @@ rclone config
 3. **Pruebas de restauración**: Prueba restaurar un backup al menos una vez al mes
 4. **Permisos**: Asegúrate de que solo tu usuario tenga acceso al directorio de backups
 
-### Agregar notificaciones por Telegram (opcional)
+### 📱 Notificaciones por Telegram
 
-1. Crea un bot con @BotFather en Telegram
-2. Obtén tu chat_id
-3. Agrega al final del script `backup.sh`:
+El script incluye soporte para notificaciones por Telegram. Recibirás un mensaje cada vez que se complete un backup.
+
+**Paso 1: Crear un bot en Telegram**
+
+1. Abre Telegram y busca `@BotFather`
+2. Envía `/newbot` y sigue las instrucciones
+3. Copia el **token** que te da (algo como `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+
+**Paso 2: Obtener tu Chat ID**
+
+1. Busca `@userinfobot` en Telegram
+2. Envíale cualquier mensaje
+3. Te responderá con tu **ID** (un número como `123456789`)
+
+**Paso 3: Configurar las variables**
+
+Agrega estas variables a tu archivo `.env` o expórtalas antes de ejecutar el backup:
 
 ```bash
-send_telegram_notification() {
-    local message="$1"
-    local bot_token="TU_BOT_TOKEN"
-    local chat_id="TU_CHAT_ID"
-    curl -s -X POST "https://api.telegram.org/bot${bot_token}/sendMessage" \
-        -d chat_id="${chat_id}" \
-        -d text="${message}" \
-        -d parse_mode="HTML" > /dev/null
-}
+# En tu .env
+TELEGRAM_ENABLED=true
+TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_CHAT_ID=123456789
+```
 
-# Llamar al final del main:
-send_telegram_notification "✅ Backup completado: $(basename $backup_file)"
+O expórtalas directamente:
+
+```bash
+export TELEGRAM_ENABLED=true
+export TELEGRAM_BOT_TOKEN=tu_token
+export TELEGRAM_CHAT_ID=tu_chat_id
+./scripts/backup.sh
+```
+
+**Mensaje de ejemplo:**
+
+```
+✅ Backup Finanzas Pro
+
+📦 Archivo: backup_20251222_110000.sql.gz
+📊 Tamaño: 1.2M
+☁️ Destino: + gdrive
+🕐 Fecha: 2025-12-22 11:00
 ```
 
 ## 📊 Estructura de Archivos

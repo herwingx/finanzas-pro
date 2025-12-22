@@ -32,6 +32,12 @@ POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-}"  # Se detectará automáticamente s
 POSTGRES_USER="${POSTGRES_USER:-finanzas}"
 POSTGRES_DB="${POSTGRES_DB:-finanzas_pro}"
 
+# Configuración de Telegram (opcional)
+# Obtén tu bot token de @BotFather y tu chat_id de @userinfobot
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
+TELEGRAM_ENABLED="${TELEGRAM_ENABLED:-false}"  # Cambiar a true para activar
+
 # ============================================================================
 # COLORES Y UTILIDADES
 # ============================================================================
@@ -46,6 +52,35 @@ log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# Función para enviar notificaciones por Telegram
+send_telegram() {
+    local message="$1"
+    local parse_mode="${2:-HTML}"
+    
+    # Verificar si Telegram está habilitado
+    if [ "$TELEGRAM_ENABLED" != "true" ]; then
+        return 0
+    fi
+    
+    # Verificar que las credenciales estén configuradas
+    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+        log_warning "Telegram habilitado pero faltan credenciales (TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID)"
+        return 1
+    fi
+    
+    # Enviar mensaje
+    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        -d chat_id="${TELEGRAM_CHAT_ID}" \
+        -d text="${message}" \
+        -d parse_mode="${parse_mode}" > /dev/null 2>&1
+    
+    if [ $? -eq 0 ]; then
+        log_info "Notificación enviada a Telegram"
+    else
+        log_warning "Error al enviar notificación a Telegram"
+    fi
+}
 
 # ============================================================================
 # FUNCIONES PRINCIPALES
@@ -479,9 +514,28 @@ main() {
         upload_to_cloud "$backup_file"
     fi
     
+    # Calcular tamaño del backup
+    local backup_size=$(du -h "$backup_file" | cut -f1)
+    local backup_name=$(basename "$backup_file")
+    local cloud_status=""
+    
+    if [ "$local_only" = true ]; then
+        cloud_status="(solo local)"
+    else
+        cloud_status="+ ${RCLONE_REMOTE}"
+    fi
+    
     echo ""
     log_success "¡Proceso de backup completado!"
     echo ""
+    
+    # Enviar notificación a Telegram si está habilitado
+    send_telegram "✅ <b>Backup Finanzas Pro</b>
+
+📦 Archivo: <code>${backup_name}</code>
+📊 Tamaño: ${backup_size}
+☁️ Destino: ${cloud_status}
+🕐 Fecha: $(date '+%Y-%m-%d %H:%M')"
 }
 
 main "$@"

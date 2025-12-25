@@ -38,9 +38,16 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
       
+      - name: 🔍 Test Cloudflare Access
+        run: |
+          echo "Testing cloudflared access to ${{ secrets.SSH_HOST }}..."
+          cloudflared access ssh --hostname ${{ secrets.SSH_HOST }} --id ${{ secrets.CF_ACCESS_CLIENT_ID }} --secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }} --url http://localhost:2222 &
+          sleep 3
+          echo "Cloudflared started, testing connection..."
+      
       - name: 🚀 Deploy
         run: |
-          ssh ${{ secrets.SSH_HOST }} << 'ENDSSH'
+          ssh -T -o ConnectTimeout=30 ${{ secrets.SSH_HOST }} << 'ENDSSH'
             cd ${{ secrets.DEPLOY_PATH }}
             echo "📍 Directorio: $(pwd)"
             echo "🔄 Ejecutando deploy..."

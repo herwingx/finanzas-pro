@@ -485,12 +485,21 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
           if (isWithinInterval(payDate, { start: periodStart, end: periodEnd })) {
 
             // 1. Calculate the Cutoff Date associated with this Payment Date
-            // Usually Payment is ~20 days after Cutoff.
-            // If Payment(30) > Cutoff(12), they are in same month.
-            // If Payment(05) < Cutoff(20), Payment is Month X+1, Cutoff is Month X.
+            // The relationship between Cutoff and Payment dates:
+            // - If Payment(20) > Cutoff(10), they are typically in the same month
+            //   Example: Cutoff Jan 10, Payment Jan 20
+            // - If Payment(05) < Cutoff(20), payment is in the NEXT month
+            //   Example: Cutoff Jan 20, Payment Feb 05
+            // - If Payment(30) == Cutoff(30), payment is in the NEXT month (most common for end-of-month cards)
+            //   Example: Cutoff Dec 30, Payment Jan 30
+            // 
+            // The rule: Payment is ALWAYS after Cutoff. If paymentDay <= cutoffDay,
+            // then payment must be in the following month.
 
             let cutoffDate = new Date(payDate);
-            if (account.paymentDay < account.cutoffDay) {
+            if (account.paymentDay <= account.cutoffDay) {
+              // Payment day is same or less than cutoff day, so payment is NEXT month
+              // Therefore, cutoff was the PREVIOUS month
               cutoffDate.setMonth(cutoffDate.getMonth() - 1);
             }
             cutoffDate.setDate(account.cutoffDay);
@@ -681,9 +690,10 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                 // Payment date is derived from this cycle's cutoff
                 // Usually payment is ~20 days after cutoff.
                 // Impl: Set year/month to this cycle's month, then set day to paymentDay.
-                // IF paymentDay < cutoffDay, it means payment is in NEXT month.
+                // IF paymentDay <= cutoffDay, it means payment is in NEXT month.
+                // (When they're equal, like both being day 30, payment is still next month)
                 finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth(), account.paymentDay);
-                if (account.paymentDay < account.cutoffDay) {
+                if (account.paymentDay <= account.cutoffDay) {
                   finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
                 }
               } else {
@@ -692,7 +702,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                 // Payment will be roughly 1 month + 20 days later.
                 // Start with Next Month
                 finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth() + 1, account.paymentDay);
-                if (account.paymentDay < account.cutoffDay) {
+                if (account.paymentDay <= account.cutoffDay) {
                   finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
                 }
               }

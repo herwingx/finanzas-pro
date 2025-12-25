@@ -142,25 +142,24 @@ const FinancialAnalysis: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 md:px-6 space-y-6 pt-2 pb-8">
 
         {/* Period Selector */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="bg-app-subtle p-1 rounded-xl flex gap-1 w-full max-w-md overflow-x-auto no-scrollbar">
-            {(['quincenal', 'mensual', 'bimestral', 'semestral', 'anual'] as const).map(p => (
-              <button
-                key={p}
-                onClick={() => setPeriodType(p)}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap ${periodType === p
-                  ? 'bg-app-surface text-app-text shadow-sm border border-app-border'
-                  : 'text-app-muted hover:text-app-text'
-                  }`}
-              >
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-              </button>
-            ))}
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-app-text">Proyección Financiera</h3>
+            <p className="text-xs text-app-muted">
+              {formatDateUTC(summary.displayStart || summary.periodStart, { style: 'short' })} → {formatDateUTC(summary.displayEnd || summary.periodEnd, { style: 'short' })}
+            </p>
           </div>
-          <p className="text-xs text-app-muted">
-            {formatDateUTC(summary.displayStart || summary.periodStart, { style: 'short' })} → {formatDateUTC(summary.displayEnd || summary.periodEnd, { style: 'short' })}
-            <span className="ml-2 text-app-primary font-medium">({periodLabels[periodType]})</span>
-          </p>
+          <select
+            value={periodType}
+            onChange={(e) => setPeriodType(e.target.value as typeof periodType)}
+            className="appearance-none bg-app-subtle text-app-text text-xs font-semibold px-3 py-2 rounded-lg cursor-pointer outline-none focus:ring-2 focus:ring-app-primary/20 focus:border-app-primary border border-transparent hover:border-app-border transition-colors"
+          >
+            <option value="quincenal">Quincena</option>
+            <option value="mensual">Mes</option>
+            <option value="bimestral">Bimestre</option>
+            <option value="semestral">Semestre</option>
+            <option value="anual">Año</option>
+          </select>
         </div>
 
         {/* Hero Stats Grid */}

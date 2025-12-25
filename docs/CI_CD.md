@@ -178,7 +178,17 @@ Si usas **Cloudflare Tunnels** y no quieres exponer el puerto SSH, esta opción 
    | **Subdominio** | `deploy` (o `ssh`) |
    | **Dominio** | `tudominio.com` |
    | **Tipo** | `SSH` |
-   | **URL** | `localhost:22` |
+   | **URL** | Ver nota abajo |
+
+   > ⚠️ **Importante**: Si tu túnel cloudflared corre en **Docker**, usa la IP del gateway de Docker en lugar de `localhost`:
+   > ```bash
+   > # En el servidor, obtener la IP del gateway
+   > docker network inspect bridge | grep Gateway
+   > # Típicamente: 172.17.0.1
+   > ```
+   > Entonces la URL sería: `172.17.0.1:22`
+   >
+   > Si cloudflared corre directamente en el host (no en Docker), usa: `localhost:22`
 
 7. Guarda la ruta
 
@@ -347,6 +357,46 @@ git push origin main
 ```
 
 Ve a **GitHub** → **Actions** para ver el workflow ejecutándose.
+
+### Paso 9: Configurar Deploy Key (para git pull en el servidor)
+
+El servidor necesita acceso al repositorio para hacer `git pull`. Si usas SSH forwarding localmente, GitHub Actions no lo tendrá.
+
+**En tu servidor:**
+
+```bash
+# Generar llave para acceso a GitHub
+ssh-keygen -t ed25519 -C "finanzas-pro-server" -f ~/.ssh/github_repo_key -N ""
+
+# Mostrar la llave pública
+cat ~/.ssh/github_repo_key.pub
+```
+
+**En GitHub:**
+
+1. Ve al repositorio → **Settings** → **Deploy keys**
+2. Clic en **"Add deploy key"**
+3. Title: `Finanzas Pro Server`
+4. Key: (pegar la llave pública)
+5. Clic en **"Add key"**
+
+**De vuelta en el servidor:**
+
+```bash
+# Configurar git para usar esta llave
+cat >> ~/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/github_repo_key
+    IdentitiesOnly yes
+EOF
+chmod 600 ~/.ssh/config
+
+# Probar la conexión
+ssh -T git@github.com
+# Debería decir: "Hi herwingx/finanzas-pro! You've successfully authenticated..."
+```
 
 ---
 

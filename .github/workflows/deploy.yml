@@ -1,0 +1,57 @@
+name: 🚀 Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Permite ejecución manual desde GitHub
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔐 Install cloudflared
+        run: |
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/
+      
+      - name: 🔑 Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+      
+      - name: 🔧 Configure SSH for Cloudflare Access
+        run: |
+          cat >> ~/.ssh/config << EOF
+          Host ${{ secrets.SSH_HOST }}
+            ProxyCommand cloudflared access ssh --hostname %h --id ${{ secrets.CF_ACCESS_CLIENT_ID }} --secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+            User ${{ secrets.SSH_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+          chmod 600 ~/.ssh/config
+      
+      - name: 🚀 Deploy
+        run: |
+          ssh ${{ secrets.SSH_HOST }} << 'ENDSSH'
+            cd ${{ secrets.DEPLOY_PATH }}
+            echo "📍 Directorio: $(pwd)"
+            echo "🔄 Ejecutando deploy..."
+            ./deploy.sh update
+            echo "✅ Deploy completado!"
+          ENDSSH
+      
+      - name: ✅ Success
+        if: success()
+        run: echo "🎉 Deployment successful!"
+      
+      - name: ❌ Failure
+        if: failure()
+        run: echo "💥 Deployment failed! Check the logs above."

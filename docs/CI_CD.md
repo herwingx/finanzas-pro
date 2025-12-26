@@ -39,12 +39,38 @@ Tu PC (desarrollo)          GitHub                    Tu Servidor
 
 ### Beneficios
 
-| Antes (manual) | Después (CI/CD) |
-|:---------------|:----------------|
-| SSH al server → `./deploy.sh update` | Solo `git push` |
-| ~2-5 min de tu tiempo | 0 segundos (automático) |
-| Puedes olvidar ejecutar migraciones | Todo automatizado |
-| No sabes qué versión está en prod | Cada deploy queda registrado |
+| Antes (manual)                       | Después (CI/CD)              |
+| :----------------------------------- | :--------------------------- |
+| SSH al server → `./deploy.sh update` | Solo `git push`              |
+| ~2-5 min de tu tiempo                | 0 segundos (automático)      |
+| Puedes olvidar ejecutar migraciones  | Todo automatizado            |
+| No sabes qué versión está en prod    | Cada deploy queda registrado |
+
+### Nombres Descriptivos de Workflows
+
+Usamos `run-name` para que los deploys aparezcan con títulos informativos en la UI de GitHub Actions:
+
+```yaml
+name: 🚀 Deploy to Production
+
+run-name: "🚀 Deploy por ${{ github.actor }} - ${{ github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.event.head_commit.message }}"
+```
+
+**Ejemplos de títulos resultantes:**
+
+| Trigger          | Título en GitHub Actions                                |
+| :--------------- | :------------------------------------------------------ |
+| Push a main      | `🚀 Deploy por herwingx - feat(auth): implementar login` |
+| Ejecución manual | `🚀 Deploy por herwingx - 🔧 Manual`                      |
+
+**Variables útiles para run-name:**
+
+| Variable                           | Descripción                     | Ejemplo                     |
+| :--------------------------------- | :------------------------------ | :-------------------------- |
+| `github.actor`                     | Usuario que disparó el workflow | `herwingx`                  |
+| `github.ref_name`                  | Nombre de la rama/tag           | `main`, `feat/login`        |
+| `github.event_name`                | Tipo de evento                  | `push`, `workflow_dispatch` |
+| `github.event.head_commit.message` | Mensaje del commit              | `feat(auth): login`         |
 
 ---
 
@@ -90,13 +116,13 @@ Ve a tu repositorio en GitHub → **Settings** → **Secrets and variables** →
 
 Agrega estos secrets:
 
-| Secret Name | Valor | Descripción |
-|:------------|:------|:------------|
-| `SSH_HOST` | `tu-servidor.com` o `IP` | Dirección del servidor |
-| `SSH_USER` | `usuario` | Usuario SSH |
-| `SSH_PRIVATE_KEY` | Contenido de `~/.ssh/finanzas_deploy` | Llave privada completa |
-| `SSH_PORT` | `22` | Puerto SSH (opcional, default 22) |
-| `DEPLOY_PATH` | `/opt/apps/finanzas-pro` | Ruta de la aplicación |
+| Secret Name       | Valor                                 | Descripción                       |
+| :---------------- | :------------------------------------ | :-------------------------------- |
+| `SSH_HOST`        | `tu-servidor.com` o `IP`              | Dirección del servidor            |
+| `SSH_USER`        | `usuario`                             | Usuario SSH                       |
+| `SSH_PRIVATE_KEY` | Contenido de `~/.ssh/finanzas_deploy` | Llave privada completa            |
+| `SSH_PORT`        | `22`                                  | Puerto SSH (opcional, default 22) |
+| `DEPLOY_PATH`     | `/opt/apps/finanzas-pro`              | Ruta de la aplicación             |
 
 > ⚠️ **Importante**: Copia TODO el contenido de la llave privada, incluyendo las líneas `-----BEGIN` y `-----END`.
 
@@ -173,12 +199,12 @@ Si usas **Cloudflare Tunnels** y no quieres exponer el puerto SSH, esta opción 
 5. Clic en **"+ Agregar ruta de aplicación publicada"**
 6. Configura:
    
-   | Campo | Valor |
-   |:------|:------|
+   | Campo          | Valor              |
+   | :------------- | :----------------- |
    | **Subdominio** | `deploy` (o `ssh`) |
-   | **Dominio** | `tudominio.com` |
-   | **Tipo** | `SSH` |
-   | **URL** | Ver nota abajo |
+   | **Dominio**    | `tudominio.com`    |
+   | **Tipo**       | `SSH`              |
+   | **URL**        | Ver nota abajo     |
 
    > ⚠️ **Importante**: Si tu túnel cloudflared corre en **Docker**, usa la IP del gateway de Docker en lugar de `localhost`:
    > ```bash
@@ -199,17 +225,17 @@ Si usas **Cloudflare Tunnels** y no quieres exponer el puerto SSH, esta opción 
 3. Selecciona tipo: **"Autoalojado"** (Self-hosted)
 4. Configura **Información básica**:
    
-   | Campo | Valor |
-   |:------|:------|
-   | **Nombre de aplicación** | `SSH Deploy` |
-   | **Duración de la sesión** | `24 hours` |
+   | Campo                     | Valor        |
+   | :------------------------ | :----------- |
+   | **Nombre de aplicación**  | `SSH Deploy` |
+   | **Duración de la sesión** | `24 hours`   |
 
 5. Clic en **"+ Agregar nombre de host público"**:
    
-   | Campo | Valor |
-   |:------|:------|
-   | **Subdominio** | `deploy` |
-   | **Dominio** | `tudominio.com` |
+   | Campo          | Valor           |
+   | :------------- | :-------------- |
+   | **Subdominio** | `deploy`        |
+   | **Dominio**    | `tudominio.com` |
 
 6. Continúa al siguiente paso (políticas)
 
@@ -221,9 +247,9 @@ Si usas **Cloudflare Tunnels** y no quieres exponer el puerto SSH, esta opción 
 2. Clic en **"Crear token de servicio"**
 3. Configura:
    
-   | Campo | Valor |
-   |:------|:------|
-   | **Nombre** | `github-actions-deploy` |
+   | Campo        | Valor                    |
+   | :----------- | :----------------------- |
+   | **Nombre**   | `github-actions-deploy`  |
    | **Duración** | `Non-expiring` (o 1 año) |
 
 4. **¡IMPORTANTE!** Copia y guarda estos valores (solo se muestran una vez):
@@ -236,18 +262,18 @@ Si usas **Cloudflare Tunnels** y no quieres exponer el puerto SSH, esta opción 
 2. Clic en **"Agregar una política"**
 3. Configura:
    
-   | Campo | Valor |
-   |:------|:------|
-   | **Nombre de política** | `GitHub Actions Deploy` |
-   | **Acción** | `Service Auth` |
+   | Campo                     | Valor                                                          |
+   | :------------------------ | :------------------------------------------------------------- |
+   | **Nombre de política**    | `GitHub Actions Deploy`                                        |
+   | **Acción**                | `Service Auth`                                                 |
    | **Duración de la sesión** | `Igual que el tiempo de expiración de la sesión de aplicación` |
 
 4. En **"Agregar reglas"** → sección **"Incluir"**:
    
-   | Campo | Valor |
-   |:------|:------|
-   | **Selector** | `Service Token` |
-   | **Valor** | Selecciona `github-actions-deploy` |
+   | Campo        | Valor                              |
+   | :----------- | :--------------------------------- |
+   | **Selector** | `Service Token`                    |
+   | **Valor**    | Selecciona `github-actions-deploy` |
 
 5. Guarda la política
 6. Continúa hasta **"Ajustes avanzados"** → clic en **"Guardar"** (sin cambiar nada)
@@ -275,14 +301,14 @@ Ve a tu repositorio: **Settings** → **Security** → **Secrets and variables**
 
 Crea estos 6 secrets (uno por uno con "New repository secret"):
 
-| Secret Name | Valor | Ejemplo |
-|:------------|:------|:--------|
-| `SSH_HOST` | Subdominio del túnel | `deploy.tudominio.com` |
-| `SSH_USER` | Usuario del servidor | `root` o `tu_usuario` |
-| `SSH_PRIVATE_KEY` | Llave privada completa | `-----BEGIN OPENSSH...` |
-| `CF_ACCESS_CLIENT_ID` | Client ID del token | `fd97ff505...access` |
-| `CF_ACCESS_CLIENT_SECRET` | Client Secret del token | `e05845f929...` |
-| `DEPLOY_PATH` | Ruta de la aplicación | `/opt/apps/finanzas-pro` |
+| Secret Name               | Valor                   | Ejemplo                  |
+| :------------------------ | :---------------------- | :----------------------- |
+| `SSH_HOST`                | Subdominio del túnel    | `deploy.tudominio.com`   |
+| `SSH_USER`                | Usuario del servidor    | `root` o `tu_usuario`    |
+| `SSH_PRIVATE_KEY`         | Llave privada completa  | `-----BEGIN OPENSSH...`  |
+| `CF_ACCESS_CLIENT_ID`     | Client ID del token     | `fd97ff505...access`     |
+| `CF_ACCESS_CLIENT_SECRET` | Client Secret del token | `e05845f929...`          |
+| `DEPLOY_PATH`             | Ruta de la aplicación   | `/opt/apps/finanzas-pro` |
 
 ### Paso 7: Crear el Workflow
 
@@ -568,10 +594,10 @@ Agrega esto a tu README.md:
 
 ## 🎯 Resumen
 
-| Opción | Pros | Contras | Recomendado para |
-|:-------|:-----|:--------|:-----------------|
-| **SSH Directo** | Simple, usa `deploy.sh` | Requiere puerto 22 abierto | VPS, servidores con IP pública |
-| **Cloudflare Tunnel** | Seguro, sin puertos | Más configuración | Home Lab, NAT |
-| **Watchtower** | Zero-touch | No ejecuta migraciones | Imágenes pre-built |
+| Opción                | Pros                    | Contras                    | Recomendado para               |
+| :-------------------- | :---------------------- | :------------------------- | :----------------------------- |
+| **SSH Directo**       | Simple, usa `deploy.sh` | Requiere puerto 22 abierto | VPS, servidores con IP pública |
+| **Cloudflare Tunnel** | Seguro, sin puertos     | Más configuración          | Home Lab, NAT                  |
+| **Watchtower**        | Zero-touch              | No ejecuta migraciones     | Imágenes pre-built             |
 
 **Recomendación**: Para Home Labs con Cloudflare Tunnels, usa la **Opción 2**. Para VPS con IP pública, usa la **Opción 1**.

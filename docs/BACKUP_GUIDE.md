@@ -1,6 +1,10 @@
 # 🔒 Guía de Backup - Finanzas Pro
 
+> **Tranquilidad Mental** — Estrategias de respaldo automático local y en la nube.
+
 Esta guía explica cómo configurar backups automáticos diarios de tu base de datos con subida opcional a la nube.
+
+---
 
 ## 📋 Características
 

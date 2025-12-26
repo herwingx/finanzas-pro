@@ -1,5 +1,7 @@
 # 🤝 Guía de Contribución
 
+> **Construyamos Juntos** — Estándares y procesos para colaborar efectivamente en el proyecto.
+
 ¡Gracias por tu interés en contribuir a Finanzas Pro! Este documento explica cómo puedes ayudar a mejorar el proyecto.
 
 ---
@@ -167,15 +169,15 @@ refactor(api): simplificar validación de usuarios
 ```
 
 **Tipos permitidos:**
-| Tipo | Descripción |
-|------|-------------|
-| `feat` | Nueva funcionalidad |
-| `fix` | Corrección de bug |
-| `docs` | Solo documentación |
-| `style` | Formato (sin cambios de lógica) |
+| Tipo       | Descripción                          |
+| ---------- | ------------------------------------ |
+| `feat`     | Nueva funcionalidad                  |
+| `fix`      | Corrección de bug                    |
+| `docs`     | Solo documentación                   |
+| `style`    | Formato (sin cambios de lógica)      |
 | `refactor` | Cambio de código sin nuevas features |
-| `test` | Agregar o corregir tests |
-| `chore` | Tareas de build, dependencias |
+| `test`     | Agregar o corregir tests             |
+| `chore`    | Tareas de build, dependencias        |
 
 ### 5. Push y Pull Request
 

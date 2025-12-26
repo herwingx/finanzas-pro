@@ -17,16 +17,16 @@
 
 ## ✨ Características
 
-| Característica | Descripción |
-|:---------------|:------------|
-| 🏦 **Multi-cuenta** | Gestiona cuentas de débito, crédito y efectivo |
-| 💳 **Compras MSI** | Control de compras a meses sin intereses |
-| 🔄 **Recurrentes** | Automatiza ingresos y gastos fijos |
-| 💸 **Préstamos** | Registra dinero prestado o debido |
-| 📊 **Regla 50/30/20** | Análisis financiero inteligente |
-| 📱 **Mobile-First** | PWA optimizada con gestos swipe |
-| 🌓 **Tema Oscuro/Claro** | Diseño premium adaptativo |
-| 🔒 **Self-Hosted** | Tus datos, tu servidor |
+| Característica          | Descripción                                    |
+| :---------------------- | :--------------------------------------------- |
+| 🏦 **Multi-cuenta**      | Gestiona cuentas de débito, crédito y efectivo |
+| 💳 **Compras MSI**       | Control de compras a meses sin intereses       |
+| 🔄 **Recurrentes**       | Automatiza ingresos y gastos fijos             |
+| 💸 **Préstamos**         | Registra dinero prestado o debido              |
+| 📊 **Regla 50/30/20**    | Análisis financiero inteligente                |
+| 📱 **Mobile-First**      | PWA optimizada con gestos swipe                |
+| 🌓 **Tema Oscuro/Claro** | Diseño premium adaptativo                      |
+| 🔒 **Self-Hosted**       | Tus datos, tu servidor                         |
 
 ---
 
@@ -119,10 +119,10 @@ chmod +x deploy.sh
 
 ## 📦 Opciones de Despliegue
 
-| Método | Archivo | Ideal para |
-|:-------|:--------|:-----------|
-| **Cloudflare Tunnel** | `docker-compose.yml` | Home Lab (sin exponer puertos) |
-| **Self-Hosted** | `docker-compose.selfhosted.yml` | VPS, LAN, tras proxy propio |
+| Método                | Archivo                         | Ideal para                     |
+| :-------------------- | :------------------------------ | :----------------------------- |
+| **Cloudflare Tunnel** | `docker-compose.yml`            | Home Lab (sin exponer puertos) |
+| **Self-Hosted**       | `docker-compose.selfhosted.yml` | VPS, LAN, tras proxy propio    |
 
 ### Cloudflare Tunnel (Recomendado para Home Lab)
 
@@ -166,13 +166,13 @@ El script `deploy.sh` simplifica la gestión:
 
 ## 📚 Documentación
 
-| Documento | Descripción |
-|:----------|:------------|
-| [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Guía completa de despliegue |
-| [CI_CD.md](./docs/CI_CD.md) | Configurar despliegue automático |
-| [BACKUP.md](./docs/BACKUP_GUIDE.md) | Sistema de backups |
-| [SECURITY.md](./docs/SEGURIDAD.md) | Configuración de seguridad |
-| [CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Guía para contribuidores |
+| Documento                                 | Descripción                      |
+| :---------------------------------------- | :------------------------------- |
+| [DEPLOYMENT.md](./docs/DEPLOYMENT.md)     | Guía completa de despliegue      |
+| [CI_CD.md](./docs/CI_CD.md)               | Configurar despliegue automático |
+| [BACKUP.md](./docs/BACKUP_GUIDE.md)       | Sistema de backups               |
+| [SECURITY.md](./docs/SECURITY.md)         | Configuración de seguridad       |
+| [CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Guía para contribuidores         |
 
 ---
 

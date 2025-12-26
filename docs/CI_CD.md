@@ -1,5 +1,7 @@
 # 🚀 Guía de CI/CD - Despliegue Automático
 
+> **Automatización Total** — Configura pipelines robustos para desplegar cambios sin esfuerzo.
+
 Esta guía explica cómo configurar **despliegue automático** para Finanzas Pro. Una vez configurado, cada push a la rama `main` desplegará automáticamente los cambios en tu servidor.
 
 ---

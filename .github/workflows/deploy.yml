@@ -1,5 +1,7 @@
 name: 🚀 Deploy to Production
 
+run-name: "🚀 Deploy por ${{ github.actor }} - ${{ github.event_name == 'workflow_dispatch' && '🔧 Manual' || github.event.head_commit.message }}"
+
 on:
   push:
     branches: [main]

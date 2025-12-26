@@ -1,6 +1,10 @@
 # 🔒 Guía de Seguridad - Finanzas Pro
 
+> **Protección Blindada** — Medidas proactivas para asegurar tus datos financieros.
+
 Esta guía describe las medidas de seguridad implementadas y cómo configurarlas para proteger tu instalación.
+
+---
 
 ## Tabla de Contenidos
 
@@ -19,15 +23,15 @@ Esta guía describe las medidas de seguridad implementadas y cómo configurarlas
 
 Finanzas Pro implementa múltiples capas de seguridad:
 
-| Característica | Descripción |
-|----------------|-------------|
-| **Contraseñas** | Hasheadas con bcrypt (salt rounds: 10) |
-| **Autenticación** | JWT con expiración de 24 horas |
-| **Rate Limiting** | Protección contra fuerza bruta |
-| **CORS** | Control de orígenes permitidos |
-| **Helmet** | Headers de seguridad HTTP |
-| **Token de Reset** | Expira en 1 hora |
-| **Logs Sanitizados** | No se loguean contraseñas ni tokens |
+| Característica       | Descripción                            |
+| -------------------- | -------------------------------------- |
+| **Contraseñas**      | Hasheadas con bcrypt (salt rounds: 10) |
+| **Autenticación**    | JWT con expiración de 24 horas         |
+| **Rate Limiting**    | Protección contra fuerza bruta         |
+| **CORS**             | Control de orígenes permitidos         |
+| **Helmet**           | Headers de seguridad HTTP              |
+| **Token de Reset**   | Expira en 1 hora                       |
+| **Logs Sanitizados** | No se loguean contraseñas ni tokens    |
 
 ---
 
@@ -78,13 +82,13 @@ REGISTRATION_ENABLED="false"
 
 Protección contra ataques de fuerza bruta:
 
-| Endpoint | Límite | Ventana |
-|----------|--------|---------|
-| `/api/*` (general) | 100 requests | 15 minutos |
-| `/api/auth/login` | 5 intentos | 15 minutos |
-| `/api/auth/register` | 5 intentos | 15 minutos |
-| `/api/auth/request-reset` | 3 intentos | 1 hora |
-| `/api/auth/reset-password` | 5 intentos | 15 minutos |
+| Endpoint                   | Límite       | Ventana    |
+| -------------------------- | ------------ | ---------- |
+| `/api/*` (general)         | 100 requests | 15 minutos |
+| `/api/auth/login`          | 5 intentos   | 15 minutos |
+| `/api/auth/register`       | 5 intentos   | 15 minutos |
+| `/api/auth/request-reset`  | 3 intentos   | 1 hora     |
+| `/api/auth/reset-password` | 5 intentos   | 15 minutos |
 
 ### Respuestas de Rate Limit
 

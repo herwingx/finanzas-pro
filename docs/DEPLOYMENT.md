@@ -1,5 +1,7 @@
 # 🚀 Guía de Despliegue
 
+> **Tu Server, Tus Reglas** — Opciones flexibles para desplegar en Home Lab, VPS o Nube.
+
 Esta guía cubre todas las opciones para desplegar Finanzas Pro en tu propio servidor.
 
 ---
@@ -21,10 +23,10 @@ Esta guía cubre todas las opciones para desplegar Finanzas Pro en tu propio ser
 ### Hardware
 
 | Recurso | Mínimo | Recomendado |
-|---------|--------|-------------|
-| CPU | 1 core | 2-4 cores |
-| RAM | 2 GB | 4 GB |
-| Disco | 10 GB | 20 GB (SSD) |
+| ------- | ------ | ----------- |
+| CPU     | 1 core | 2-4 cores   |
+| RAM     | 2 GB   | 4 GB        |
+| Disco   | 10 GB  | 20 GB (SSD) |
 
 ### Software
 
@@ -101,8 +103,8 @@ NODE_ENV=production
 
 En el dashboard de Cloudflare, configura el **Public Hostname**:
 
-| Subdomain | Domain | Service |
-|-----------|--------|---------|
+| Subdomain  | Domain          | Service           |
+| ---------- | --------------- | ----------------- |
 | `finanzas` | `tudominio.com` | `http://nginx:80` |
 
 ### Paso 4: Iniciar
@@ -152,12 +154,12 @@ docker compose -f docker-compose.selfhosted.yml exec backend npx prisma migrate 
 
 ### Puertos expuestos
 
-| Servicio | Puerto | Descripción |
-|----------|--------|-------------|
-| Frontend | 3000 | Aplicación web |
-| Backend | 4000 | API REST |
-| PostgreSQL | 5432 | Base de datos |
-| Nginx | 80 | Reverse proxy |
+| Servicio   | Puerto | Descripción    |
+| ---------- | ------ | -------------- |
+| Frontend   | 3000   | Aplicación web |
+| Backend    | 4000   | API REST       |
+| PostgreSQL | 5432   | Base de datos  |
+| Nginx      | 80     | Reverse proxy  |
 
 ### Acceder
 
@@ -228,23 +230,23 @@ cd frontend && npm run dev
 
 ### `.env` (raíz del proyecto)
 
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `POSTGRES_USER` | Usuario de PostgreSQL | `finanzas` |
-| `POSTGRES_PASSWORD` | Contraseña de PostgreSQL | `password_segura` |
-| `POSTGRES_DB` | Nombre de la base de datos | `finanzas_pro` |
-| `CLOUDFLARE_TUNNEL_TOKEN` | Token del tunnel (opcional) | `eyJhIjo...` |
+| Variable                  | Descripción                 | Ejemplo           |
+| ------------------------- | --------------------------- | ----------------- |
+| `POSTGRES_USER`           | Usuario de PostgreSQL       | `finanzas`        |
+| `POSTGRES_PASSWORD`       | Contraseña de PostgreSQL    | `password_segura` |
+| `POSTGRES_DB`             | Nombre de la base de datos  | `finanzas_pro`    |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Token del tunnel (opcional) | `eyJhIjo...`      |
 
 ### `backend/.env`
 
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `DATABASE_URL` | URL de conexión PostgreSQL | `postgresql://user:pass@db:5432/finanzas_pro` |
-| `JWT_SECRET` | Secreto para tokens JWT | `string-aleatorio-largo` |
-| `PORT` | Puerto del backend | `4000` |
-| `NODE_ENV` | Entorno | `production` |
-| `FRONTEND_URL` | URL del frontend (CORS) | `https://finanzas.tudominio.com` |
-| `SMTP_*` | Configuración de email (opcional) | Ver abajo |
+| Variable       | Descripción                       | Ejemplo                                       |
+| -------------- | --------------------------------- | --------------------------------------------- |
+| `DATABASE_URL` | URL de conexión PostgreSQL        | `postgresql://user:pass@db:5432/finanzas_pro` |
+| `JWT_SECRET`   | Secreto para tokens JWT           | `string-aleatorio-largo`                      |
+| `PORT`         | Puerto del backend                | `4000`                                        |
+| `NODE_ENV`     | Entorno                           | `production`                                  |
+| `FRONTEND_URL` | URL del frontend (CORS)           | `https://finanzas.tudominio.com`              |
+| `SMTP_*`       | Configuración de email (opcional) | Ver abajo                                     |
 
 ### Configuración SMTP (opcional)
 

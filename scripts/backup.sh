@@ -33,7 +33,7 @@ BACKUP_RETENTION_DAYS=7
 
 # Configuración de rclone (opcional)
 RCLONE_REMOTE="${RCLONE_REMOTE:-gdrive}"  # Nombre del remote en rclone
-RCLONE_PATH="${RCLONE_PATH:-finanzas-pro-backups}"  # Carpeta en la nube
+RCLONE_PATH="${RCLONE_PATH:-Backup Finanzas Pro}"  # Carpeta en la nube
 
 # Configuración de PostgreSQL (desde el docker-compose o variables de entorno)
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-}"  # Se detectará automáticamente si está vacío
@@ -463,7 +463,7 @@ show_help() {
     echo "  POSTGRES_USER       Usuario de PostgreSQL (default: finanzas)"
     echo "  POSTGRES_DB         Base de datos (default: finanzas_pro)"
     echo "  RCLONE_REMOTE       Nombre del remote de rclone (default: gdrive)"
-    echo "  RCLONE_PATH         Carpeta en la nube (default: finanzas-pro-backups)"
+    echo "  RCLONE_PATH         Carpeta en la nube (default: Backup Finanzas Pro)"
     echo "  BACKUP_RETENTION_DAYS  Días de retención (default: 7)"
     echo ""
     echo "Ejemplos:"

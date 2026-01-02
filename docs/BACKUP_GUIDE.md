@@ -23,11 +23,11 @@ graph TD
     Dump --> Compress[2. Comprimir .sql.gz]
     Compress --> SaveLocal[Guardar en /backups]
     
-    SaveLocal --> Cloud{¿Rclone Configurado?}
+    SaveLocal --> Cloud{"¿Rclone Configurado?"}
     Cloud -- Sí --> Upload[3. Subir a Nube]
     Cloud -- No --> CleanLocal
     
-    Upload --> Telegram{¿Notificaciones?}
+    Upload --> Telegram{"¿Notificaciones?"}
     Upload --> CleanCloud[4. Limpiar Antiguos Nube]
     CleanCloud --> CleanLocal[5. Limpiar Antiguos Local]
     

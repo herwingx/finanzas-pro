@@ -108,8 +108,8 @@ graph TD
         Nginx[Nginx Reverse Proxy]
         
         subgraph "Docker Network"
-            Frontend[Frontend (React/Vite)]
-            Backend[Backend (Express)]
+            Frontend["Frontend (React/Vite)"]
+            Backend["Backend (Express)"]
             DB[(PostgreSQL)]
         end
     end

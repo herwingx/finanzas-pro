@@ -19,15 +19,16 @@ Esta guía cubre todas las opciones para desplegar Finanzas Pro en tu propio ser
 
 ```mermaid
 graph TD
-    Start([Inicio]) --> Q1{¿Propósito?}
+    Start([Inicio]) --> Q1{"¿Propósito?"}
     
-    Q1 -->|Producción / Home Lab| Q2{¿Acceso Externo?}
+    Q1 -->|Producción / Home Lab| Q2{"¿Acceso Externo?"}
     Q1 -->|Desarrollo / Pruebas| Opt3[Opción 3: Local]
     
     Q2 -->|Sin abrir puertos / IP Dinámica| Opt1[Opción 1: Cloudflare Tunnel]
     Q2 -->|VPS con IP Pública / LAN| Opt2[Opción 2: Self-Hosted]
     
     style Opt1 fill:#f9f,stroke:#333
+
     style Opt2 fill:#bbf,stroke:#333
     style Opt3 fill:#bfb,stroke:#333
 ```

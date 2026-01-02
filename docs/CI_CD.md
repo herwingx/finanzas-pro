@@ -21,22 +21,25 @@ Esta guía explica cómo configurar **despliegue automático** para Finanzas Pro
 
 ### Flujo de CI/CD
 
-```
-Tu PC (desarrollo)          GitHub                    Tu Servidor
-      │                        │                           │
-      │  1. git push main      │                           │
-      ├───────────────────────►│                           │
-      │                        │  2. GitHub Actions        │
-      │                        │     se activa             │
-      │                        ├──────────────────────────►│
-      │                        │  3. SSH al servidor       │
-      │                        │                           │ 4. ./deploy.sh update
-      │                        │                           │    - git pull
-      │                        │                           │    - docker rebuild
-      │                        │                           │    - prisma migrate
-      │                        │◄──────────────────────────┤
-      │                        │  5. Notificación ✅       │
-      │◄───────────────────────┤                           │
+```mermaid
+sequenceDiagram
+    participant User as Tu PC (Desarrollo)
+    participant GitHub as GitHub Repo
+    participant Actions as GitHub Actions
+    participant Server as Tu Servidor
+
+    User->>GitHub: 1. git push main
+    GitHub->>Actions: Trigger Event
+    activate Actions
+    Note over Actions: 2. Ejecuta Workflow
+    Actions->>Server: 3. SSH Connect
+    activate Server
+    Server->>Server: 4. ./deploy.sh update
+    Note right of Server: git pull<br/>docker rebuild<br/>prisma migrate
+    Server-->>Actions: Success Output
+    deactivate Server
+    Actions-->>User: 5. Notificación/Status ✅
+    deactivate Actions
 ```
 
 ### Beneficios

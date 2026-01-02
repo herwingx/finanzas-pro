@@ -8,6 +8,8 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![CI/CD](https://github.com/herwingx/finanzas-pro/actions/workflows/deploy.yml/badge.svg)](https://github.com/herwingx/finanzas-pro/actions/workflows/deploy.yml)
+<!-- Topics: finance, self-hosted, personal-management, react, typescript, nodejs, postgresql, docker, pwa, budget-app -->
 
 <p align="center">
   <img src="docs/images/dashboard-preview.png" alt="Dashboard Preview" width="800"/>
@@ -92,27 +94,35 @@ chmod +x deploy.sh
 
 ## 🏗️ Arquitectura
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DOCKER NETWORK                           │
-│                                                                 │
-│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
-│   │   Frontend   │◄──►│   Backend    │◄──►│  PostgreSQL  │     │
-│   │  (React/Vite)│    │  (Express)   │    │     (DB)     │     │
-│   │   :3000      │    │   :4000      │    │   :5432      │     │
-│   └──────────────┘    └──────────────┘    └──────────────┘     │
-│          │                   │                                  │
-│          └─────────┬─────────┘                                  │
-│                    ▼                                            │
-│   ┌─────────────────────────────────────┐                      │
-│   │           Nginx (Reverse Proxy)      │                      │
-│   └─────────────────────────────────────┘                      │
-│                    │                                            │
-│                    ▼                                            │
-│   ┌─────────────────────────────────────┐                      │
-│   │    Cloudflare Tunnel (Opcional)      │───► Internet        │
-│   └─────────────────────────────────────┘                      │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Internet
+        User([User])
+    end
+
+    subgraph "Cloudflare Network"
+        CF[Cloudflare Tunnel]
+    end
+
+    subgraph "Home Lab / Server"
+        Nginx[Nginx Reverse Proxy]
+        
+        subgraph "Docker Network"
+            Frontend[Frontend (React/Vite)]
+            Backend[Backend (Express)]
+            DB[(PostgreSQL)]
+        end
+    end
+
+    User <-->|HTTPS| CF
+    CF <-->|Tunnel| Nginx
+    
+    User -.->|LAN :3000| Nginx
+
+    Nginx <-->|/api| Backend
+    Nginx <-->|/*| Frontend
+    
+    Backend <--> DB
 ```
 
 ---

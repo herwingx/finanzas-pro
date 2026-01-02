@@ -1,4 +1,21 @@
 {
+  "name": "finanzas-pro",
+  "version": "1.0.0",
+  "description": "Sistema integral de gestión financiera personal — Self-hosted, privado y completamente tuyo.",
+  "keywords": [
+    "finance",
+    "self-hosted",
+    "personal-management",
+    "react",
+    "typescript",
+    "nodejs",
+    "postgresql",
+    "docker",
+    "pwa",
+    "budget-app"
+  ],
+  "author": "Herwingx",
+  "license": "MIT",
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.15"
   }

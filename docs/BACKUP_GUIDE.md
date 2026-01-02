@@ -16,6 +16,30 @@ Esta guía explica cómo configurar backups automáticos diarios de tu base de d
 - ✅ **Restauración fácil** con menú interactivo
 - ✅ **Detección automática** del contenedor de PostgreSQL
 
+```mermaid
+graph TD
+    Start(Inicio del Backup) --> Detect[Detectar contenedor DB]
+    Detect --> Dump[1. Dump PostgreSQL]
+    Dump --> Compress[2. Comprimir .sql.gz]
+    Compress --> SaveLocal[Guardar en /backups]
+    
+    SaveLocal --> Cloud{¿Rclone Configurado?}
+    Cloud -- Sí --> Upload[3. Subir a Nube]
+    Cloud -- No --> CleanLocal
+    
+    Upload --> Telegram{¿Notificaciones?}
+    Upload --> CleanCloud[4. Limpiar Antiguos Nube]
+    CleanCloud --> CleanLocal[5. Limpiar Antiguos Local]
+    
+    CleanLocal --> End(Fin)
+    Telegram -- Sí --> Notify[Enviar Mensaje]
+    Notify --> CleanCloud
+    
+    style Start fill:#f9f,stroke:#333
+    style Dump fill:#bbf,stroke:#333
+    style Upload fill:#bfb,stroke:#333
+```
+
 ## 🚀 Configuración Rápida
 
 ### 1. Hacer el script ejecutable

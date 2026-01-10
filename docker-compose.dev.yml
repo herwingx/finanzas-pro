@@ -1,0 +1,31 @@
+# =============================================================================
+# docker-compose.dev.yml - Solo base de datos para desarrollo local
+# =============================================================================
+# USO:
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Esto levanta SOLO PostgreSQL. Backend y Frontend corren localmente con
+# npm run dev para tener hot-reload.
+# =============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: finanzas-pro-db-dev
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-finanzas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev123}
+      POSTGRES_DB: ${POSTGRES_DB:-finanzas_pro}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-finanzas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:

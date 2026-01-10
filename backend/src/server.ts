@@ -20,6 +20,10 @@ import installmentsRoutes from './routes/installments';
 import financialPlanningRoutes from './routes/financialPlanningRoutes';
 import creditCardPaymentsRoutes from './routes/creditCardPayments';
 import loansRoutes from './routes/loans';
+import aiRoutes from './routes/ai';
+
+// Jobs (P0 - Persistencia Crítica)
+import { generateCreditCardStatements, createDailyAccountSnapshots } from './jobs';
 
 const app = express();
 
@@ -83,6 +87,7 @@ app.use('/api/installments', installmentsRoutes);
 app.use('/api/financial-planning', financialPlanningRoutes);
 app.use('/api/credit-card', creditCardPaymentsRoutes);
 app.use('/api/loans', loansRoutes);
+app.use('/api/ai', aiRoutes);
 
 // =============================================================================
 // Server Startup with Security Info
@@ -100,4 +105,41 @@ app.listen(PORT, () => {
   console.log(`   • Rate Limiting: ${process.env.RATE_LIMIT_ENABLED !== 'false' ? 'Enabled' : 'Disabled'}`);
   console.log(`   • Registration: ${process.env.REGISTRATION_ENABLED !== 'false' ? 'Open' : 'Disabled'}`);
   console.log('');
+
+  // =============================================================================
+  // Cronjobs P0 (solo en producción)
+  // =============================================================================
+  if (process.env.NODE_ENV === 'production' && process.env.ENABLE_CRON_JOBS === 'true') {
+    console.log('⏰ Cronjobs habilitados:');
+
+    // Ejecutar statements job diario a las 00:05
+    const runStatementsJob = async () => {
+      const now = new Date();
+      // Solo ejecutar a las 00:05
+      if (now.getHours() === 0 && now.getMinutes() >= 5 && now.getMinutes() < 6) {
+        console.log('[CRON] Generando statements de TDC...');
+        await generateCreditCardStatements();
+      }
+    };
+
+    // Ejecutar snapshots job diario a las 23:55
+    const runSnapshotsJob = async () => {
+      const now = new Date();
+      // Solo ejecutar a las 23:55
+      if (now.getHours() === 23 && now.getMinutes() >= 55 && now.getMinutes() < 56) {
+        console.log('[CRON] Creando snapshots de balances...');
+        await createDailyAccountSnapshots();
+      }
+    };
+
+    // Verificar cada minuto
+    setInterval(() => {
+      runStatementsJob().catch(console.error);
+      runSnapshotsJob().catch(console.error);
+    }, 60000);
+
+    console.log('   • Statement Generation: 00:05 daily');
+    console.log('   • Balance Snapshots: 23:55 daily');
+    console.log('');
+  }
 });

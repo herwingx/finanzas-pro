@@ -1,9 +1,41 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ ENUMS P0 ============
+
+/// Tipo de cuenta financiera
+enum AccountType {
+  CASH
+  DEBIT
+  CREDIT
+  LOAN
+  INVESTMENT
+}
+
+/// Estado del estado de cuenta de TDC
+enum StatementStatus {
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
+}
+
+/// Tipo de inversión
+enum InvestmentType {
+  STOCK
+  CRYPTO
+  BOND
+  FUND
+  ETF
+  REAL_ESTATE
+  OTHER
 }
 
 model User {
@@ -17,6 +49,13 @@ model User {
   createdAt             DateTime               @default(now())
   resetToken            String?
   resetTokenExpiry      DateTime?
+  
+  // P0: Campos para cálculo correcto de 50/30/20
+  monthlyNetIncome      Float?                 // Ingreso neto mensual (post-impuestos)
+  incomeFrequency       String?                // weekly, biweekly, monthly
+  taxRate               Float?                 // Tasa de impuestos (ej: 0.30)
+  
+  // Relaciones existentes
   accounts              Account[]
   budgets               Budget[]
   categories            Category[]
@@ -24,27 +63,44 @@ model User {
   loans                 Loan[]
   recurringTransactions RecurringTransaction[]
   transactions          Transaction[]
+  
+  // P0: Nuevas relaciones
+  auditLogs             AuditLog[]
+  investments           Investment[]
+  savingsGoals          SavingsGoal[]
+  notifications         Notification[]
+  calendarEvents        CalendarEvent[]
+  oauthAccounts         UserOAuth[]
+  aiConversations       AIConversation[]
 }
 
 model Account {
-  id                      String                 @id @default(uuid())
+  id                      String                    @id @default(uuid())
   name                    String
-  type                    String
+  type                    String                    // TODO: Migrar a AccountType enum
   balance                 Float
   creditLimit             Float?
   cutoffDay               Int?
   paymentDay              Int?
   userId                  String
-  user                    User                   @relation(fields: [userId], references: [id])
+  
+  // P0: Tasa de interés anual para TDC (ej: 0.45 para 45%)
+  interestRate            Float?
+  
+  user                    User                      @relation(fields: [userId], references: [id])
   installmentPurchases    InstallmentPurchase[]
   loans                   Loan[]
   recurringTransactions   RecurringTransaction[]
   transactions            Transaction[]
-  destinationTransactions Transaction[]          @relation("DestinationTransactions")
+  destinationTransactions Transaction[]             @relation("DestinationTransactions")
+  
+  // P0: Nuevas relaciones para persistencia
+  snapshots               AccountSnapshot[]
+  statements              CreditCardStatement[]
 }
 
 model Transaction {
-  id                     String                @id @default(uuid())
+  id                     String                   @id @default(uuid())
   amount                 Float
   description            String
   date                   DateTime
@@ -52,20 +108,27 @@ model Transaction {
   userId                 String
   categoryId             String?
   accountId              String?
-  createdAt              DateTime              @default(now())
-  updatedAt              DateTime              @updatedAt
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
   recurringTransactionId String?
   installmentPurchaseId  String?
   loanId                 String?
-  destinationAccountId   String?               @map("destination_account_id")
+  destinationAccountId   String?                  @map("destination_account_id")
   deletedAt              DateTime?
-  account                Account?              @relation(fields: [accountId], references: [id])
-  category               Category?             @relation("CategoryTransactions", fields: [categoryId], references: [id])
-  destinationAccount     Account?              @relation("DestinationTransactions", fields: [destinationAccountId], references: [id])
-  installmentPurchase    InstallmentPurchase?  @relation("InstallmentTransactions", fields: [installmentPurchaseId], references: [id])
-  loan                   Loan?                 @relation(fields: [loanId], references: [id])
-  recurringTransaction   RecurringTransaction? @relation("RecurringTransactions", fields: [recurringTransactionId], references: [id])
-  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // P0: Vincular transacción a un estado de cuenta específico al facturarse
+  statementId            String?
+  
+  account                Account?                 @relation(fields: [accountId], references: [id])
+  category               Category?                @relation("CategoryTransactions", fields: [categoryId], references: [id])
+  destinationAccount     Account?                 @relation("DestinationTransactions", fields: [destinationAccountId], references: [id])
+  installmentPurchase    InstallmentPurchase?     @relation("InstallmentTransactions", fields: [installmentPurchaseId], references: [id])
+  loan                   Loan?                    @relation(fields: [loanId], references: [id])
+  recurringTransaction   RecurringTransaction?    @relation("RecurringTransactions", fields: [recurringTransactionId], references: [id])
+  statement              CreditCardStatement?     @relation(fields: [statementId], references: [id])
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([statementId])
 }
 
 model InstallmentPurchase {
@@ -159,4 +222,227 @@ model Loan {
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// ============ MODELOS P0: PERSISTENCIA CRÍTICA ============
+
+/// Estado de cuenta de tarjeta de crédito (congelado al corte).
+/// PROPÓSITO: Resolver el cálculo en runtime. Cuando llega el día de corte,
+/// se "congela" una foto de la deuda que NO cambia retroactivamente.
+model CreditCardStatement {
+  id              String          @id @default(uuid())
+  accountId       String
+  account         Account         @relation(fields: [accountId], references: [id])
+  
+  // Período del ciclo
+  cycleStart      DateTime        /// Día después del corte anterior
+  cycleEnd        DateTime        /// Fecha de corte (congelada)
+  paymentDueDate  DateTime        /// Fecha límite de pago
+  
+  // Montos congelados
+  totalDue        Float           /// Saldo total al corte
+  minimumPayment  Float?          /// Pago mínimo calculado
+  msiAmount       Float           @default(0) /// Cuotas MSI del período
+  regularAmount   Float           @default(0) /// Consumos regulares
+  
+  // Estado de pago
+  status          StatementStatus @default(PENDING)
+  paidAmount      Float           @default(0)
+  paidAt          DateTime?
+  
+  // Transacciones facturadas en este corte
+  transactions    Transaction[]
+  
+  createdAt       DateTime        @default(now())
+  
+  @@index([accountId, cycleEnd])
+}
+
+/// Snapshot diario del balance de cada cuenta.
+/// PROPÓSITO: Graficar Net Worth histórico en O(1) sin recalcular.
+model AccountSnapshot {
+  id        String   @id @default(uuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
+  
+  balance   Float    /// Balance al momento del snapshot
+  date      DateTime /// Fecha del snapshot (medianoche)
+  
+  @@unique([accountId, date])
+  @@index([accountId, date])
+}
+
+/// Registro inmutable de cambios críticos (auditoría).
+/// PROPÓSITO: Soporte técnico, debugging, compliance.
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   /// CREATE, UPDATE, DELETE
+  entityType  String   /// Transaction, Account, etc.
+  entityId    String
+  oldValue    Json?    /// Estado anterior
+  newValue    Json?    /// Estado nuevo
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ============ MODELOS P2: INVERSIONES Y METAS ============
+
+/// Activo de inversión (stocks, crypto, bienes raíces).
+model Investment {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  
+  name            String         /// "Bitcoin", "AAPL", "CETES"
+  type            InvestmentType
+  ticker          String?        /// Símbolo de mercado (opcional)
+  
+  quantity        Float          /// Unidades poseídas
+  avgBuyPrice     Float          /// Precio promedio de compra
+  currentPrice    Float?         /// Precio actual (actualizado vía API o manual)
+  currency        String         @default("MXN")
+  
+  purchaseDate    DateTime
+  lastPriceUpdate DateTime?
+  notes           String?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  @@index([userId, type])
+}
+
+/// Meta de ahorro con seguimiento de progreso.
+model SavingsGoal {
+  id            String                @id @default(uuid())
+  userId        String
+  user          User                  @relation(fields: [userId], references: [id])
+  
+  name          String
+  targetAmount  Float
+  currentAmount Float                 @default(0)
+  deadline      DateTime?
+  icon          String?
+  color         String?
+  priority      Int                   @default(1) /// 1=Alta, 2=Media, 3=Baja
+  status        String                @default("active") /// active, completed, paused
+  
+  contributions SavingsContribution[]
+  
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+/// Contribución a una meta de ahorro.
+model SavingsContribution {
+  id            String      @id @default(uuid())
+  amount        Float
+  date          DateTime
+  notes         String?
+  
+  savingsGoalId String
+  savingsGoal   SavingsGoal @relation(fields: [savingsGoalId], references: [id], onDelete: Cascade)
+  transactionId String?     /// Link opcional a transacción
+  
+  createdAt     DateTime    @default(now())
+}
+
+// ============ MODELOS P3: AUTH, NOTIFICACIONES, CALENDARIO ============
+
+/// Conexión OAuth externa (Google, Apple).
+model UserOAuth {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider      String    /// 'google', 'apple'
+  providerId    String    /// ID del provider
+  accessToken   String?   /// Encriptar en producción
+  refreshToken  String?   /// Encriptar en producción
+  scope         String?   /// Permisos otorgados
+  expiresAt     DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@unique([provider, providerId])
+}
+
+/// Notificación del sistema.
+model Notification {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type         String    /// payment_reminder, goal_progress, overspend
+  title        String
+  body         String
+  data         Json?     /// Datos adicionales (IDs, montos, etc.)
+  read         Boolean   @default(false)
+  
+  scheduledFor DateTime? /// Para envío programado
+  sentAt       DateTime?
+  
+  createdAt    DateTime  @default(now())
+  
+  @@index([userId, read])
+}
+
+/// Evento sincronizado con calendario externo.
+model CalendarEvent {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  externalId   String?  /// ID en Google Calendar
+  provider     String   /// 'google', 'apple'
+  title        String
+  description  String?
+  eventDate    DateTime
+  
+  // Referencias opcionales al origen
+  recurringId   String?
+  installmentId String?
+  statementId   String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([userId, eventDate])
+}
+
+// ============ MODELOS P4: CAPA AI (Gemini) ============
+
+/// Conversación con el asistente AI.
+model AIConversation {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String?     /// Resumen de la conversación
+  messages  AIMessage[]
+  
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+/// Mensaje individual en una conversación AI.
+model AIMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role           String         /// 'user', 'assistant', 'system'
+  content        String
+  tokens         Int?           /// Tokens usados (para tracking)
+  
+  createdAt      DateTime       @default(now())
+  
+  @@index([conversationId, createdAt])
 }

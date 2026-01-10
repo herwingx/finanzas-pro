@@ -22,6 +22,7 @@
 - [⚡ Guía Rápida para Forks](#-guía-rápida-para-forks)
 - [🔐 Configuración Detallada](#-configuración-detallada)
 - [🚀 Despliegue Paso a Paso](#-despliegue-paso-a-paso)
+- [🛠️ Desarrollo Local](#️-desarrollo-local)
 - [🏗️ Arquitectura](#️-arquitectura)
 - [📚 Documentación](#-documentación)
 - [🤝 Contribuir](#-contribuir)
@@ -147,7 +148,6 @@ Si prefieres entender qué pasa "bajo el capó" o no puedes usar el script:
 2. **Esperar a que la base de datos esté lista.**
 
 3. **Ejecutar migraciones de base de datos:**
-   ```bash
    docker compose exec backend npx prisma migrate deploy
    ```
    *Esto crea las tablas necesarias en tu nueva base de datos PostgreSQL.*
@@ -161,6 +161,105 @@ Si prefieres entender qué pasa "bajo el capó" o no puedes usar el script:
 
 - **Vía Cloudflare:** `https://tudominio.com` (Si configuraste el tunnel)
 - **Vía Red Local:** `http://IP-SERVIDOR:3000` (Si usas el modo self-hosted con puertos expuestos)
+
+---
+
+## 🛠️ Desarrollo Local
+
+Para contribuir o desarrollar nuevas funcionalidades, usa el entorno de desarrollo local que proporciona **hot-reload** y una base de datos separada.
+
+### Configuración Inicial (Primera Vez)
+
+```bash
+# Dar permisos al script
+chmod +x dev.sh
+
+# Ejecutar setup completo
+./dev.sh setup
+```
+
+Este comando:
+1. ✅ Crea `.env` desde `.env.development`
+2. ✅ Inicia PostgreSQL local (Docker, puerto 5432)
+3. ✅ Instala dependencias de backend y frontend
+4. ✅ Genera cliente Prisma
+5. ✅ Ejecuta migraciones
+
+### Flujo de Trabajo Diario
+
+```bash
+# 1. Iniciar base de datos
+./dev.sh start
+
+# 2. En Terminal 1 - Backend (con hot-reload)
+cd backend && npm run dev
+
+# 3. En Terminal 2 - Frontend (con hot-reload)
+cd frontend && npm run dev
+```
+
+**URLs de desarrollo:**
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:4000/api`
+- Prisma Studio: `./dev.sh studio`
+
+### Comandos de Desarrollo
+
+| Comando | Descripción |
+|:--------|:------------|
+| `./dev.sh setup` | Configuración inicial completa |
+| `./dev.sh start` | Inicia PostgreSQL y muestra instrucciones |
+| `./dev.sh stop` | Detiene PostgreSQL |
+| `./dev.sh migrate` | Aplica nuevas migraciones de Prisma |
+| `./dev.sh studio` | Abre Prisma Studio (UI para la BD) |
+| `./dev.sh db-reset` | Elimina y recrea la BD (¡borra datos!) |
+
+### Desarrollo vs Producción
+
+| Aspecto | Desarrollo | Producción |
+|:--------|:-----------|:-----------|
+| **BD** | `localhost:5432` | Contenedor Docker |
+| **Backend** | `npm run dev` (hot-reload) | Contenedor Docker |
+| **Frontend** | `npm run dev` (hot-reload) | Build estático + Nginx |
+| **Config** | `.env.development` | `.env.production` |
+| **Cronjobs** | Deshabilitados | Habilitados |
+
+### Flujo de Merge y Deploy con Migraciones
+
+Las migraciones de Prisma se **versionan en Git** y se aplican automáticamente en producción.
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   DESARROLLO    │ ──▶ │      GIT        │ ──▶ │   PRODUCCIÓN    │
+│                 │     │                 │     │                 │
+│ prisma migrate  │     │ prisma/         │     │ prisma migrate  │
+│ dev --name xxx  │     │ migrations/     │     │ deploy          │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+**Flujo de trabajo para nuevos modelos:**
+
+```bash
+# 1. Desarrollo: Editar schema.prisma
+# 2. Crear migración local
+cd backend && npx prisma migrate dev --name nombre_descriptivo
+
+# 3. Commit con migración incluida
+git add prisma/
+git commit -m "feat(db): descripción del cambio"
+
+# 4. Push a develop → PR → Merge a main
+git push origin develop
+gh pr create --fill
+gh pr merge --squash --delete-branch
+
+# 5. En producción: deploy aplica migraciones automáticamente
+./deploy.sh update  # Ejecuta: git pull + docker build + migrate deploy
+```
+
+> [!IMPORTANT]
+> **Nunca** uses `prisma migrate dev` en producción. 
+> El script `deploy.sh update` usa `prisma migrate deploy` que solo aplica migraciones existentes sin interacción.
 
 ---
 

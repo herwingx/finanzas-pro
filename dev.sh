@@ -60,12 +60,12 @@ cmd_setup() {
     
     # 4. Instalar dependencias backend
     log_info "Instalando dependencias del backend..."
-    cd backend && npm install && cd ..
+    (cd backend && npm install)
     log_success "Dependencias backend instaladas"
     
     # 4. Instalar dependencias frontend
     log_info "Instalando dependencias del frontend..."
-    cd frontend && npm install && cd ..
+    (cd frontend && npm install)
     log_success "Dependencias frontend instaladas"
     
     # 5. Iniciar base de datos
@@ -76,12 +76,12 @@ cmd_setup() {
     
     # 6. Generar cliente Prisma
     log_info "Generando cliente Prisma..."
-    cd backend && npx prisma generate && cd ..
+    (cd backend && npx prisma generate)
     log_success "Cliente Prisma generado"
     
     # 7. Ejecutar migraciones
     log_info "Ejecutando migraciones..."
-    cd backend && npx prisma migrate dev && cd ..
+    (cd backend && npx prisma migrate dev)
     log_success "Migraciones aplicadas"
     
     echo ""
@@ -135,7 +135,7 @@ cmd_db_reset() {
         docker compose -f docker-compose.dev.yml down -v
         docker compose -f docker-compose.dev.yml up -d
         sleep 3
-        cd backend && npx prisma migrate dev && cd ..
+        (cd backend && npx prisma migrate dev)
         log_success "Base de datos reseteada"
     else
         log_info "Cancelado"
@@ -144,7 +144,7 @@ cmd_db_reset() {
 
 cmd_migrate() {
     log_info "Ejecutando migraciones..."
-    cd backend && npx prisma migrate dev && cd ..
+    (cd backend && npx prisma migrate dev)
     log_success "Migraciones aplicadas"
 }
 

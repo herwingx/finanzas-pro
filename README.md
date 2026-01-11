@@ -21,6 +21,7 @@
 - [✨ Características](#-características)
 - [⚡ Inicio Rápido](#-inicio-rápido)
 - [🛠️ Desarrollo Local](#️-desarrollo-local)
+  - [🗄️ Prisma 7 - Base de Datos](#️-prisma-7---cliente-de-base-de-datos)
 - [🚀 Despliegue en Producción](#-despliegue-en-producción)
 - [🐳 Opciones de Docker Compose](#-opciones-de-docker-compose)
 - [🔐 Variables de Entorno](#-variables-de-entorno)
@@ -120,6 +121,49 @@ cd frontend && npm run dev
 | `./dev.sh studio`   | Abre Prisma Studio (UI para la BD)        |
 | `./dev.sh db-reset` | Elimina y recrea la BD (¡borra datos!)    |
 
+### 🗄️ Prisma 7 - Cliente de Base de Datos
+
+Este proyecto usa **Prisma 7** con la nueva arquitectura sin motor Rust. Esto significa:
+
+- ✅ **Builds más rápidos** - No se descarga el query engine binario
+- ✅ **Bundles más pequeños** - Menos dependencias en producción
+- ✅ **Driver Adapters** - Conexión nativa con PostgreSQL via `pg`
+
+#### Archivos de Configuración
+
+| Archivo                            | Propósito                                    |
+| :--------------------------------- | :------------------------------------------- |
+| `backend/prisma/schema.prisma`     | Define modelos, relaciones y enums           |
+| `backend/prisma.config.ts`         | Configura el CLI (URL para migraciones)      |
+| `backend/src/generated/prisma/`    | Cliente generado (no se sube a Git)          |
+| `backend/src/services/database.ts` | Inicializa el cliente con el adapter de `pg` |
+
+#### Flujo del Cliente Prisma
+
+```mermaid
+graph LR
+    A[schema.prisma] -->|npx prisma generate| B[src/generated/prisma/]
+    B -->|TypeScript compile| C[dist/generated/prisma/]
+    C -->|runtime| D[database.ts]
+    D -->|PrismaPg adapter| E[(PostgreSQL)]
+```
+
+#### Regenerar el Cliente
+
+Si modificas `schema.prisma`, debes regenerar el cliente:
+
+```bash
+cd backend
+
+# Regenerar cliente (después de cambiar modelos)
+npx prisma generate
+
+# Crear y aplicar migración (si cambiaste el schema)
+npx prisma migrate dev --name "descripcion_del_cambio"
+```
+
+> 📘 **Nota:** El cliente generado está en `.gitignore`. Se regenera automáticamente en el Dockerfile y con `./dev.sh setup`.
+
 ---
 
 ## 🚀 Despliegue en Producción
@@ -164,6 +208,31 @@ chmod +x deploy.sh
 | `./deploy.sh status`  | Estado de los servicios             |
 | `./deploy.sh backup`  | Crea backup de la base de datos     |
 | `./deploy.sh migrate` | Ejecuta migraciones de Prisma       |
+
+### 🔄 Flujo de Actualización en Producción
+
+```mermaid
+sequenceDiagram
+    participant Dev as Desarrollador
+    participant Git as GitHub
+    participant Server as Servidor Prod
+    participant Docker as Docker
+    participant DB as PostgreSQL
+
+    Dev->>Git: git push (merge a main)
+    Note over Server: ./deploy.sh update
+    Server->>Git: git pull origin main
+    Server->>Docker: docker compose up -d --build
+    Docker->>Docker: Dockerfile ejecuta prisma generate
+    Docker->>Server: Contenedor listo
+    Server->>DB: prisma migrate deploy
+    Note over DB: Solo aplica migraciones pendientes<br/>(NO borra datos)
+```
+
+> ⚠️ **Importante sobre migraciones:**
+> - `prisma migrate dev` → **Solo en desarrollo** (puede resetear datos)
+> - `prisma migrate deploy` → **En producción** (solo aplica pendientes, seguro)
+> - El Dockerfile ya incluye `prisma generate` automáticamente
 
 ---
 

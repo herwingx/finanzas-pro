@@ -1,6 +1,6 @@
 import express from 'express';
 import prisma from '../services/database';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { addDays, addMonths, addWeeks, addYears, subMonths } from 'date-fns';
 

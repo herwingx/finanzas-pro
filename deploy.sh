@@ -218,38 +218,82 @@ MODO SELF-HOSTED (sin Cloudflare):
 check_docker
 check_env
 
-case "${1:-help}" in
-    start)
-        cmd_start
-        ;;
-    stop)
-        cmd_stop
-        ;;
-    restart)
-        cmd_restart
-        ;;
-    update)
-        cmd_update
-        ;;
-    logs)
-        cmd_logs
-        ;;
-    status)
-        cmd_status
-        ;;
-    backup)
-        cmd_backup
-        ;;
-    migrate)
-        cmd_migrate
-        ;;
-    shell)
-        cmd_shell
-        ;;
-    db)
-        cmd_db
-        ;;
-    help|--help|-h|*)
-        cmd_help
-        ;;
-esac
+# Menú Interactivo
+show_menu() {
+    echo ""
+    echo -e "${BLUE}=== FinanzasPro Deploy Tool ===${NC}"
+    if [[ "$COMPOSE_FILE" == *"selfhosted"* ]]; then
+        echo -e "${YELLOW}(Modo Self-Hosted Activo)${NC}"
+    fi
+    echo ""
+    echo "1) 🚀 Iniciar servicios (start)"
+    echo "2) 🛑 Detener servicios (stop)"
+    echo "3) 🔄 Actualizar app (update)"
+    echo "4) 📊 Ver estado (status)"
+    echo "5) 📜 Ver logs (logs)"
+    echo "6) 💾 Backup BD (backup)"
+    echo "7) 🐚 Shell Backend (shell)"
+    echo "8) 🐘 Shell BD (db)"
+    echo "9) ❌ Salir"
+    echo ""
+    read -p "Selecciona una opción [1-9]: " option
+    
+    case $option in
+        1) cmd_start ;;
+        2) cmd_stop ;;
+        3) cmd_update ;;
+        4) cmd_status ;;
+        5) cmd_logs ;;
+        6) cmd_backup ;;
+        7) cmd_shell ;;
+        8) cmd_db ;;
+        *) exit 0 ;;
+    esac
+}
+
+# Main
+check_docker
+check_env
+
+if [ $# -eq 0 ]; then
+    show_menu
+else
+    case "${1}" in
+        start)
+            cmd_start
+            ;;
+        stop)
+            cmd_stop
+            ;;
+        restart)
+            cmd_restart
+            ;;
+        update)
+            cmd_update
+            ;;
+        logs)
+            cmd_logs
+            ;;
+        status)
+            cmd_status
+            ;;
+        backup)
+            cmd_backup
+            ;;
+        migrate)
+            cmd_migrate
+            ;;
+        shell)
+            cmd_shell
+            ;;
+        db)
+            cmd_db
+            ;;
+        help|--help|-h)
+            cmd_help
+            ;;
+        *)
+            cmd_help
+            ;;
+    esac
+fi

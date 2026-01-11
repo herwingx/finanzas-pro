@@ -183,12 +183,64 @@ FLUJO DE TRABAJO:
 # MAIN
 # =============================================================================
 
-case "${1:-help}" in
-    setup)    cmd_setup ;;
-    start)    cmd_start ;;
-    stop)     cmd_stop ;;
-    migrate)  cmd_migrate ;;
-    studio)   cmd_studio ;;
-    db-reset) cmd_db_reset ;;
-    help|*)   cmd_help ;;
-esac
+# Verificar dependencias
+check_deps() {
+    local missing=0
+    for cmd in docker node npm; do
+        if ! command -v $cmd &> /dev/null; then
+            log_error "$cmd no está instalado"
+            missing=1
+        fi
+    done
+    
+    if [ $missing -eq 1 ]; then
+        exit 1
+    fi
+}
+
+# Menú Interactivo
+show_menu() {
+    echo ""
+    echo -e "${BLUE}=== FinanzasPro Dev Tool ===${NC}"
+    echo ""
+    echo "1) 🚀 Iniciar entorno (start)"
+    echo "2) 🛑 Detener entorno (stop)"
+    echo "3) 🛠️  Configuración inicial (setup)"
+    echo "4) 🔄 Ejecutar migraciones (migrate)"
+    echo "5) 📊 Abrir Prisma Studio (studio)"
+    echo "6) ⚠️  Resetear Base de Datos (db-reset)"
+    echo "7) ❌ Salir"
+    echo ""
+    read -p "Selecciona una opción [1-7]: " option
+    
+    case $option in
+        1) cmd_start ;;
+        2) cmd_stop ;;
+        3) cmd_setup ;;
+        4) cmd_migrate ;;
+        5) cmd_studio ;;
+        6) cmd_db_reset ;;
+        *) exit 0 ;;
+    esac
+}
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+check_deps
+
+if [ $# -eq 0 ]; then
+    show_menu
+else
+    case "${1}" in
+        setup)    cmd_setup ;;
+        start)    cmd_start ;;
+        stop)     cmd_stop ;;
+        migrate)  cmd_migrate ;;
+        studio)   cmd_studio ;;
+        db-reset) cmd_db_reset ;;
+        help|--help|-h) cmd_help ;;
+        *)        cmd_help ;;
+    esac
+fi

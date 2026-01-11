@@ -26,8 +26,15 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuración
+# Configuración
 COMPOSE_FILE="docker-compose.yml"
 PROJECT_NAME="finanzas-pro"
+
+# Detectar modo Self-Hosted
+if [[ "$*" == *"--self-hosted"* ]]; then
+    COMPOSE_FILE="docker-compose.selfhosted.yml"
+    echo -e "${YELLOW}[INFO] Modo Self-Hosted activado (usando $COMPOSE_FILE)${NC}"
+fi
 BACKUP_DIR="./backups"
 POSTGRES_USER="${POSTGRES_USER:-finanzas}"
 POSTGRES_DB="${POSTGRES_DB:-finanzas_pro}"
@@ -201,6 +208,9 @@ EJEMPLOS:
   ./deploy.sh update    # Después de hacer push a main
   ./deploy.sh logs      # Ver qué está pasando
   ./deploy.sh backup    # Antes de cambios importantes
+
+MODO SELF-HOSTED (sin Cloudflare):
+  ./deploy.sh start --self-hosted
 "
 }
 

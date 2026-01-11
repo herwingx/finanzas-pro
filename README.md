@@ -23,6 +23,7 @@
 - [🛠️ Desarrollo Local](#️-desarrollo-local)
   - [🗄️ Prisma 7 - Base de Datos](#️-prisma-7---cliente-de-base-de-datos)
 - [🚀 Despliegue en Producción](#-despliegue-en-producción)
+  - [🔄 Flujo de Update](#-flujo-de-actualización-en-producción)
 - [🐳 Opciones de Docker Compose](#-opciones-de-docker-compose)
 - [🔐 Variables de Entorno](#-variables-de-entorno)
 - [🏗️ Arquitectura](#️-arquitectura)
@@ -284,10 +285,11 @@ Expone puertos directamente. Ideal para:
 - Detrás de un reverse proxy existente (Traefik, Caddy)
 
 ```bash
-docker compose -f docker-compose.selfhosted.yml up -d
+# Método recomendado (Script)
+./deploy.sh start --self-hosted
 
-# Con Nginx opcional (puerto 80)
-docker compose -f docker-compose.selfhosted.yml --profile with-nginx up -d
+# Método manual (Docker direct)
+docker compose -f docker-compose.selfhosted.yml up -d
 ```
 
 **Puertos expuestos:**

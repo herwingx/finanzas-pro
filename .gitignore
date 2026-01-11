@@ -17,8 +17,6 @@ build/
 .env.production
 !.env.example
 !**/.env.example
-!.env.development
-!.env.production.example
 
 # Logs
 logs

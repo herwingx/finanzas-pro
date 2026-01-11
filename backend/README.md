@@ -15,11 +15,26 @@ Esta carpeta contiene la lógica del servidor, modelos de datos y endpoints de l
 
 ---
 
+## 🔐 Variables de Entorno
+
+> 📘 **Documentación completa en [README principal](../README.md#-variables-de-entorno)**
+
+### Configuración Rápida
+
+```bash
+# Copiar plantilla (valores de desarrollo listos para usar)
+cp .env.example .env
+```
+
+Para **producción**, consulta la sección "Variables Backend" en el README principal.
+
+---
+
 ## 🚀 Desarrollo Local
 
 ### 1. Configuración de Entorno
 
-Asegúrate de tener el archivo `.env` configurado (ver README principal).
+Asegúrate de tener el archivo `.env` configurado:
 
 ```bash
 cp .env.example .env
@@ -31,17 +46,19 @@ cp .env.example .env
 npm install
 ```
 
-### 3. Base de Datos (Docker)
+### 3. Base de Datos
 
-Necesitas una instancia de PostgreSQL corriendo. Puedes usar Docker:
+Necesitas PostgreSQL corriendo. Usa el script de desarrollo desde la raíz:
 
 ```bash
-docker run -d --name finanzas-db \
-  -e POSTGRES_USER=finanzas \
-  -e POSTGRES_PASSWORD=tu_password \
-  -e POSTGRES_DB=finanzas_pro \
-  -p 5432:5432 \
-  postgres:16-alpine
+# Desde la raíz del proyecto
+./dev.sh start
+```
+
+O manualmente:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### 4. Migraciones
@@ -64,12 +81,15 @@ El servidor iniciará en `http://localhost:4000`.
 
 ## 🔧 Comandos Útiles
 
-| Comando | Descripción |
-| :--- | :--- |
-| `npm run build` | Compila TypeScript a JavaScript (carpeta `dist/`). |
-| `npm start` | Inicia el servidor compilado (producción). |
-| `npx prisma studio` | Abre una interfaz web para ver/editar la BD. |
-| `npx prisma generate` | Regenera el cliente de Prisma (útil si cambias `schema.prisma`). |
+| Comando                     | Descripción                                        |
+| :-------------------------- | :------------------------------------------------- |
+| `npm run dev`               | Inicia servidor con hot-reload (desarrollo).       |
+| `npm run build`             | Compila TypeScript a JavaScript (carpeta `dist/`). |
+| `npm start`                 | Inicia el servidor compilado (producción).         |
+| `npx prisma studio`         | Abre una interfaz web para ver/editar la BD.       |
+| `npx prisma generate`       | Regenera el cliente de Prisma.                     |
+| `npx prisma migrate dev`    | Crea y aplica migración (desarrollo).              |
+| `npx prisma migrate deploy` | Aplica migraciones existentes (producción).        |
 
 ---
 
@@ -85,3 +105,11 @@ src/
 ├── utils/        # Helpers y utilidades
 └── server.ts     # Punto de entrada
 ```
+
+---
+
+## 🔗 Ver También
+
+- [📖 README Principal](../README.md) - Documentación completa del proyecto
+- [🔐 Variables de Entorno](../README.md#-variables-de-entorno) - Configuración detallada
+- [🐳 Docker Compose](../README.md#-opciones-de-docker-compose) - Opciones de despliegue

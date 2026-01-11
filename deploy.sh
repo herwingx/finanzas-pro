@@ -64,19 +64,15 @@ check_docker() {
 
 # Verificar variables de entorno
 check_env() {
-    if [ ! -f ".env.production" ] && [ ! -f ".env" ]; then
-        log_warning "No se encontró archivo .env.production ni .env"
-        log_info "Copia .env.production.example a .env.production y configura los valores"
+    if [ ! -f ".env" ]; then
+        log_warning "No se encontró archivo .env"
+        log_info "Copia .env.example y configura los valores para producción:"
+        log_info "  cp .env.example .env && nano .env"
+        exit 1
     fi
     
-    # Cargar variables de entorno (Prioridad: .env.production > .env)
-    if [ -f ".env" ]; then
-        export $(cat .env | grep -v '^#' | xargs)
-    fi
-    
-    if [ -f ".env.production" ]; then
-        export $(cat .env.production | grep -v '^#' | xargs)
-    fi
+    # Cargar variables de entorno
+    export $(cat .env | grep -v '^#' | xargs)
 }
 
 # Comandos principales

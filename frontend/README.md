@@ -15,6 +15,24 @@ Esta carpeta contiene el código fuente del cliente web (SPA).
 
 ---
 
+## 🔐 Variables de Entorno
+
+> 📘 **Documentación completa en [README principal](../README.md#-variables-de-entorno)**
+
+### Configuración Rápida
+
+```bash
+# Copiar plantilla (valores de desarrollo listos para usar)
+cp .env.example .env
+```
+
+| Variable                    | Desarrollo                  | Producción |
+| :-------------------------- | :-------------------------- | :--------- |
+| `VITE_API_URL`              | `http://localhost:4000/api` | `/api`     |
+| `VITE_GOOGLE_GENAI_API_KEY` | (opcional)                  | (opcional) |
+
+---
+
 ## 🚀 Desarrollo Local
 
 ### 1. Instalar dependencias
@@ -23,7 +41,13 @@ Esta carpeta contiene el código fuente del cliente web (SPA).
 npm install
 ```
 
-### 2. Iniciar servidor de desarrollo
+### 2. Configurar variables de entorno
+
+```bash
+cp .env.example .env
+```
+
+### 3. Iniciar servidor de desarrollo
 
 ```bash
 npm run dev
@@ -31,13 +55,24 @@ npm run dev
 
 La aplicación estará disponible en `http://localhost:5173`.
 
-### 3. Build para producción
+### 4. Build para producción
 
 ```bash
 npm run build
 ```
 
 Los archivos estáticos se generarán en la carpeta `dist/`.
+
+---
+
+## 🔧 Comandos Útiles
+
+| Comando           | Descripción                           |
+| :---------------- | :------------------------------------ |
+| `npm run dev`     | Servidor de desarrollo con hot-reload |
+| `npm run build`   | Build de producción                   |
+| `npm run preview` | Previsualiza el build de producción   |
+| `npm run lint`    | Ejecuta ESLint                        |
 
 ---
 
@@ -57,8 +92,16 @@ src/
 
 ---
 
-## 🤝 Guías de Estilo
+## 🎨 Guías de Estilo
 
 - Usamos **TailwindCSS** para todo el estilizado.
 - Componentes funcionales con **Hooks**.
 - **Mobile-First**: Siempre verifica el diseño en resoluciones móviles.
+
+---
+
+## 🔗 Ver También
+
+- [📖 README Principal](../README.md) - Documentación completa del proyecto
+- [🔐 Variables de Entorno](../README.md#-variables-de-entorno) - Configuración detallada
+- [🐳 Docker Compose](../README.md#-opciones-de-docker-compose) - Opciones de despliegue

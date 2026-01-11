@@ -33,8 +33,8 @@ cmd_setup() {
     
     # 1. Copiar .env raíz si no existe
     if [ ! -f ".env" ]; then
-        log_info "Creando .env desde .env.development..."
-        cp .env.development .env
+        log_info "Creando .env desde .env.example..."
+        cp .env.example .env
         log_success ".env creado"
     else
         log_warning ".env ya existe, no se sobrescribe"
@@ -42,8 +42,8 @@ cmd_setup() {
     
     # 2. Copiar .env a backend
     if [ ! -f "backend/.env" ]; then
-        log_info "Creando backend/.env desde backend/.env.development..."
-        cp backend/.env.development backend/.env
+        log_info "Creando backend/.env desde backend/.env.example..."
+        cp backend/.env.example backend/.env
         log_success "backend/.env creado"
     else
         log_warning "backend/.env ya existe, no se sobrescribe"
@@ -51,8 +51,8 @@ cmd_setup() {
     
     # 3. Copiar .env a frontend
     if [ ! -f "frontend/.env" ]; then
-        log_info "Creando frontend/.env desde frontend/.env.development..."
-        cp frontend/.env.development frontend/.env
+        log_info "Creando frontend/.env desde frontend/.env.example..."
+        cp frontend/.env.example frontend/.env
         log_success "frontend/.env creado"
     else
         log_warning "frontend/.env ya existe, no se sobrescribe"

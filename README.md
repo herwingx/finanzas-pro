@@ -19,10 +19,11 @@
 ## 📋 Tabla de Contenidos
 
 - [✨ Características](#-características)
-- [⚡ Guía Rápida para Forks](#-guía-rápida-para-forks)
-- [🔐 Configuración Detallada](#-configuración-detallada)
-- [🚀 Despliegue Paso a Paso](#-despliegue-paso-a-paso)
+- [⚡ Inicio Rápido](#-inicio-rápido)
 - [🛠️ Desarrollo Local](#️-desarrollo-local)
+- [🚀 Despliegue en Producción](#-despliegue-en-producción)
+- [🐳 Opciones de Docker Compose](#-opciones-de-docker-compose)
+- [🔐 Variables de Entorno](#-variables-de-entorno)
 - [🏗️ Arquitectura](#️-arquitectura)
 - [📚 Documentación](#-documentación)
 - [🤝 Contribuir](#-contribuir)
@@ -44,129 +45,31 @@
 
 ---
 
-## ⚡ Guía Rápida para Forks
+## ⚡ Inicio Rápido
 
-Si acabas de hacer fork de este proyecto y quieres ponerlo en marcha rápidamente, sigue estos pasos críticos.
-
-### 1. Clonar tu fork
+### Clonar el Repositorio
 
 ```bash
-git clone https://github.com/TU_USUARIO/finanzas-pro.git
+git clone https://github.com/herwingx/finanzas-pro.git
 cd finanzas-pro
 ```
 
-### 2. Configuración Inicial Automática
-
-Hemos preparado scripts para facilitar la configuración inicial si estás en Linux/Mac:
+### Configuración en 1 Paso
 
 ```bash
-# Copia las plantillas de variables de entorno automáticamente
+# Copia las plantillas de variables de entorno
 cp .env.example .env
 cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-### 3. Personalizar Secretos (Obligatorio)
-
-Como este es un sistema financiero, la seguridad es crítica. **Nunca** uses los valores por defecto en producción.
-
-```bash
-# Genera tus propias credenciales seguras
-nano .env
-# Edita: POSTGRES_PASSWORD, CLOUDFLARE_TUNNEL_TOKEN
-
-nano backend/.env
-# Edita: JWT_SECRET, DATABASE_URL (asegúrate que coincida con POSTGRES_PASSWORD)
-```
-
-> **Nota:** Si no planeas usar Cloudflare Tunnel inicialmente, puedes dejar esa variable vacía, pero se recomienda para acceso seguro sin abrir puertos.
-
----
-
-## 🔐 Configuración Detallada
-
-El sistema se configura mediante dos archivos de entorno principales. Aquí te explicamos cada variable crítica.
-
-### Archivo Raíz `.env`
-Configura la infraestructura (Docker, Base de Datos, Red).
-
-| Variable | Importancia | Descripción |
-| :--- | :--- | :--- |
-| `POSTGRES_USER` | **Alta** | Usuario maestro de la base de datos (def: `finanzas`). |
-| `POSTGRES_PASSWORD` | **Crítica** | Contraseña de la BD. ¡Cámbiala inmediatamente! |
-| `POSTGRES_DB` | Media | Nombre de la base de datos (def: `finanzas_pro`). |
-| `CLOUDFLARE_TUNNEL_TOKEN` | **Crítica** | Token obtenido de Cloudflare Zero Trust para exponer tu app de forma segura. |
-
-### Archivo Backend `backend/.env`
-Configura la lógica de la aplicación y conexión a datos.
-
-| Variable | Importancia | Descripción |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | **Crítica** | String de conexión completo. Debe coincidir con las credenciales del root `.env`.<br>Formato: `postgresql://USER:PASSWORD@db:5432/DB_NAME` |
-| `JWT_SECRET` | **Crítica** | Llave maestra para firmar sesiones de usuarios. Usa un string largo y aleatorio. |
-| `PORT` | Baja | Puerto interno del contenedor (def: `4000`). No suele requerir cambios. |
-| `NODE_ENV` | Media | `production` para despliegue real, `development` para pruebas locales. |
-
----
-
-## 🚀 Despliegue Paso a Paso
-
-Ofrecemos un script de utilidad `deploy.sh` que automatiza todo el ciclo de vida de la aplicación con Docker.
-
-### Pre-requisitos
-- Docker y Docker Compose v2+ instalados.
-- Puertos `80` y `443` libres (si no usas Cloudflare Tunnel).
-
-### Método 1: Despliegue Automático (Recomendado)
-
-Este método levanta la infraestructura, construye las imágenes, ejecuta migraciones y levanta los servicios.
-
-**Paso 1: Dar permisos al script**
-```bash
-chmod +x deploy.sh
-```
-
-**Paso 2: Iniciar la aplicación**
-```bash
-./deploy.sh start
-```
-*Este comando construirá el frontend y backend, iniciará la base de datos y conectará el túnel.*
-
-**Paso 3: Verificar estado**
-```bash
-./deploy.sh status
-```
-
-### Método 2: Despliegue Manual (Docker Compose)
-
-Si prefieres entender qué pasa "bajo el capó" o no puedes usar el script:
-
-1. **Levantar servicios:**
-   ```bash
-   docker compose up -d --build
-   ```
-
-2. **Esperar a que la base de datos esté lista.**
-
-3. **Ejecutar migraciones de base de datos:**
-   docker compose exec backend npx prisma migrate deploy
-   ```
-   *Esto crea las tablas necesarias en tu nueva base de datos PostgreSQL.*
-
-4. **Verificar logs:**
-   ```bash
-   docker compose logs -f
-   ```
-
-### Acceso a la Aplicación
-
-- **Vía Cloudflare:** `https://tudominio.com` (Si configuraste el tunnel)
-- **Vía Red Local:** `http://IP-SERVIDOR:3000` (Si usas el modo self-hosted con puertos expuestos)
+> 📘 **Nota:** Los archivos `.env.example` vienen preconfigurados para **desarrollo local**. ¡Funcionan inmediatamente!
 
 ---
 
 ## 🛠️ Desarrollo Local
 
-Para contribuir o desarrollar nuevas funcionalidades, usa el entorno de desarrollo local que proporciona **hot-reload** y una base de datos separada.
+Para contribuir o desarrollar nuevas funcionalidades, usa el entorno de desarrollo que proporciona **hot-reload**.
 
 ### Configuración Inicial (Primera Vez)
 
@@ -179,7 +82,7 @@ chmod +x dev.sh
 ```
 
 Este comando:
-1. ✅ Crea `.env` desde `.env.development`
+1. ✅ Copia `.env.example` → `.env` (raíz, backend, frontend)
 2. ✅ Inicia PostgreSQL local (Docker, puerto 5432)
 3. ✅ Instala dependencias de backend y frontend
 4. ✅ Genera cliente Prisma
@@ -199,73 +102,245 @@ cd frontend && npm run dev
 ```
 
 **URLs de desarrollo:**
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:4000/api`
-- Prisma Studio: `./dev.sh studio`
+
+| Servicio      | URL                         |
+| :------------ | :-------------------------- |
+| Frontend      | `http://localhost:5173`     |
+| Backend API   | `http://localhost:4000/api` |
+| Prisma Studio | `./dev.sh studio`           |
 
 ### Comandos de Desarrollo
 
-| Comando | Descripción |
-|:--------|:------------|
-| `./dev.sh setup` | Configuración inicial completa |
-| `./dev.sh start` | Inicia PostgreSQL y muestra instrucciones |
-| `./dev.sh stop` | Detiene PostgreSQL |
-| `./dev.sh migrate` | Aplica nuevas migraciones de Prisma |
-| `./dev.sh studio` | Abre Prisma Studio (UI para la BD) |
-| `./dev.sh db-reset` | Elimina y recrea la BD (¡borra datos!) |
+| Comando             | Descripción                               |
+| :------------------ | :---------------------------------------- |
+| `./dev.sh setup`    | Configuración inicial completa            |
+| `./dev.sh start`    | Inicia PostgreSQL y muestra instrucciones |
+| `./dev.sh stop`     | Detiene PostgreSQL                        |
+| `./dev.sh migrate`  | Aplica nuevas migraciones de Prisma       |
+| `./dev.sh studio`   | Abre Prisma Studio (UI para la BD)        |
+| `./dev.sh db-reset` | Elimina y recrea la BD (¡borra datos!)    |
 
-### Desarrollo vs Producción
+---
 
-| Aspecto | Desarrollo | Producción |
-|:--------|:-----------|:-----------|
-| **BD** | `localhost:5432` | Contenedor Docker |
-| **Backend** | `npm run dev` (hot-reload) | Contenedor Docker |
-| **Frontend** | `npm run dev` (hot-reload) | Build estático + Nginx |
-| **Config** | `.env.development` | `.env.production` |
-| **Cronjobs** | Deshabilitados | Habilitados |
+## 🚀 Despliegue en Producción
 
-### Flujo de Merge y Deploy con Migraciones
+### Pre-requisitos
 
-Las migraciones de Prisma se **versionan en Git** y se aplican automáticamente en producción.
+- Docker y Docker Compose v2+
+- (Opcional) Dominio configurado en Cloudflare
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   DESARROLLO    │ ──▶ │      GIT        │ ──▶ │   PRODUCCIÓN    │
-│                 │     │                 │     │                 │
-│ prisma migrate  │     │ prisma/         │     │ prisma migrate  │
-│ dev --name xxx  │     │ migrations/     │     │ deploy          │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-```
-
-**Flujo de trabajo para nuevos modelos:**
+### Paso 1: Configurar Variables de Entorno
 
 ```bash
-# 1. Desarrollo: Editar schema.prisma
-# 2. Crear migración local
-cd backend && npx prisma migrate dev --name nombre_descriptivo
+# Copiar plantillas
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 
-# 3. Commit con migración incluida
-git add prisma/
-git commit -m "feat(db): descripción del cambio"
-
-# 4. Push a develop → PR → Merge a main
-git push origin develop
-gh pr create --fill
-gh pr merge --squash --delete-branch
-
-# 5. En producción: deploy aplica migraciones automáticamente
-./deploy.sh update  # Ejecuta: git pull + docker build + migrate deploy
+# Editar con valores de producción
+nano .env            # Ver sección "Variables de Entorno" abajo
+nano backend/.env    # Cambiar DATABASE_URL, JWT_SECRET, etc.
 ```
 
-> [!IMPORTANT]
-> **Nunca** uses `prisma migrate dev` en producción. 
-> El script `deploy.sh update` usa `prisma migrate deploy` que solo aplica migraciones existentes sin interacción.
+### Paso 2: Elegir Método de Despliegue
+
+Ver sección [🐳 Opciones de Docker Compose](#-opciones-de-docker-compose) para elegir según tu infraestructura.
+
+### Paso 3: Iniciar Servicios
+
+```bash
+chmod +x deploy.sh
+./deploy.sh start
+```
+
+### Comandos de Producción
+
+| Comando               | Descripción                         |
+| :-------------------- | :---------------------------------- |
+| `./deploy.sh start`   | Inicia todos los servicios          |
+| `./deploy.sh stop`    | Detiene todos los servicios         |
+| `./deploy.sh update`  | Pull de Git + rebuild + migraciones |
+| `./deploy.sh logs`    | Muestra logs en tiempo real         |
+| `./deploy.sh status`  | Estado de los servicios             |
+| `./deploy.sh backup`  | Crea backup de la base de datos     |
+| `./deploy.sh migrate` | Ejecuta migraciones de Prisma       |
+
+---
+
+## 🐳 Opciones de Docker Compose
+
+Finanzas Pro incluye **3 configuraciones** de Docker Compose para diferentes escenarios:
+
+| Archivo                         | Uso                      | Cuándo Usarlo                   |
+| :------------------------------ | :----------------------- | :------------------------------ |
+| `docker-compose.dev.yml`        | Solo PostgreSQL          | Desarrollo local con hot-reload |
+| `docker-compose.yml`            | Full + Cloudflare Tunnel | Producción con dominio propio   |
+| `docker-compose.selfhosted.yml` | Full + puertos expuestos | LAN, Tailscale, VPN             |
+
+### 1. Desarrollo Local (`docker-compose.dev.yml`)
+
+Solo levanta PostgreSQL. Backend y frontend corren localmente con `npm run dev`.
+
+```bash
+# Automático con script
+./dev.sh start
+
+# Manual
+docker compose -f docker-compose.dev.yml up -d
+```
+
+### 2. Producción con Cloudflare (`docker-compose.yml`) — Recomendado
+
+Incluye Cloudflare Tunnel para acceso seguro sin abrir puertos.
+
+```bash
+# Requiere: CLOUDFLARE_TUNNEL_TOKEN en .env
+./deploy.sh start
+
+# O manual
+docker compose up -d
+```
+
+**Ventajas:**
+- ✅ SSL automático
+- ✅ Sin abrir puertos en tu router/firewall
+- ✅ Protección DDoS incluida
+- ✅ Acceso desde cualquier lugar
+
+### 3. Self-Hosted / Tailscale (`docker-compose.selfhosted.yml`)
+
+Expone puertos directamente. Ideal para:
+- Acceso solo en red local (LAN)
+- Uso con Tailscale o VPN
+- Detrás de un reverse proxy existente (Traefik, Caddy)
+
+```bash
+docker compose -f docker-compose.selfhosted.yml up -d
+
+# Con Nginx opcional (puerto 80)
+docker compose -f docker-compose.selfhosted.yml --profile with-nginx up -d
+```
+
+**Puertos expuestos:**
+
+| Servicio         | Puerto |
+| :--------------- | :----- |
+| Frontend         | `3000` |
+| Backend          | `4000` |
+| PostgreSQL       | `5432` |
+| Nginx (opcional) | `80`   |
+
+---
+
+## 🔐 Variables de Entorno
+
+### Estrategia de Configuración
+
+| Archivo        | Propósito                                |
+| :------------- | :--------------------------------------- |
+| `.env.example` | Plantilla con valores de **desarrollo**  |
+| `.env`         | Tu configuración real (ignorado por Git) |
+
+> 📘 Los `.env.example` funcionan **inmediatamente para desarrollo**. Para producción, ajusta los valores indicados con `# PROD:`.
+
+---
+
+### Variables Raíz (`.env`)
+
+Configura la infraestructura Docker.
+
+| Variable                  | Desarrollo              | Producción               | Descripción                    |
+| :------------------------ | :---------------------- | :----------------------- | :----------------------------- |
+| `POSTGRES_USER`           | `finanzas`              | `finanzas`               | Usuario de PostgreSQL          |
+| `POSTGRES_PASSWORD`       | `devfinanzas`           | **Tu password seguro**   | Contraseña de PostgreSQL       |
+| `POSTGRES_DB`             | `finanzas_pro`          | `finanzas_pro`           | Nombre de la base de datos     |
+| `CLOUDFLARE_TUNNEL_TOKEN` | (vacío)                 | **Tu token**             | Token de Cloudflare Zero Trust |
+| `ALLOWED_ORIGINS`         | `http://localhost:5173` | `https://tu-dominio.com` | CORS: orígenes permitidos      |
+| `RATE_LIMIT_ENABLED`      | `false`                 | `true`                   | Protección contra fuerza bruta |
+| `REGISTRATION_ENABLED`    | `true`                  | `false`                  | Permite registro de usuarios   |
+| `TELEGRAM_ENABLED`        | `false`                 | `true` (opcional)        | Notificaciones de backups      |
+| `TELEGRAM_BOT_TOKEN`      | (vacío)                 | Tu token                 | Token de @BotFather            |
+| `TELEGRAM_CHAT_ID`        | (vacío)                 | Tu chat ID               | ID de @userinfobot             |
+
+---
+
+### Variables Backend (`backend/.env`)
+
+Configura la lógica de la aplicación.
+
+| Variable               | Desarrollo                   | Producción               | Descripción                  |
+| :--------------------- | :--------------------------- | :----------------------- | :--------------------------- |
+| `DATABASE_URL`         | `...@localhost:5432/...`     | `...@db:5432/...`        | Host cambia a `db` en Docker |
+| `PORT`                 | `4000`                       | `4000`                   | Puerto interno del backend   |
+| `NODE_ENV`             | `development`                | `production`             | Modo de ejecución            |
+| `JWT_SECRET`           | `dev-jwt-secret...`          | `openssl rand -hex 32`   | Secreto para firmar tokens   |
+| `APP_URL`              | `http://localhost:5173`      | `https://tu-dominio.com` | URL para enlaces en emails   |
+| `ALLOWED_ORIGINS`      | `http://localhost:5173,3000` | `https://tu-dominio.com` | CORS                         |
+| `RATE_LIMIT_ENABLED`   | `false`                      | `true`                   | Limita intentos de login     |
+| `REGISTRATION_ENABLED` | `true`                       | `false`                  | Control de registro          |
+| `ENABLE_CRON_JOBS`     | `false`                      | `true`                   | Tareas programadas           |
+
+**SMTP (opcional, para recuperación de contraseña):**
+
+| Variable      | Ejemplo Gmail                          |
+| :------------ | :------------------------------------- |
+| `SMTP_HOST`   | `smtp.gmail.com`                       |
+| `SMTP_PORT`   | `587`                                  |
+| `SMTP_SECURE` | `false`                                |
+| `SMTP_USER`   | `tu-email@gmail.com`                   |
+| `SMTP_PASS`   | `tu-app-password` (16 chars)           |
+| `SMTP_FROM`   | `Finanzas Pro <noreply@tudominio.com>` |
+
+> 📘 Gmail requiere [App Password](https://myaccount.google.com/apppasswords)
+
+---
+
+### Variables Frontend (`frontend/.env`)
+
+| Variable                    | Desarrollo                  | Producción | Descripción                 |
+| :-------------------------- | :-------------------------- | :--------- | :-------------------------- |
+| `VITE_API_URL`              | `http://localhost:4000/api` | `/api`     | Ruta relativa en producción |
+| `VITE_GOOGLE_GENAI_API_KEY` | (opcional)                  | (opcional) | API key de Gemini AI        |
+
+---
+
+### Ejemplo: Migración de Desarrollo a Producción
+
+```bash
+# 1. Copiar desde ejemplo
+cp .env.example .env
+
+# 2. Editar valores críticos
+nano .env
+```
+
+**Cambios mínimos para producción:**
+
+```bash
+# .env (raíz)
+POSTGRES_PASSWORD=MiPasswordSeguro2024!
+CLOUDFLARE_TUNNEL_TOKEN=eyJ...
+ALLOWED_ORIGINS=https://finanzas.midominio.com
+RATE_LIMIT_ENABLED=true
+REGISTRATION_ENABLED=false
+
+# backend/.env
+DATABASE_URL=postgresql://finanzas:MiPasswordSeguro2024!@db:5432/finanzas_pro
+NODE_ENV=production
+JWT_SECRET=$(openssl rand -hex 32)
+APP_URL=https://finanzas.midominio.com
+ALLOWED_ORIGINS=https://finanzas.midominio.com
+RATE_LIMIT_ENABLED=true
+REGISTRATION_ENABLED=false
+ENABLE_CRON_JOBS=true
+
+# frontend/.env
+VITE_API_URL=/api
+```
 
 ---
 
 ## 🏗️ Arquitectura
-
-Entender cómo funciona Finanzas Pro te ayudará a mantenerlo y configurarlo mejor.
 
 ```mermaid
 graph TD
@@ -292,21 +367,19 @@ graph TD
 - **Frontend**: Single Page Application (SPA) servida estáticamente por Nginx.
 - **Backend**: API RESTful que procesa la lógica de negocio.
 - **Base de Datos**: PostgreSQL persistente (los datos sobreviven reinicios).
-- **Proxy**: Nginx maneja el enrutamiento y puede servir de SSL terminator si no usas Cloudflare.
+- **Proxy**: Nginx maneja el enrutamiento y puede servir de SSL terminator.
 
 ---
 
 ## 📚 Documentación Adicional
 
-Para profundizar en temas específicos, consulta nuestras guías detalladas en la carpeta `docs/`:
-
-| Guía | Contenido |
-| :--- | :--- |
-| [📘 Guía de Despliegue](docs/DEPLOYMENT.md) | Opciones avanzadas (Self-hosted, VPS, Cloud). |
-| [🛡️ Seguridad](docs/SECURITY.md) | Hardening, buenas prácticas y configuración segura. |
-| [💾 Backups](docs/BACKUP_GUIDE.md) | Cómo respaldar y restaurar tu información financiera. |
-| [🔄 CI/CD](docs/CI_CD.md) | Pipelines de GitHub Actions para despliegue continuo. |
-| [🤝 Contribuir](docs/CONTRIBUTING.md) | Estándares de código y cómo enviar PRs. |
+| Guía                                       | Contenido                                             |
+| :----------------------------------------- | :---------------------------------------------------- |
+| [📘 Guía de Despliegue](docs/DEPLOYMENT.md) | Opciones avanzadas (Self-hosted, VPS, Cloud).         |
+| [🛡️ Seguridad](docs/SECURITY.md)            | Hardening, buenas prácticas y configuración segura.   |
+| [💾 Backups](docs/BACKUP_GUIDE.md)          | Cómo respaldar y restaurar tu información financiera. |
+| [🔄 CI/CD](docs/CI_CD.md)                   | Pipelines de GitHub Actions para despliegue continuo. |
+| [🤝 Contribuir](docs/CONTRIBUTING.md)       | Estándares de código y cómo enviar PRs.               |
 
 ---
 

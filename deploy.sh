@@ -218,25 +218,38 @@ MODO SELF-HOSTED (sin Cloudflare):
 check_docker
 check_env
 
-# Menú Interactivo
+# Menú Interactivo Premium
 show_menu() {
-    echo ""
-    echo -e "${BLUE}=== FinanzasPro Deploy Tool ===${NC}"
+    clear
+    echo -e "${BLUE}"
+    echo "  ______ _                              _____           "
+    echo " |  ____(_)                            |  __ \          "
+    echo " | |__   _ _ __   __ _ _ __  ______ _  | |__) | __ ___  "
+    echo " |  __| | | '_ \ / _\` | '_ \|_  / _\` | |  ___/ '__/ _ \ "
+    echo " | |    | | | | | (_| | | | |/ / (_| | | |   | | | (_) |"
+    echo " |_|    |_|_| |_|\__,_|_| |_/___\__,_| |_|   |_|  \___/ "
+    echo -e "${NC}"
+    echo -e "  🌍 ${GREEN}Production Deploy Manager${NC}"
+    
     if [[ "$COMPOSE_FILE" == *"selfhosted"* ]]; then
-        echo -e "${YELLOW}(Modo Self-Hosted Activo)${NC}"
+        echo -e "  🔧 MODO: ${YELLOW}Self-Hosted (Direct Ports)${NC}"
+    else
+        echo -e "  ☁️  MODO: ${BLUE}Cloudflare Tunnel (Secure)${NC}"
     fi
+    echo "=========================================================="
     echo ""
-    echo "1) 🚀 Iniciar servicios (start)"
-    echo "2) 🛑 Detener servicios (stop)"
-    echo "3) 🔄 Actualizar app (update)"
-    echo "4) 📊 Ver estado (status)"
-    echo "5) 📜 Ver logs (logs)"
-    echo "6) 💾 Backup BD (backup)"
-    echo "7) 🐚 Shell Backend (shell)"
-    echo "8) 🐘 Shell BD (db)"
-    echo "9) ❌ Salir"
+    echo -e "  ${GREEN}1)${NC} Iniciar servicios     ${YELLOW}(start)${NC}"
+    echo -e "  ${GREEN}2)${NC} Detener servicios     ${YELLOW}(stop)${NC}"
+    echo -e "  ${GREEN}3)${NC} Actualizar App        ${YELLOW}(update)${NC}"
+    echo -e "  ${GREEN}4)${NC} Ver Estado            ${YELLOW}(status)${NC}"
+    echo -e "  ${GREEN}5)${NC} Ver Logs              ${YELLOW}(logs)${NC}"
+    echo -e "  ${GREEN}6)${NC} Backup Datos          ${YELLOW}(backup)${NC}"
+    echo -e "  ${GREEN}7)${NC} Shell Backend         ${YELLOW}(shell)${NC}"
+    echo -e "  ${GREEN}8)${NC} Shell Base Datos      ${YELLOW}(db)${NC}"
+    echo -e "  ${GREEN}9)${NC} Salir"
     echo ""
-    read -p "Selecciona una opción [1-9]: " option
+    echo "=========================================================="
+    read -p "  👉 Selecciona una opción [1-9]: " option
     
     case $option in
         1) cmd_start ;;
@@ -247,7 +260,7 @@ show_menu() {
         6) cmd_backup ;;
         7) cmd_shell ;;
         8) cmd_db ;;
-        *) exit 0 ;;
+        *) echo "¡Hasta luego! 👋"; exit 0 ;;
     esac
 }
 

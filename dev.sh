@@ -198,20 +198,31 @@ check_deps() {
     fi
 }
 
-# Menú Interactivo
+# Menú Interactivo Premium
 show_menu() {
+    clear
+    echo -e "${BLUE}"
+    echo "  ______ _                              _____           "
+    echo " |  ____(_)                            |  __ \          "
+    echo " | |__   _ _ __   __ _ _ __  ______ _  | |__) | __ ___  "
+    echo " |  __| | | '_ \ / _\` | '_ \|_  / _\` | |  ___/ '__/ _ \ "
+    echo " | |    | | | | | (_| | | | |/ / (_| | | |   | | | (_) |"
+    echo " |_|    |_|_| |_|\__,_|_| |_/___\__,_| |_|   |_|  \___/ "
+    echo -e "${NC}"
+    echo -e "  🚀 ${GREEN}Dev Environment Control Center${NC}"
+    echo -e "  ${YELLOW}v1.0.0${NC} | ${BLUE}Prisma 7 Ready${NC}"
+    echo "=========================================================="
     echo ""
-    echo -e "${BLUE}=== FinanzasPro Dev Tool ===${NC}"
+    echo -e "  ${GREEN}1)${NC} Iniciar entorno       ${YELLOW}(start)${NC}"
+    echo -e "  ${GREEN}2)${NC} Detener entorno       ${YELLOW}(stop)${NC}"
+    echo -e "  ${GREEN}3)${NC} Configurar todo       ${YELLOW}(setup)${NC}"
+    echo -e "  ${GREEN}4)${NC} Correr migraciones    ${YELLOW}(migrate)${NC}"
+    echo -e "  ${GREEN}5)${NC} Abrir Prisma Studio   ${YELLOW}(studio)${NC}"
+    echo -e "  ${GREEN}6)${NC} Resetear Base de Datos ${RED}(⚠️ Danger)${NC}"
+    echo -e "  ${GREEN}7)${NC} Salir"
     echo ""
-    echo "1) 🚀 Iniciar entorno (start)"
-    echo "2) 🛑 Detener entorno (stop)"
-    echo "3) 🛠️  Configuración inicial (setup)"
-    echo "4) 🔄 Ejecutar migraciones (migrate)"
-    echo "5) 📊 Abrir Prisma Studio (studio)"
-    echo "6) ⚠️  Resetear Base de Datos (db-reset)"
-    echo "7) ❌ Salir"
-    echo ""
-    read -p "Selecciona una opción [1-7]: " option
+    echo "=========================================================="
+    read -p "  👉 Selecciona una opción [1-7]: " option
     
     case $option in
         1) cmd_start ;;
@@ -220,7 +231,7 @@ show_menu() {
         4) cmd_migrate ;;
         5) cmd_studio ;;
         6) cmd_db_reset ;;
-        *) exit 0 ;;
+        *) echo "¡Hasta luego! 👋"; exit 0 ;;
     esac
 }
 

@@ -397,9 +397,6 @@ export const FinancialPlanningWidget: React.FC = () => {
               onChange={(e) => e.target.value && setPeriodType(e.target.value as any)}
             >
               <option value="" disabled className="hidden">Más...</option>
-              {['bimestral', 'semestral', 'anual'].includes(periodType) && (
-                <option value={periodType} className="hidden">{periodType.charAt(0).toUpperCase() + periodType.slice(1)}</option>
-              )}
               <option value="bimestral">Bimestral</option>
               <option value="semestral">Semestral</option>
               <option value="anual">Anual</option>

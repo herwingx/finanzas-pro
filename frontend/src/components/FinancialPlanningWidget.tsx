@@ -510,6 +510,14 @@ export const FinancialPlanningWidget: React.FC = () => {
                 </div>
               </SwipeableActionRow>
             ))}
+            {summary.expectedIncome.length > 3 && (
+              <button
+                onClick={() => setShowAllIncome(!showAllIncome)}
+                className="w-full py-3 text-center text-xs font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors border-t border-app-border"
+              >
+                {showAllIncome ? 'Ver menos' : `Ver ${summary.expectedIncome.length - 3} más`}
+              </button>
+            )}
           </div>
         </div>
       )}

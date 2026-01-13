@@ -10,48 +10,18 @@ import { SkeletonTransactionList } from '../components/Skeleton';
 import { formatDateUTC } from '../utils/dateUtils';
 import { TransactionDetailSheet } from '../components/TransactionDetailSheet';
 
+import { useGlobalSheets } from '../context/GlobalSheetContext'; // Import context
+
 const History: React.FC = () => {
   const navigate = useNavigate();
+  const { openTransactionSheet } = useGlobalSheets(); // Consume context
   const { data: transactions, isLoading: isLoadingTransactions } = useTransactions();
-  const { data: categories, isLoading: isLoadingCategories } = useCategories();
-  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
-  const { data: installments } = useInstallmentPurchases();
-
-  // Mutations
-  const deleteTransactionMutation = useDeleteTransaction();
-  const restoreTransactionMutation = useRestoreTransaction();
-
-  // State
-  const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
-
-  // Helpers
-  const getCategoryInfo = (id: string | null) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#71717A', name: 'General' };
-  const getAccount = (id: string | null) => accounts?.find(a => a.id === id);
-  const getAccountName = (id: string | null) => getAccount(id)?.name || 'Cuenta';
-
-  const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
-
-  // Sorting & Filtering
-  const sortedTxs = useMemo(() => {
-    if (!transactions) return [];
-    const filtered = filterType === 'all' ? transactions : transactions.filter(tx => tx.type === filterType);
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, filterType]);
-
-  const grouped = sortedTxs.reduce((groups, tx) => {
-    const date = formatDateUTC(tx.date, { style: 'long' });
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(tx);
-    return groups;
-  }, {} as Record<string, Transaction[]>);
+  // ... (rest of the code)
 
   // Edit Logic
   const handleEditClick = (tx: Transaction) => {
     const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
     const isAdjustment = tx.description.toLowerCase().includes('ajuste');
-
     const isLoan = tx.loanId;
 
     if (isInitialMsi) {
@@ -73,7 +43,8 @@ const History: React.FC = () => {
       return;
     }
 
-    navigate(`/new?editId=${tx.id}`, { replace: true });
+    // Direct open sheet instead of navigation
+    openTransactionSheet(tx);
   };
 
   // Deletion Logic

@@ -243,7 +243,7 @@ const AccountsPage: React.FC = () => {
     if (isError) return <div className="p-10 text-center text-rose-500">Error cargando cuentas. Intente recargar.</div>;
 
     return (
-        <div className="bg-app-bg pb-safe">
+        <div className="bg-app-bg">
             <SimpleHeader
                 title="Cartera"
                 action={
@@ -254,12 +254,12 @@ const AccountsPage: React.FC = () => {
                 }
             />
 
-            <main className="max-w-2xl mx-auto px-4 mt-6 pb-24 space-y-8 animate-fade-in">
+            <main className="max-w-2xl mx-auto px-4 mt-6 space-y-8 animate-fade-in">
 
                 {/* 1. FINANCIAL SUMMARY WIDGET (KPIs) */}
                 {kpiData && (
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="col-span-2 bento-card p-5 bg-gradient-to-br from-app-surface to-app-subtle dark:from-zinc-900 dark:to-black">
+                        <div className="col-span-2 bento-card p-5 bg-linear-to-br from-app-surface to-app-subtle dark:from-zinc-900 dark:to-black">
                             <div className="flex items-center gap-2 mb-1 opacity-70">
                                 <span className="material-symbols-outlined text-[16px]">account_balance</span>
                                 <span className="text-[10px] uppercase font-bold tracking-widest">Patrimonio Neto</span>

@@ -104,12 +104,12 @@ const More: React.FC = () => {
   ];
 
   return (
-    <div className="bg-app-bg text-app-text font-sans pb-safe">
+    <div className="bg-app-bg text-app-text font-sans">
 
       {/* HEADER (Sin back button, es root page) */}
       <PageHeader title="Menú" showBackButton={false} />
 
-      <main className="max-w-xl mx-auto px-4 mt-6 space-y-6 animate-fade-in pb-24">
+      <main className="max-w-xl mx-auto px-4 mt-6 space-y-6 animate-fade-in">
 
         {/* 1. HERO PROFILE CARD (Estilo Bento) */}
         <Link

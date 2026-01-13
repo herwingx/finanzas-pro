@@ -61,6 +61,7 @@ model User {
   // Relaciones
   accounts              Account[]
   assets                Asset[]
+  investments           Investment[]
   budgets               Budget[]
   categories            Category[]
   installmentPurchases  InstallmentPurchase[]
@@ -133,6 +134,28 @@ model Asset {
   updatedAt       DateTime       @updatedAt
   
   @@index([userId, type])
+}
+
+model Investment {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String
+  type            String
+  ticker          String?
+  quantity        Float
+  avgBuyPrice     Float
+  currentPrice    Float
+  currency        String    @default("MXN")
+  purchaseDate    DateTime?
+  lastPriceUpdate DateTime?
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
 }
 
 model Transaction {

@@ -20,7 +20,7 @@ const adapter = new PrismaPg(pool);
 // 3. Inicializar cliente con el adaptador
 const prisma = new PrismaClient({
   adapter,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 });
 
 export default prisma;

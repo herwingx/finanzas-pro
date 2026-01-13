@@ -90,7 +90,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ isOpen, 
 
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-bold text-app-text leading-tight mb-1 truncate">{n.title}</h4>
-                    <p className="text-xs text-app-muted leading-relaxed mb-3 break-words">{n.body}</p>
+                    <p className="text-xs text-app-muted leading-relaxed mb-3 wrap-break">{n.body}</p>
 
                     {/* Action Buttons */}
                     <div className="flex gap-2 flex-wrap">

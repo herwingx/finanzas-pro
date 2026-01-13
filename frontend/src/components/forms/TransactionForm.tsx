@@ -136,14 +136,16 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
     try {
       if (isEditing && existingTransaction) {
+        const updatePayload: any = {
+          ...payloadBase,
+          type,
+        };
+        if (type !== "transfer") updatePayload.categoryId = categoryId;
+        if (destAccountId) updatePayload.destinationAccountId = destAccountId;
+
         await updateMutation.mutateAsync({
           id: existingTransaction.id,
-          transaction: {
-            ...payloadBase,
-            type,
-            categoryId: type !== "transfer" ? categoryId : undefined,
-            destinationAccountId: destAccountId || undefined,
-          },
+          transaction: updatePayload,
         });
         toastSuccess("Actualizado");
       } else if (type === "transfer") {

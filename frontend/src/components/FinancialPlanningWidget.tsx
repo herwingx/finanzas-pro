@@ -386,15 +386,28 @@ export const FinancialPlanningWidget: React.FC = () => {
               {t}
             </button>
           ))}
-          <select
-            className="ml-1 bg-transparent text-xs font-bold text-app-muted outline-none px-2 cursor-pointer hover:text-app-primary"
-            value={['bimestral', 'semestral', 'anual'].includes(periodType) ? periodType : ''}
-            onChange={(e) => e.target.value && setPeriodType(e.target.value as any)}
-          >
-            <option value="" disabled>Más...</option>
-            <option value="bimestral">Bimestral</option>
-            <option value="anual">Anual</option>
-          </select>
+
+          <div className="relative flex items-center">
+            <select
+              className={`
+                appearance-none bg-transparent text-xs font-bold outline-none pl-3 pr-6 py-1.5 cursor-pointer transition-colors rounded-lg
+                ${['bimestral', 'semestral', 'anual'].includes(periodType) ? 'text-app-primary bg-app-surface shadow-sm ring-1 ring-black/5' : 'text-app-muted hover:text-app-text'}
+              `}
+              value={['bimestral', 'semestral', 'anual'].includes(periodType) ? periodType : ''}
+              onChange={(e) => e.target.value && setPeriodType(e.target.value as any)}
+            >
+              <option value="" disabled className="hidden">Más...</option>
+              {['bimestral', 'semestral', 'anual'].includes(periodType) && (
+                <option value={periodType} className="hidden">{periodType.charAt(0).toUpperCase() + periodType.slice(1)}</option>
+              )}
+              <option value="bimestral">Bimestral</option>
+              <option value="semestral">Semestral</option>
+              <option value="anual">Anual</option>
+            </select>
+            <span className={`pointer-events-none absolute right-1 material-symbols-outlined text-[14px] ${['bimestral', 'semestral', 'anual'].includes(periodType) ? 'text-app-primary' : 'text-app-muted'}`}>
+              expand_more
+            </span>
+          </div>
         </div>
       </div>
 

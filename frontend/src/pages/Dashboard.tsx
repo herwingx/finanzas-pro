@@ -80,7 +80,7 @@ const Dashboard: React.FC = () => {
     <div className="w-full bg-app-bg transition-colors duration-300">
 
       {/* === HEADER CON CAMPANA DE NOTIFICACIONES === */}
-      <header className="pt-6 pb-2 px-4 md:px-8 max-w-[1400px] mx-auto flex justify-between items-center sticky top-0 z-30 bg-app-bg/80 backdrop-blur-xl md:static md:bg-transparent">
+      <header className="pt-4 pb-2 px-4 md:px-8 max-w-[1400px] mx-auto flex justify-between items-center sticky top-0 z-30 bg-app-bg/80 backdrop-blur-xl md:static md:bg-transparent">
         <div className="animate-fade-in flex items-center gap-3">
           <Link to="/profile" className="size-10 rounded-full overflow-hidden border border-app-border hover:ring-2 ring-app-primary transition-all md:hidden">
             <img src={profile?.avatar || `https://ui-avatars.com/api/?name=${profile?.name}`} alt="Avatar" className="w-full h-full object-cover" />
@@ -118,7 +118,7 @@ const Dashboard: React.FC = () => {
       />
 
       {/* BENTO GRID PRINCIPAL */}
-      <main className="px-4 md:px-8 py-4 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in">
+      <main className="px-4 md:px-8 py-2 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in">
 
         {/* 1. Main Balance con Privacidad */}
         <div className="md:col-span-2 row-span-2 h-[260px] md:h-auto bento-card relative overflow-hidden bg-linear-to-br from-app-surface to-app-subtle dark:to-[#0A0A0A] p-6 flex flex-col justify-between border-0 shadow-lg">

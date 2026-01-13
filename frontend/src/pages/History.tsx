@@ -177,7 +177,7 @@ const History: React.FC = () => {
         totalAmount={Math.abs(filteredData.totalSum)} // Optional visual
       />
 
-      <main className="px-4 max-w-2xl mx-auto mt-6 animate-fade-in">
+      <main className="px-4 max-w-2xl mx-auto mt-4 animate-fade-in">
         {isLoading ? (
           <SkeletonTransactionList count={8} />
         ) : Object.keys(filteredData.groups).length === 0 ? (

@@ -109,7 +109,7 @@ const More: React.FC = () => {
       {/* HEADER (Sin back button, es root page) */}
       <PageHeader title="Menú" showBackButton={false} />
 
-      <main className="max-w-xl mx-auto px-4 mt-6 space-y-6 animate-fade-in">
+      <main className="max-w-xl mx-auto px-4 mt-2 space-y-6 animate-fade-in">
 
         {/* 1. HERO PROFILE CARD (Estilo Bento) */}
         <Link

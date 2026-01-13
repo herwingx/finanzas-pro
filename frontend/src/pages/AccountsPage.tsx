@@ -254,7 +254,7 @@ const AccountsPage: React.FC = () => {
                 }
             />
 
-            <main className="max-w-2xl mx-auto px-4 mt-6 space-y-8 animate-fade-in">
+            <main className="max-w-2xl mx-auto px-4 mt-4 space-y-8 animate-fade-in">
 
                 {/* 1. FINANCIAL SUMMARY WIDGET (KPIs) */}
                 {kpiData && (

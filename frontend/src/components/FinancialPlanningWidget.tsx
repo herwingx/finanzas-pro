@@ -373,20 +373,20 @@ export const FinancialPlanningWidget: React.FC = () => {
           </p>
         </div>
 
-        <div className="relative inline-flex items-center bg-app-subtle rounded-lg">
+        <div className="relative inline-flex items-center bg-app-surface border border-app-border rounded-xl shadow-sm hover:border-app-primary/30 transition-colors group">
           <select
             value={periodType}
             onChange={(e) => setPeriodType(e.target.value as any)}
-            className="appearance-none bg-transparent hover:bg-black/5 active:bg-black/10 text-app-text text-xs font-bold pl-3 pr-7 py-1.5 rounded-lg outline-none cursor-pointer capitalize transition-all"
+            className="appearance-none bg-transparent text-app-text text-sm md:text-xs font-bold pl-3 pr-8 py-2 md:py-1.5 rounded-xl outline-none cursor-pointer capitalize focus:ring-2 ring-app-primary/20 w-full md:w-auto"
           >
-            <option value="quincenal">Quincenal</option>
-            <option value="mensual">Mensual</option>
-            <option value="bimestral">Bimestral</option>
-            <option value="semestral">Semestral</option>
-            <option value="anual">Anual</option>
+            <option value="quincenal" className="bg-app-surface text-app-text py-2">Quincenal</option>
+            <option value="mensual" className="bg-app-surface text-app-text py-2">Mensual</option>
+            <option value="bimestral" className="bg-app-surface text-app-text py-2">Bimestral</option>
+            <option value="semestral" className="bg-app-surface text-app-text py-2">Semestral</option>
+            <option value="anual" className="bg-app-surface text-app-text py-2">Anual</option>
           </select>
-          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[16px] text-app-muted">
-            expand_more
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] md:text-[16px] text-app-muted group-hover:text-app-primary transition-colors">
+            unfold_more
           </span>
         </div>
       </div>

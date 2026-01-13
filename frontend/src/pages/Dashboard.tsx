@@ -146,15 +146,6 @@ const Dashboard: React.FC = () => {
         <StatWidget label="Ingresos" value={stats.monthStats.income} type="income" format={stats.formatCurrency} />
         <StatWidget label="Gastos" value={stats.monthStats.expense} type="expense" format={stats.formatCurrency} />
 
-        {/* 3. Acciones Rápidas */}
-        <div className="md:col-span-2 lg:col-span-2 grid grid-cols-2 gap-3">
-          <button onClick={() => openTransactionSheet(null, { type: 'expense' })} className="btn btn-primary h-14 col-span-1 rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 text-sm md:text-base font-semibold">
-            <span className="material-symbols-outlined text-[20px]">remove</span> Nuevo Gasto
-          </button>
-          <button onClick={() => openTransactionSheet(null, { type: 'income' })} className="btn h-14 col-span-1 bg-emerald-500 text-white hover:bg-emerald-600 rounded-2xl active:scale-95 text-sm md:text-base font-semibold">
-            <span className="material-symbols-outlined text-[20px]">add</span> Nuevo Ingreso
-          </button>
-        </div>
         {/* Financial Planning Widget - Ancho completo */}
         <div className="col-span-2 xl:col-span-4">
           <FinancialPlanningWidget />

@@ -161,7 +161,7 @@ const CreditCardGroup = ({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3.5">
             {/* Brand Logo Placeholder / Icon */}
-            <div className="relative size-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#2E2E3A] to-[#1C1C22] shadow-inner text-white">
+            <div className="relative size-11 rounded-xl flex items-center justify-center bg-linear-to-br from-[#2E2E3A] to-[#1C1C22] shadow-inner text-white">
               <span className="material-symbols-outlined text-[22px] opacity-90">credit_card</span>
               {isOverdue && !isLongPeriod && (
                 <span className="absolute -top-1 -right-1 size-3 bg-app-danger rounded-full border-2 border-app-surface animate-pulse" />

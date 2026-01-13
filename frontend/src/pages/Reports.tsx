@@ -186,29 +186,27 @@ const Reports: React.FC = () => {
                         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-center">
 
                             {/* Donut Chart */}
-                            <div className="h-48 w-48 relative shrink-0">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={chartData}
-                                            dataKey="value"
-                                            innerRadius={55}
-                                            outerRadius={75}
-                                            paddingAngle={3}
-                                            cornerRadius={6}
-                                            animationDuration={800}
-                                            animationBegin={0}
-                                        >
-                                            {chartData.map((e, i) => (
-                                                <Cell key={i} fill={e.color} strokeWidth={0} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            content={<CustomTooltip formatter={formatCurrency} />}
-                                            cursor={{ stroke: 'var(--border-default)', strokeWidth: 1 }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                            <div className="h-48 w-48 relative shrink-0 flex items-center justify-center">
+                                <PieChart width={192} height={192}>
+                                    <Pie
+                                        data={chartData}
+                                        dataKey="value"
+                                        innerRadius={55}
+                                        outerRadius={75}
+                                        paddingAngle={3}
+                                        cornerRadius={6}
+                                        animationDuration={800}
+                                        animationBegin={0}
+                                    >
+                                        {chartData.map((e, i) => (
+                                            <Cell key={i} fill={e.color} strokeWidth={0} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        content={<CustomTooltip formatter={formatCurrency} />}
+                                        cursor={{ stroke: 'var(--border-default)', strokeWidth: 1 }}
+                                    />
+                                </PieChart>
                             </div>
 
                             {/* Legend / Breakdown List */}

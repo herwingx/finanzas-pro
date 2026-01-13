@@ -54,6 +54,8 @@ const More: React.FC = () => {
         { path: '/recurring', icon: 'event_repeat', title: 'Recurrentes', description: 'Suscripciones y fijos', colorClass: 'text-purple-600 dark:text-purple-400', bgClass: 'bg-purple-100 dark:bg-purple-900/30' },
         { path: '/installments', icon: 'credit_score', title: 'Meses Sin Intereses', description: null, colorClass: 'text-indigo-600 dark:text-indigo-400', bgClass: 'bg-indigo-100 dark:bg-indigo-900/30' },
         { path: '/loans', icon: 'handshake', title: 'Préstamos', description: 'Dinero que te deben', colorClass: 'text-amber-600 dark:text-amber-400', bgClass: 'bg-amber-100 dark:bg-amber-900/30' },
+        { path: '/investments', icon: 'trending_up', title: 'Inversiones', description: 'Portafolio de activos', colorClass: 'text-emerald-600 dark:text-emerald-400', bgClass: 'bg-emerald-100 dark:bg-emerald-900/30' },
+        { path: '/goals', icon: 'savings', title: 'Metas de Ahorro', description: 'Alcancías virtuales', colorClass: 'text-teal-600 dark:text-teal-400', bgClass: 'bg-teal-100 dark:bg-teal-900/30' },
       ]
     },
     {
@@ -87,7 +89,7 @@ const More: React.FC = () => {
           to="/profile"
           className="flex items-center gap-4 p-4 bg-app-surface border border-app-border rounded-2xl shadow-sm hover:border-app-border/80 hover:shadow-md transition-all active:scale-[0.99]"
         >
-          <div className="size-16 rounded-full bg-gradient-to-br from-app-primary to-indigo-600 flex items-center justify-center text-white shadow-inner shrink-0 text-xl font-bold">
+          <div className="size-16 rounded-full bg-linear-to-br from-app-primary to-indigo-600 flex items-center justify-center text-white shadow-inner shrink-0 text-xl font-bold">
             {profile?.avatar ? (
               <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover rounded-full" />
             ) : (

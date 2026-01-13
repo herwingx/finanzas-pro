@@ -6,9 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { SkeletonAccountList } from '../components/Skeleton';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
-import { InstallmentPurchase } from '../types';
+import { InstallmentPurchase, TransactionType } from '../types';
 import { formatDateUTC } from '../utils/dateUtils';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 
 // ============== MSI DETAIL SHEET ==============
 // Similar to LoanDetailSheet and RecurringDetailSheet for consistency
@@ -25,7 +26,7 @@ const MSIDetailSheet = ({
     onDelete: () => void;
     formatCurrency: (val: number) => string;
 }) => {
-    const navigate = useNavigate();
+    const { openTransactionSheet } = useGlobalSheets();
 
     if (!purchase) return null;
 
@@ -44,12 +45,19 @@ const MSIDetailSheet = ({
     nextPaymentDate.setMonth(nextPaymentDate.getMonth() + nextPaymentNum);
 
     const handleRegisterPayment = () => {
-        navigate(`/new?type=transfer&destinationAccountId=${purchase.accountId}&amount=${nextPaymentAmt.toFixed(2)}&description=${encodeURIComponent(`Pago MSI: ${purchase.description}`)}&installmentPurchaseId=${purchase.id}`);
+        openTransactionSheet(null, {
+            type: 'transfer',
+            amount: nextPaymentAmt.toFixed(2),
+            description: `Pago MSI: ${purchase.description}`,
+            destinationAccountId: purchase.accountId,
+            installmentPurchaseId: purchase.id
+        });
         onClose();
     };
 
     return (
         <SwipeableBottomSheet isOpen={!!purchase} onClose={onClose}>
+            {/* ... (Unchanged content) ... */}
             <div className="text-center mb-6">
                 <div className="size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
                     <span className="material-symbols-outlined">credit_score</span>
@@ -82,6 +90,7 @@ const MSIDetailSheet = ({
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3 mb-6">
+                {/* ... (Unchanged) ... */}
                 <div className="bg-app-bg border border-app-border rounded-xl p-3">
                     <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Total</p>
                     <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(total)}</p>
@@ -157,6 +166,7 @@ const MSIDetailSheet = ({
 const InstallmentsPage: React.FC = () => {
     const { data: purchases, isLoading, isError } = useInstallmentPurchases();
     const { data: profile } = useProfile();
+    const { openInstallmentSheet, openTransactionSheet } = useGlobalSheets();
     const [activeTab, setActiveTab] = useState<'active' | 'settled'>('active');
     const [itemToDelete, setItemToDelete] = useState<InstallmentPurchase | null>(null);
     const [selectedItem, setSelectedItem] = useState<InstallmentPurchase | null>(null);
@@ -195,7 +205,7 @@ const InstallmentsPage: React.FC = () => {
 
     const handleEdit = (purchase: InstallmentPurchase) => {
         setSelectedItem(null);
-        navigate(`/installments/edit/${purchase.id}?mode=edit`, { replace: true });
+        openInstallmentSheet(purchase);
     };
 
     if (isLoading) {
@@ -221,7 +231,7 @@ const InstallmentsPage: React.FC = () => {
                 <div className="flex justify-between items-center mb-4 px-1">
                     <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Planes Activos</h2>
                     <button
-                        onClick={() => navigate('/installments/new')}
+                        onClick={() => openInstallmentSheet()}
                         className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
                     >
                         <span className="material-symbols-outlined text-[18px]">add_circle</span>
@@ -258,7 +268,7 @@ const InstallmentsPage: React.FC = () => {
                             return (
                                 <SwipeableItem
                                     key={purchase.id}
-                                    onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`, { replace: true })}
+                                    onSwipeRight={() => handleEdit(purchase)}
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}

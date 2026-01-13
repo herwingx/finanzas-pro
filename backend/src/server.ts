@@ -20,6 +20,8 @@ import installmentsRoutes from './routes/installments';
 import financialPlanningRoutes from './routes/financialPlanningRoutes';
 import creditCardPaymentsRoutes from './routes/creditCardPayments';
 import loansRoutes from './routes/loans';
+import investmentsRoutes from './routes/investments';
+import goalsRoutes from './routes/goals';
 import aiRoutes from './routes/ai';
 
 // Jobs (P0 - Persistencia Crítica)
@@ -87,6 +89,8 @@ app.use('/api/installments', installmentsRoutes);
 app.use('/api/financial-planning', financialPlanningRoutes);
 app.use('/api/credit-card', creditCardPaymentsRoutes);
 app.use('/api/loans', loansRoutes);
+app.use('/api/investments', investmentsRoutes); // P2: Inversiones
+app.use('/api/goals', goalsRoutes); // P2: Metas de ahorro
 app.use('/api/ai', aiRoutes);
 
 // =============================================================================

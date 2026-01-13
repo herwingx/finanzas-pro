@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { PageHeader } from '../components/PageHeader';
 import { SkeletonAccountList } from '../components/Skeleton';
-import { useAccounts, useProfile, useDeleteAccount } from '../hooks/useApi';
+import { useAccounts, useProfile, useDeleteAccount, useInvestments, useLoans, useGoals } from '../hooks/useApi';
 import { toastSuccess, toastError, toast } from '../utils/toast';
 import { AccountType, Account } from '../types';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 
 // ============== ACCOUNT DETAIL SHEET ==============
 const AccountDetailSheet = ({
@@ -92,19 +93,20 @@ const AccountDetailSheet = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="hidden md:flex gap-3">
+            <div className="grid grid-cols-2 gap-3">
                 <button
                     onClick={onEdit}
-                    className="flex-1 py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
+                    className="py-3.5 rounded-xl bg-app-subtle border border-app-border text-app-text font-bold active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                     <span className="material-symbols-outlined text-lg">edit</span>
-                    Editar
+                    Editar Config
                 </button>
                 <button
                     onClick={onDelete}
-                    className="py-3.5 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold hover:opacity-80 transition-opacity flex items-center justify-center"
+                    className="py-3.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-900/10 dark:text-rose-400 font-bold active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                     <span className="material-symbols-outlined text-lg">delete</span>
+                    Eliminar
                 </button>
             </div>
         </SwipeableBottomSheet>
@@ -112,8 +114,19 @@ const AccountDetailSheet = ({
 };
 
 const AccountsPage: React.FC = () => {
-    const navigate = useNavigate();
-    const { data: accounts, isLoading, isError } = useAccounts();
+    const [searchParams] = useSearchParams();
+    const { openAccountSheet } = useGlobalSheets();
+
+    useEffect(() => {
+        if (searchParams.get('action') === 'new') {
+            openAccountSheet();
+        }
+    }, [searchParams, openAccountSheet]);
+
+    const { data: accounts, isLoading: isLoadingAcc, isError } = useAccounts();
+    const { data: investments, isLoading: isLoadingInv } = useInvestments();
+    const { data: loans, isLoading: isLoadingLoans } = useLoans();
+    const { data: goals, isLoading: isLoadingGoals } = useGoals();
     const { data: profile } = useProfile();
     const deleteAccountMutation = useDeleteAccount();
     const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
@@ -167,10 +180,21 @@ const AccountsPage: React.FC = () => {
         }).format(value);
     }, [profile?.currency]);
 
-    // Resumen KPIs
-    const totalAssets = useMemo(() => accounts?.filter(a => ['DEBIT', 'CASH', 'SAVINGS'].includes(a.type)).reduce((s, a) => s + a.balance, 0) || 0, [accounts]);
-    const totalDebt = useMemo(() => accounts?.filter(a => a.type === 'CREDIT').reduce((s, a) => s + a.balance, 0) || 0, [accounts]);
-    const netWorth = totalAssets - totalDebt;
+    // Resumen KPIs (Global Net Worth Calculation matching Dashboard)
+    const totalCashAssets = useMemo(() => accounts?.filter(a => ['DEBIT', 'CASH', 'SAVINGS'].includes(a.type)).reduce((s, a) => s + a.balance, 0) || 0, [accounts]);
+    const totalInvestments = useMemo(() => investments?.reduce((sum, inv) => sum + ((inv.currentPrice || inv.avgBuyPrice) * inv.quantity), 0) || 0, [investments]);
+    const totalLoansLent = useMemo(() => loans?.filter(l => l.loanType === 'lent' && ['active', 'partial'].includes(l.status)).reduce((sum, l) => sum + l.remainingAmount, 0) || 0, [loans]);
+    const totalGoalAssets = useMemo(() => goals?.reduce((sum, g) => sum + g.currentAmount, 0) || 0, [goals]);
+
+    // Activos Totales (Cuentas + Inversiones + Lo que me deben + Metas)
+    const totalAssets = totalCashAssets + totalInvestments + totalLoansLent + totalGoalAssets;
+
+    // Pasivos (Deuda en Tarjetas + Lo que debo)
+    const totalCreditDebt = useMemo(() => accounts?.filter(a => a.type === 'CREDIT').reduce((s, a) => s + a.balance, 0) || 0, [accounts]);
+    const totalLoansBorrowed = useMemo(() => loans?.filter(l => l.loanType === 'borrowed' && ['active', 'partial'].includes(l.status)).reduce((sum, l) => sum + l.remainingAmount, 0) || 0, [loans]);
+    const totalLiabilities = totalCreditDebt + totalLoansBorrowed;
+
+    const netWorth = totalAssets - totalLiabilities;
 
     // Helpers UI
     const getAccountConfig = (type: AccountType) => {
@@ -182,7 +206,7 @@ const AccountsPage: React.FC = () => {
         }
     };
 
-    if (isLoading) {
+    if (isLoadingAcc || isLoadingInv || isLoadingLoans || isLoadingGoals) {
         return (
             <div className="min-h-dvh bg-app-bg animate-pulse">
                 <PageHeader title="Mis Cuentas" showBackButton={false} />
@@ -208,8 +232,8 @@ const AccountsPage: React.FC = () => {
                         <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">{formatCurrency(totalAssets)}</p>
                     </div>
                     <div className="bg-app-surface p-3 rounded-2xl border border-app-border text-center shadow-sm">
-                        <p className="text-[10px] uppercase font-bold text-app-muted tracking-wider">Deuda</p>
-                        <p className="text-base font-bold text-rose-600 dark:text-rose-400 mt-1 tabular-nums">-{formatCurrency(totalDebt)}</p>
+                        <p className="text-[10px] uppercase font-bold text-app-muted tracking-wider">Deuda Final</p>
+                        <p className="text-base font-bold text-rose-600 dark:text-rose-400 mt-1 tabular-nums">-{formatCurrency(totalLiabilities)}</p>
                     </div>
                     <div className="bg-app-surface p-3 rounded-2xl border border-app-border text-center shadow-sm relative overflow-hidden">
                         <div className={`absolute top-0 left-0 w-full h-1 ${netWorth >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -222,10 +246,10 @@ const AccountsPage: React.FC = () => {
                 <div className="flex justify-between items-center mb-4 px-1">
                     <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Cuentas</h2>
                     {/* Add Account Link Styled as Icon Button for Mobile, Button for Desktop */}
-                    <Link to="/accounts/new" className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold">
+                    <button onClick={() => openAccountSheet()} className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold">
                         <span className="material-symbols-outlined text-[18px]">add_circle</span>
                         <span className="hidden sm:inline">Nueva Cuenta</span>
-                    </Link>
+                    </button>
                 </div>
 
                 {/* Accounts Grid/List */}
@@ -242,7 +266,7 @@ const AccountsPage: React.FC = () => {
                             return (
                                 <SwipeableItem
                                     key={account.id}
-                                    onSwipeRight={() => navigate(`/accounts/edit/${account.id}?mode=edit`, { replace: true })}
+                                    onSwipeRight={() => openAccountSheet(account)}
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(account)}
                                     rightAction={{ icon: 'delete', color: '#EF4444', label: 'Eliminar' }}
@@ -298,7 +322,7 @@ const AccountsPage: React.FC = () => {
                             <span className="material-symbols-outlined text-4xl mb-3 text-app-muted">savings</span>
                             <p className="text-sm font-bold text-app-text">Sin Cuentas Registradas</p>
                             <p className="text-xs text-app-muted mb-4 max-w-[200px]">Añade tu cuenta bancaria o efectivo para comenzar.</p>
-                            <Link to="/accounts/new" className="btn btn-primary text-xs px-4 py-2 h-auto min-h-0 rounded-lg shadow-lg">Agregar Cuenta</Link>
+                            <button onClick={() => openAccountSheet()} className="btn btn-primary text-xs px-4 py-2 h-auto min-h-0 rounded-lg shadow-lg font-bold text-app-primary">Agregar Cuenta</button>
                         </div>
                     )}
                 </div>
@@ -312,8 +336,8 @@ const AccountsPage: React.FC = () => {
                 onClose={() => setSelectedAccount(null)}
                 onEdit={() => {
                     if (selectedAccount) {
-                        navigate(`/accounts/edit/${selectedAccount.id}?mode=edit`, { replace: true });
                         setSelectedAccount(null);
+                        openAccountSheet(selectedAccount);
                     }
                 }}
                 onDelete={() => {
@@ -327,5 +351,6 @@ const AccountsPage: React.FC = () => {
         </div>
     );
 };
+
 
 export default AccountsPage;

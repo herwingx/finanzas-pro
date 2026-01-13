@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   AreaChart, Area,
   BarChart, Bar,
@@ -38,6 +38,26 @@ const ModernTooltip = ({ active, payload, label }: any) => {
 interface SpendingTrendProps { transactions: Transaction[]; }
 
 export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions }) => {
+  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
+  const [dims, setDims] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!containerNode) return;
+    const update = () => {
+      if (containerNode) {
+        const { offsetWidth, offsetHeight } = containerNode;
+        if (offsetWidth > 0 && offsetHeight > 0) {
+          setDims(d => (d.width === offsetWidth && d.height === offsetHeight ? d : { width: offsetWidth, height: offsetHeight }));
+        }
+      }
+    };
+    update();
+    const t = setTimeout(update, 100);
+    const obs = new ResizeObserver(update);
+    obs.observe(containerNode);
+    return () => { obs.disconnect(); clearTimeout(t); };
+  }, [containerNode]);
+
   const { data, totals } = useMemo(() => {
     // Agrupar por Mes
     const monthlyData = transactions.reduce((acc, tx) => {
@@ -79,7 +99,7 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
   }
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col min-w-0">
       {/* KPIs Compactos */}
       <div className="flex gap-4 mb-4 mt-1 overflow-x-auto pb-1 no-scrollbar">
         <div className="shrink-0 flex items-center gap-2">
@@ -99,9 +119,9 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
       </div>
 
       {/* Chart Area */}
-      <div className="flex-1 min-h-[160px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+      <div ref={setContainerNode} className="h-[250px] w-full min-w-0 relative">
+        {dims.width > 0 && dims.height > 0 && (
+          <AreaChart width={dims.width} height={dims.height} data={data} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="gradIngresos" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--semantic-success)" stopOpacity={0.15} />
@@ -142,7 +162,7 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
               fill="url(#gradGastos)"
             />
           </AreaChart>
-        </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
@@ -188,7 +208,7 @@ export const CategoryDistributionChart: React.FC<{ transactions: Transaction[], 
 
       {/* Chart */}
       <div className="w-2/3 h-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="99%" height="100%" minWidth={0}>
           <PieChart>
             <Pie
               data={data}
@@ -235,7 +255,7 @@ export const BalanceOverTimeChart: React.FC<{ transactions: Transaction[] }> = (
   if (data.length < 2) return <div className="h-40 flex items-center justify-center text-xs text-app-muted">Se requieren más datos</div>;
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
+    <ResponsiveContainer width="99%" height={200} minWidth={0}>
       <AreaChart data={data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
         <defs>
           <linearGradient id="gradBalance" x1="0" y1="0" x2="0" y2="1">

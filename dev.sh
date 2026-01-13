@@ -115,7 +115,7 @@ cmd_start() {
     echo "    cd frontend && npm run dev"
     echo ""
     echo "URLs:"
-    echo "  Frontend: http://localhost:5173"
+    echo "  Frontend: http://localhost:3000"
     echo "  Backend:  http://localhost:4000"
     echo "  API:      http://localhost:4000/api"
     echo ""

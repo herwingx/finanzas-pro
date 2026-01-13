@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
@@ -11,6 +11,36 @@ const FinancialAnalysis: React.FC = () => {
   const [periodType, setPeriodType] = useState<'quincenal' | 'mensual' | 'bimestral' | 'semestral' | 'anual'>('mensual');
   // Use 'projection' mode for analysis - shows future projections from today
   const { data: summary, isLoading } = useFinancialPeriodSummary(periodType, 'projection');
+
+  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
+  const [dims, setDims] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!containerNode) return;
+    const update = () => {
+      if (containerNode) {
+        const { offsetWidth, offsetHeight } = containerNode;
+        // Only update if dimensions effectively changed to avoid measuring loops? 
+        // React state update bail-out handles strict equality, but objects are new.
+        // We will trust React.
+        if (offsetWidth > 0 && offsetHeight > 0) {
+          setDims(d => (d.width === offsetWidth && d.height === offsetHeight ? d : { width: offsetWidth, height: offsetHeight }));
+        }
+      }
+    };
+
+    // Initial + Delay for layout to settle
+    update();
+    const t = setTimeout(update, 100);
+
+    const obs = new ResizeObserver(update);
+    obs.observe(containerNode);
+
+    return () => {
+      obs.disconnect();
+      clearTimeout(t);
+    };
+  }, [containerNode]);
 
   const chartData = useMemo(() => {
     // ... (rest of memo, omitted for brevity, logic remains same)
@@ -234,9 +264,9 @@ const FinancialAnalysis: React.FC = () => {
             </div>
           </div>
 
-          <div className="h-72 w-full p-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+          <div ref={setContainerNode} className="h-72 w-full p-2 relative">
+            {dims.width > 0 && dims.height > 0 && (
+              <AreaChart width={dims.width} height={dims.height} data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSaldoProj" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -270,7 +300,8 @@ const FinancialAnalysis: React.FC = () => {
                   animationDuration={800}
                 />
               </AreaChart>
-            </ResponsiveContainer>
+            )}
+            {!dims.width && <div className="w-full h-full flex items-center justify-center text-app-muted">Cargando gráfico...</div>}
           </div>
         </div>
 

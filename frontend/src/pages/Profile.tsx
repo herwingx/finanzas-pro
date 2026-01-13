@@ -18,6 +18,11 @@ const Profile: React.FC = () => {
   const [timezone, setTimezone] = useState('America/Mexico_City');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
+  // Financial Config (P1)
+  const [netIncome, setNetIncome] = useState('');
+  const [incomeFreq, setIncomeFreq] = useState<'weekly' | 'biweekly' | 'monthly'>('monthly');
+  const [taxRate, setTaxRate] = useState('');
+
   // Common timezones for Latin America and key regions
   const timezones = [
     { value: 'America/Mexico_City', label: 'México Central (CDMX)' },
@@ -45,6 +50,12 @@ const Profile: React.FC = () => {
       setCurrency(profile.currency);
       setTimezone(profile.timezone || 'America/Mexico_City');
       setAvatarPreview(profile.avatar || null);
+
+      // Load P1 Fields
+      setNetIncome(profile.monthlyNetIncome ? String(profile.monthlyNetIncome) : '');
+      setIncomeFreq(profile.incomeFrequency || 'monthly');
+      setTaxRate(profile.taxRate ? String(profile.taxRate * 100) : ''); // Stored as decimal (0.30), display as % (30)
+
       setIsEditing(true);
     }
   };
@@ -64,7 +75,15 @@ const Profile: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      await updateProfileMutation.mutateAsync({ name, currency, timezone, avatar: avatarPreview || '' });
+      await updateProfileMutation.mutateAsync({
+        name,
+        currency,
+        timezone,
+        avatar: avatarPreview || '',
+        monthlyNetIncome: netIncome ? parseFloat(netIncome) : undefined,
+        incomeFrequency: incomeFreq,
+        taxRate: taxRate ? parseFloat(taxRate) / 100 : undefined
+      });
       toastSuccess('Perfil actualizado correctamente');
       setIsEditing(false);
     } catch (error) {
@@ -199,6 +218,88 @@ const Profile: React.FC = () => {
                   {currentTimezoneLabel}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Financial Configuration (P1 Logic) */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider pl-1">Configuración Financiera</h3>
+            <p className="text-[10px] text-app-muted pl-1 mb-2">Define tus parámetros base para la Regla 50/30/20.</p>
+
+            {/* Income Config */}
+            <div className="bg-app-surface border border-app-border rounded-2xl p-4 shadow-sm space-y-4">
+
+              {/* Net Income */}
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-semibold text-sm text-app-text">Ingreso Neto Base</p>
+                  <p className="text-xs text-app-muted mt-0.5">Lo que recibes ya libres de impuestos.</p>
+                </div>
+                {isEditing ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-app-muted">$</span>
+                    <input
+                      type="number"
+                      value={netIncome}
+                      onChange={e => setNetIncome(e.target.value)}
+                      placeholder="Ej. 25000"
+                      className="w-24 bg-app-subtle border-transparent py-1.5 px-2 rounded-lg text-sm font-bold text-app-text text-right outline-none focus:ring-2 focus:ring-app-primary"
+                    />
+                  </div>
+                ) : (
+                  <div className="font-bold text-app-text">
+                    ${profile?.monthlyNetIncome?.toLocaleString() || '0.00'}
+                  </div>
+                )}
+              </div>
+
+              {/* Frequency */}
+              <div className="flex justify-between items-center border-t border-app-border pt-3">
+                <div>
+                  <p className="font-semibold text-sm text-app-text">Frecuencia de Cobro</p>
+                  <p className="text-xs text-app-muted mt-0.5">Cada cuánto recibes este ingreso.</p>
+                </div>
+                {isEditing ? (
+                  <select
+                    value={incomeFreq}
+                    onChange={(e) => setIncomeFreq(e.target.value as any)}
+                    className="bg-app-subtle py-1.5 px-2 rounded-lg text-sm font-bold text-app-text outline-none text-right"
+                  >
+                    <option value="weekly">Semanal</option>
+                    <option value="biweekly">Quincenal</option>
+                    <option value="monthly">Mensual</option>
+                  </select>
+                ) : (
+                  <div className="text-sm font-medium text-app-muted capitalize">
+                    {profile?.incomeFrequency === 'biweekly' ? 'Quincenal' : profile?.incomeFrequency === 'weekly' ? 'Semanal' : 'Mensual'}
+                  </div>
+                )}
+              </div>
+
+              {/* Tax Rate */}
+              <div className="flex justify-between items-center border-t border-app-border pt-3">
+                <div>
+                  <p className="font-semibold text-sm text-app-text">Estimación de Impuestos</p>
+                  <p className="text-xs text-app-muted mt-0.5">Solo informativo para proyecciones brutas.</p>
+                </div>
+                {isEditing ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      value={taxRate}
+                      onChange={e => setTaxRate(e.target.value)}
+                      placeholder="30"
+                      className="w-12 bg-app-subtle border-transparent py-1.5 px-2 rounded-lg text-sm font-bold text-app-text text-right outline-none focus:ring-2 focus:ring-app-primary"
+                    />
+                    <span className="text-sm font-bold text-app-muted">%</span>
+                  </div>
+                ) : (
+                  <div className="font-bold text-app-text">
+                    {profile?.taxRate ? (profile.taxRate * 100).toFixed(0) : '0'}%
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
 

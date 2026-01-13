@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
+import { TransactionType, TransactionFormInitialData } from '../types';
 
 // --- Interfaces & Constants ---
 
@@ -17,6 +19,8 @@ const QUICK_ACTIONS = [
   { icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
   { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
   { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new' },
+  { icon: 'savings', label: 'Meta', colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400', path: '/goals?action=new' },
+  { icon: 'trending_up', label: 'Inversión', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/investments?action=new' },
 ];
 
 const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
@@ -71,6 +75,14 @@ const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const {
+    openInvestmentSheet,
+    openGoalSheet,
+    openInstallmentSheet,
+    openLoanSheet,
+    openRecurringSheet,
+    openTransactionSheet
+  } = useGlobalSheets();
 
   // Close menu on route change
   useEffect(() => setIsMenuOpen(false), [location.pathname]);
@@ -80,7 +92,53 @@ const BottomNav: React.FC = () => {
   if (!shouldShow) return null;
 
   const handleQuickAction = (path: string) => {
-    // Small delay to allow ripple/active state to show before navigation
+    // Intercept Global Sheets
+    if (path.includes('/investments?action=new')) {
+      setIsMenuOpen(false);
+      // Small timeout for better UX (let menu close anim start)
+      setTimeout(() => openInvestmentSheet(), 100);
+      return;
+    }
+
+    if (path.includes('/goals?action=new')) {
+      setIsMenuOpen(false);
+      setTimeout(() => openGoalSheet(), 100);
+      return;
+    }
+
+    if (path.includes('/installments/new')) {
+      setIsMenuOpen(false);
+      setTimeout(() => openInstallmentSheet(), 100);
+      return;
+    }
+
+    if (path.includes('/loans/new')) {
+      setIsMenuOpen(false);
+      setTimeout(() => openLoanSheet(), 100);
+      return;
+    }
+
+    if (path.includes('/recurring/new')) {
+      setIsMenuOpen(false);
+      setTimeout(() => openRecurringSheet(), 100);
+      return;
+    }
+
+    if (path.startsWith('/new')) {
+      setIsMenuOpen(false);
+      // Parse params manually since path is relative
+      const split = path.split('?');
+      const query = split.length > 1 ? split[1] : '';
+      const params = new URLSearchParams(query);
+
+      const type = (params.get('type') as TransactionType) || 'expense';
+      const initialData: TransactionFormInitialData = { type };
+
+      setTimeout(() => openTransactionSheet(null, initialData), 100);
+      return;
+    }
+
+    // Normal Navigation
     setTimeout(() => {
       setIsMenuOpen(false);
       navigate(path);
@@ -120,7 +178,7 @@ const BottomNav: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-y-4 gap-x-2 place-items-center">
+          <div className="grid grid-cols-4 gap-y-4 gap-x-2 place-items-center">
             {QUICK_ACTIONS.map(action => (
               <QuickActionButton
                 key={action.label}

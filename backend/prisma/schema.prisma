@@ -8,18 +8,17 @@ datasource db {
   provider = "postgresql"
 }
 
-// ============ ENUMS P0 ============
+// ============ ENUMS ============
 
-/// Tipo de cuenta financiera
 enum AccountType {
   CASH
   DEBIT
   CREDIT
   LOAN
   INVESTMENT
+  SAVINGS
 }
 
-/// Estado del estado de cuenta de TDC
 enum StatementStatus {
   PENDING
   PAID
@@ -27,15 +26,17 @@ enum StatementStatus {
   OVERDUE
 }
 
-/// Tipo de inversión
-enum InvestmentType {
-  STOCK
-  CRYPTO
-  BOND
-  FUND
-  ETF
-  REAL_ESTATE
-  OTHER
+enum AssetType {
+  REAL_ESTATE   // Bienes raíces
+  VEHICLE       // Vehículos
+  STOCK         // Acciones
+  CRYPTO        // Criptomonedas
+  BOND          // Bonos/Deuda
+  FUND          // Fondos de Inversión
+  ETF           // ETF
+  CASH          // Efectivo bajo colchón
+  COLLECTIBLE   // Arte, Joyas
+  OTHER         // Otros
 }
 
 model User {
@@ -43,20 +44,23 @@ model User {
   email                 String                 @unique
   password              String
   name                  String
-  currency              String                 @default("USD")
+  currency              String                 @default("MXN")
   timezone              String                 @default("America/Mexico_City")
   avatar                String?
   createdAt             DateTime               @default(now())
   resetToken            String?
   resetTokenExpiry      DateTime?
   
-  // P0: Campos para cálculo correcto de 50/30/20
-  monthlyNetIncome      Float?                 // Ingreso neto mensual (post-impuestos)
+  // Perfil Financiero
+  monthlyNetIncome      Float?                 @default(0) // Ingreso neto mensual (post-impuestos)
   incomeFrequency       String?                // weekly, biweekly, monthly
-  taxRate               Float?                 // Tasa de impuestos (ej: 0.30)
+  taxRate               Float?                 // Tasa de impuestos estimada (0.0 - 1.0)
+  netWorth              Float?                 @default(0) // Cache del patrimonio neto calculado
+  financialScore        Int?                   @default(0) // Score de salud financiera (0-100)
   
-  // Relaciones existentes
+  // Relaciones
   accounts              Account[]
+  assets                Asset[]
   budgets               Budget[]
   categories            Category[]
   installmentPurchases  InstallmentPurchase[]
@@ -64,9 +68,8 @@ model User {
   recurringTransactions RecurringTransaction[]
   transactions          Transaction[]
   
-  // P0: Nuevas relaciones
+  // Relaciones V2
   auditLogs             AuditLog[]
-  investments           Investment[]
   savingsGoals          SavingsGoal[]
   notifications         Notification[]
   calendarEvents        CalendarEvent[]
@@ -77,26 +80,59 @@ model User {
 model Account {
   id                      String                    @id @default(uuid())
   name                    String
-  type                    String                    // TODO: Migrar a AccountType enum
+  type                    AccountType
   balance                 Float
+  currency                String                    @default("MXN")
   creditLimit             Float?
   cutoffDay               Int?
   paymentDay              Int?
+  interestRate            Float?                    // Tasa anual (ej: 45.0 para 45%)
+  
+  isArchived              Boolean                   @default(false)
+  includeInNetWorth       Boolean                   @default(true)
+  
   userId                  String
-  
-  // P0: Tasa de interés anual para TDC (ej: 0.45 para 45%)
-  interestRate            Float?
-  
   user                    User                      @relation(fields: [userId], references: [id])
+  
   installmentPurchases    InstallmentPurchase[]
   loans                   Loan[]
   recurringTransactions   RecurringTransaction[]
   transactions            Transaction[]
   destinationTransactions Transaction[]             @relation("DestinationTransactions")
   
-  // P0: Nuevas relaciones para persistencia
   snapshots               AccountSnapshot[]
   statements              CreditCardStatement[]
+}
+
+model Asset {
+  id              String         @id @default(uuid())
+  name            String         // "Casa en la playa", "Tesla Model 3"
+  type            AssetType
+  ticker          String?        // Para Stocks/Crypto (AAPL, BTC)
+  
+  // Valoración
+  purchasePrice   Float          // Valor de compra
+  currentValue    Float          // Valor actual estimado
+  currency        String         @default("MXN")
+  quantity        Float          @default(1)
+  
+  // Detalles
+  purchaseDate    DateTime
+  location        String?        // Para Real Estate
+  notes           String?
+  
+  isLiquid        Boolean        @default(false) // Si se puede convertir a efectivo rápido
+  includeInNetWorth Boolean      @default(true)
+  
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  
+  snapshots       AssetSnapshot[]
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  @@index([userId, type])
 }
 
 model Transaction {
@@ -104,20 +140,23 @@ model Transaction {
   amount                 Float
   description            String
   date                   DateTime
-  type                   String
+  type                   String                   // income, expense, transfer
+  status                 String                   @default("completed") // completed, pending
+  
   userId                 String
   categoryId             String?
   accountId              String?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+  destinationAccountId   String?                  @map("destination_account_id")
+  
+  // Vínculos
   recurringTransactionId String?
   installmentPurchaseId  String?
   loanId                 String?
-  destinationAccountId   String?                  @map("destination_account_id")
-  deletedAt              DateTime?
-  
-  // P0: Vincular transacción a un estado de cuenta específico al facturarse
   statementId            String?
+  
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  deletedAt              DateTime?
   
   account                Account?                 @relation(fields: [accountId], references: [id])
   category               Category?                @relation("CategoryTransactions", fields: [categoryId], references: [id])
@@ -129,6 +168,7 @@ model Transaction {
   user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@index([statementId])
+  @@index([userId, date])
 }
 
 model InstallmentPurchase {
@@ -140,9 +180,13 @@ model InstallmentPurchase {
   purchaseDate          DateTime
   paidInstallments      Int           @default(0)
   paidAmount            Float         @default(0)
+  
+  status                String        @default("active") // active, completed
+  
   accountId             String
   userId                String
   categoryId            String
+  
   account               Account       @relation(fields: [accountId], references: [id])
   category              Category      @relation(fields: [categoryId], references: [id])
   user                  User          @relation(fields: [userId], references: [id])
@@ -155,13 +199,15 @@ model Category {
   icon                  String
   color                 String
   type                  String
-  budgetType            String?
+  budgetType            String?                // needs, wants, savings
   userId                String
+  
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   installmentPurchases  InstallmentPurchase[]
   recurringTransactions RecurringTransaction[]
   transactions          Transaction[]          @relation("CategoryTransactions")
-
+  
   @@unique([name, userId])
 }
 
@@ -172,6 +218,10 @@ model Budget {
   startDate DateTime
   endDate   DateTime
   userId    String
+  
+  // Alertas
+  notifyThreshold Int? // % al cual notificar (ej: 80)
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -182,17 +232,20 @@ model RecurringTransaction {
   amount       Float
   description  String
   type         String
-  frequency    String
+  frequency    String        // weekly, biweekly, monthly, yearly
   startDate    DateTime
   nextDueDate  DateTime
-  endDate      DateTime?     // Fecha límite opcional - después de esta fecha no se proyectan más pagos
+  endDate      DateTime?
   active       Boolean       @default(true)
   lastRun      DateTime?
+  
   userId       String
   categoryId   String
   accountId    String
+  
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  
   account      Account       @relation(fields: [accountId], references: [id])
   category     Category      @relation(fields: [categoryId], references: [id])
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -201,56 +254,50 @@ model RecurringTransaction {
 
 model Loan {
   id              String    @id @default(uuid())
-  borrowerName    String    // Nombre de la persona (quien te debe o a quien debes)
-  borrowerPhone   String?   // Teléfono de contacto (opcional)
-  borrowerEmail   String?   // Email de contacto (opcional)
-  reason          String?   // Motivo del préstamo
-  loanType        String    @default("lent") // "lent" = presté (me deben), "borrowed" = me prestaron (debo)
-  originalAmount  Float     // Cantidad original prestada
-  remainingAmount Float     // Lo que aún falta por pagar
-  loanDate        DateTime  // Fecha del préstamo
-  expectedPayDate DateTime? // Fecha esperada de pago (null = sin fecha límite)
+  borrowerName    String    
+  borrowerPhone   String?   
+  borrowerEmail   String?   
+  reason          String?   
+  loanType        String    @default("lent") // "lent" (me deben), "borrowed" (debo)
+  originalAmount  Float     
+  remainingAmount Float     
+  loanDate        DateTime  
+  expectedPayDate DateTime? 
   status          String    @default("active") // active, partial, paid
-  notes           String?   // Notas adicionales
+  notes           String?   
+  interestRate    Float?    // Tasa anual si aplica
   
   userId          String
-  accountId       String?   // Cuenta afectada (opcional)
+  accountId       String?   
   
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   account         Account?  @relation(fields: [accountId], references: [id])
-  transactions    Transaction[] // Relación con transacciones
+  transactions    Transaction[] 
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
 
-// ============ MODELOS P0: PERSISTENCIA CRÍTICA ============
+// ============ PERSISTENCIA & HISTÓRICO ============
 
-/// Estado de cuenta de tarjeta de crédito (congelado al corte).
-/// PROPÓSITO: Resolver el cálculo en runtime. Cuando llega el día de corte,
-/// se "congela" una foto de la deuda que NO cambia retroactivamente.
 model CreditCardStatement {
   id              String          @id @default(uuid())
   accountId       String
   account         Account         @relation(fields: [accountId], references: [id])
   
-  // Período del ciclo
-  cycleStart      DateTime        /// Día después del corte anterior
-  cycleEnd        DateTime        /// Fecha de corte (congelada)
-  paymentDueDate  DateTime        /// Fecha límite de pago
+  cycleStart      DateTime
+  cycleEnd        DateTime
+  paymentDueDate  DateTime
   
-  // Montos congelados
-  totalDue        Float           /// Saldo total al corte
-  minimumPayment  Float?          /// Pago mínimo calculado
-  msiAmount       Float           @default(0) /// Cuotas MSI del período
-  regularAmount   Float           @default(0) /// Consumos regulares
+  totalDue        Float
+  minimumPayment  Float?
+  msiAmount       Float           @default(0)
+  regularAmount   Float           @default(0)
   
-  // Estado de pago
   status          StatementStatus @default(PENDING)
   paidAmount      Float           @default(0)
   paidAt          DateTime?
   
-  // Transacciones facturadas en este corte
   transactions    Transaction[]
   
   createdAt       DateTime        @default(now())
@@ -258,67 +305,48 @@ model CreditCardStatement {
   @@index([accountId, cycleEnd])
 }
 
-/// Snapshot diario del balance de cada cuenta.
-/// PROPÓSITO: Graficar Net Worth histórico en O(1) sin recalcular.
 model AccountSnapshot {
   id        String   @id @default(uuid())
   accountId String
-  account   Account  @relation(fields: [accountId], references: [id])
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   
-  balance   Float    /// Balance al momento del snapshot
-  date      DateTime /// Fecha del snapshot (medianoche)
+  balance   Float
+  date      DateTime
   
   @@unique([accountId, date])
   @@index([accountId, date])
 }
 
-/// Registro inmutable de cambios críticos (auditoría).
-/// PROPÓSITO: Soporte técnico, debugging, compliance.
+model AssetSnapshot {
+  id        String   @id @default(uuid())
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  
+  value     Float
+  date      DateTime // Snapshot a medianoche
+  
+  @@unique([assetId, date])
+  @@index([assetId, date])
+}
+
 model AuditLog {
   id          String   @id @default(uuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  action      String   /// CREATE, UPDATE, DELETE
-  entityType  String   /// Transaction, Account, etc.
+  action      String   
+  entityType  String   
   entityId    String
-  oldValue    Json?    /// Estado anterior
-  newValue    Json?    /// Estado nuevo
+  oldValue    Json?    
+  newValue    Json?    
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
   
   @@index([userId, createdAt])
-  @@index([entityType, entityId])
 }
 
-// ============ MODELOS P2: INVERSIONES Y METAS ============
+// ============ METAS & VARIOS ============
 
-/// Activo de inversión (stocks, crypto, bienes raíces).
-model Investment {
-  id              String         @id @default(uuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id])
-  
-  name            String         /// "Bitcoin", "AAPL", "CETES"
-  type            InvestmentType
-  ticker          String?        /// Símbolo de mercado (opcional)
-  
-  quantity        Float          /// Unidades poseídas
-  avgBuyPrice     Float          /// Precio promedio de compra
-  currentPrice    Float?         /// Precio actual (actualizado vía API o manual)
-  currency        String         @default("MXN")
-  
-  purchaseDate    DateTime
-  lastPriceUpdate DateTime?
-  notes           String?
-  
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  
-  @@index([userId, type])
-}
-
-/// Meta de ahorro con seguimiento de progreso.
 model SavingsGoal {
   id            String                @id @default(uuid())
   userId        String
@@ -330,8 +358,8 @@ model SavingsGoal {
   deadline      DateTime?
   icon          String?
   color         String?
-  priority      Int                   @default(1) /// 1=Alta, 2=Media, 3=Baja
-  status        String                @default("active") /// active, completed, paused
+  priority      Int                   @default(1) 
+  status        String                @default("active") 
   
   contributions SavingsContribution[]
   
@@ -339,7 +367,6 @@ model SavingsGoal {
   updatedAt     DateTime              @updatedAt
 }
 
-/// Contribución a una meta de ahorro.
 model SavingsContribution {
   id            String      @id @default(uuid())
   amount        Float
@@ -348,24 +375,20 @@ model SavingsContribution {
   
   savingsGoalId String
   savingsGoal   SavingsGoal @relation(fields: [savingsGoalId], references: [id], onDelete: Cascade)
-  transactionId String?     /// Link opcional a transacción
+  transactionId String?     
   
   createdAt     DateTime    @default(now())
 }
 
-// ============ MODELOS P3: AUTH, NOTIFICACIONES, CALENDARIO ============
-
-/// Conexión OAuth externa (Google, Apple).
 model UserOAuth {
   id            String    @id @default(uuid())
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  provider      String    /// 'google', 'apple'
-  providerId    String    /// ID del provider
-  accessToken   String?   /// Encriptar en producción
-  refreshToken  String?   /// Encriptar en producción
-  scope         String?   /// Permisos otorgados
+  provider      String    
+  providerId    String    
+  accessToken   String?   
+  refreshToken  String?   
   expiresAt     DateTime?
   
   createdAt     DateTime  @default(now())
@@ -374,19 +397,18 @@ model UserOAuth {
   @@unique([provider, providerId])
 }
 
-/// Notificación del sistema.
 model Notification {
   id           String    @id @default(uuid())
   userId       String
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  type         String    /// payment_reminder, goal_progress, overspend
+  type         String    
   title        String
   body         String
-  data         Json?     /// Datos adicionales (IDs, montos, etc.)
+  data         Json?     
   read         Boolean   @default(false)
   
-  scheduledFor DateTime? /// Para envío programado
+  scheduledFor DateTime? 
   sentAt       DateTime?
   
   createdAt    DateTime  @default(now())
@@ -394,19 +416,17 @@ model Notification {
   @@index([userId, read])
 }
 
-/// Evento sincronizado con calendario externo.
 model CalendarEvent {
   id           String   @id @default(uuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  externalId   String?  /// ID en Google Calendar
-  provider     String   /// 'google', 'apple'
+  externalId   String?  
+  provider     String   
   title        String
   description  String?
   eventDate    DateTime
   
-  // Referencias opcionales al origen
   recurringId   String?
   installmentId String?
   statementId   String?
@@ -417,30 +437,26 @@ model CalendarEvent {
   @@index([userId, eventDate])
 }
 
-// ============ MODELOS P4: CAPA AI (Gemini) ============
-
-/// Conversación con el asistente AI.
 model AIConversation {
   id        String      @id @default(uuid())
   userId    String
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  title     String?     /// Resumen de la conversación
+  title     String?     
   messages  AIMessage[]
   
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 }
 
-/// Mensaje individual en una conversación AI.
 model AIMessage {
   id             String         @id @default(uuid())
   conversationId String
   conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   
-  role           String         /// 'user', 'assistant', 'system'
+  role           String         
   content        String
-  tokens         Int?           /// Tokens usados (para tracking)
+  tokens         Int?           
   
   createdAt      DateTime       @default(now())
   

@@ -12,9 +12,7 @@ router.get('/', async (req: AuthRequest, res) => {
     try {
         const accounts = await prisma.account.findMany({
             where: { userId },
-            include: {
-                transactions: true, // Optionally include transactions associated with the account
-            }
+            // include: { transactions: true } // Removed for performance. Fetch txs separately if needed.
         });
         res.json(accounts);
     } catch (error) {

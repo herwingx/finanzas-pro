@@ -11,158 +11,141 @@ import { Button } from '../components/Button';
 import { useAccounts } from '../hooks/useApi';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 
-// --- Sub-Components (Inline for brevity but could be split) ---
+// --- INLINE COMPONENTS (Refactor to separate files later) ---
 
-// 1. DETAIL SHEET
-const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) => {
-  const [isPaymentMode, setIsPaymentMode] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [selectedAccountId, setSelectedAccountId] = useState(loan?.accountId || '');
-
-  const { data: accounts } = useAccounts();
-  const queryClient = useQueryClient();
-  const paymentMutation = useMutation({
-    mutationFn: (data: any) => registerLoanPayment(loan.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
-      toastSuccess('Abono registrado');
-      onClose();
-    },
-    onError: (e: any) => toastError(e.message)
-  });
-
-  // Filter accounts - for 'borrowed' show non-credit accounts to pay from; for 'lent' show all (receiving money)
-  const availableAccounts = useMemo(() => {
-    if (!accounts) return [];
-    return accounts.filter(acc => !['CREDIT', 'credit', 'Credit Card'].includes(acc.type));
-  }, [accounts]);
-
-  if (!loan) return null;
-
-  const isLent = loan.loanType === 'lent';
-  const percentPaid = Math.min(100, Math.round(((loan.originalAmount - loan.remainingAmount) / loan.originalAmount) * 100));
-
-  const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
-
-  return (
-    <SwipeableBottomSheet isOpen={!!loan} onClose={onClose}>
-      <div className="text-center mb-8">
-        <div className={`size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm ${isLent ? 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20'
-          }`}>
-          <span className="material-symbols-outlined">{isLent ? 'arrow_outward' : 'arrow_downward'}</span>
-        </div>
-        <h2 className="text-xl font-bold text-app-text">{loan.borrowerName}</h2>
-        <p className="text-sm text-app-muted">{isLent ? 'Te debe' : 'Le debes'}</p>
-      </div>
-
-      <div className="bg-app-subtle rounded-2xl p-5 mb-6 text-center border border-app-border/50">
-        <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Saldo Pendiente</p>
-        <div className={`text-4xl font-black tabular-nums tracking-tight ${isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-500'}`}>
-          {formatCurrency(loan.remainingAmount)}
-        </div>
-        {loan.remainingAmount !== loan.originalAmount && (
-          <div className="mt-3 w-full bg-app-subtle h-1.5 rounded-full overflow-hidden">
-            <div className={`h-full ${isLent ? 'bg-violet-500' : 'bg-rose-500'}`} style={{ width: `${percentPaid}%` }} />
-          </div>
-        )}
-      </div>
-
-      {isPaymentMode ? (
-        <form onSubmit={(e) => { e.preventDefault(); paymentMutation.mutate({ amount: parseFloat(amount), accountId: selectedAccountId || undefined }); }} className="space-y-4 animate-fade-in">
-          <div>
-            <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">Monto a abonar</label>
-            <input autoFocus type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()} value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-lg font-bold outline-none focus:ring-2 focus:ring-app-primary no-spin-button" placeholder="0.00" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">
-              {isLent ? 'Recibir en cuenta' : 'Pagar desde cuenta'}
-            </label>
-            <select
-              value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-app-primary appearance-none"
-            >
-              <option value="">Sin afectar cuentas</option>
-              {availableAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-app-muted mt-1 ml-1">
-              {selectedAccountId
-                ? (isLent ? 'Se sumará a esta cuenta' : 'Se restará de esta cuenta')
-                : 'Solo se actualizará el saldo del préstamo'
-              }
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => setIsPaymentMode(false)} fullWidth>Cancelar</Button>
-            <Button type="submit" disabled={!amount} isLoading={paymentMutation.isPending} fullWidth>Registrar</Button>
-          </div>
-        </form>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex gap-3">
-            {loan.status !== 'paid' && (
-              <>
-                <button onClick={() => setIsPaymentMode(true)} className="flex-1 bg-app-primary text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all">Abonar</button>
-                <button onClick={onMarkPaid} className="flex-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 py-3 rounded-xl font-bold text-sm hover:opacity-80 transition-opacity">Liquidar</button>
-              </>
-            )}
-          </div>
-          {/* Edit/Delete Buttons */}
-          <div className="hidden md:flex gap-3 pt-2 border-t border-app-border">
-            <button
-              onClick={onEdit}
-              className="flex-1 py-3 rounded-xl bg-app-subtle text-app-text font-bold text-sm hover:bg-app-subtle/80 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-lg">edit</span>
-              Editar
-            </button>
-            <button
-              onClick={onDelete}
-              className="py-3 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold text-sm hover:opacity-80 transition-opacity flex items-center justify-center"
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-            </button>
-          </div>
-        </div>
-      )}
-    </SwipeableBottomSheet>
-  );
-};
-
-
-// 2. SUMMARY CARD
-const LoanSummaryCard = ({ lent, owed }: { lent: number, owed: number }) => (
+const LoanSummaryCard: React.FC<{ lent: number; owed: number }> = ({ lent, owed }) => (
   <div className="grid grid-cols-2 gap-3 mb-6">
-    <div className="bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm">
-      <div className="flex items-center gap-1.5 mb-1 text-violet-500">
-        <span className="material-symbols-outlined text-[18px]">trending_up</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider">Me Deben</span>
+    <div className="bg-app-surface border border-app-border p-4 rounded-2xl flex flex-col justify-between h-28 relative overflow-hidden group shadow-sm">
+      <p className="text-xs font-bold text-app-muted uppercase tracking-wider relative z-10">Me Deben</p>
+      <p className="text-2xl font-black text-violet-600 dark:text-violet-400 font-numbers relative z-10">${lent.toLocaleString()}</p>
+      <div className="absolute -right-4 -bottom-4 text-violet-500 opacity-[0.08] dark:opacity-[0.15] group-hover:scale-110 transition-transform duration-500">
+        <span className="material-symbols-outlined text-[80px]">arrow_outward</span>
       </div>
-      <p className="text-xl font-bold text-app-text">${lent.toLocaleString()}</p>
     </div>
-    <div className="bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm">
-      <div className="flex items-center gap-1.5 mb-1 text-rose-500">
-        <span className="material-symbols-outlined text-[18px]">trending_down</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider">Debo</span>
+    <div className="bg-app-surface border border-app-border p-4 rounded-2xl flex flex-col justify-between h-28 relative overflow-hidden group shadow-sm">
+      <p className="text-xs font-bold text-app-muted uppercase tracking-wider relative z-10">Debo</p>
+      <p className="text-2xl font-black text-rose-500 dark:text-rose-400 font-numbers relative z-10">${owed.toLocaleString()}</p>
+      <div className="absolute -right-4 -bottom-4 text-rose-500 opacity-[0.08] dark:opacity-[0.15] group-hover:scale-110 transition-transform duration-500">
+        <span className="material-symbols-outlined text-[80px]">arrow_downward</span>
       </div>
-      <p className="text-xl font-bold text-app-text">${owed.toLocaleString()}</p>
     </div>
   </div>
 );
 
+interface LoanDetailSheetProps {
+  loan: Loan;
+  onClose: () => void;
+  onMarkPaid: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+}
+
+const LoanDetailSheet: React.FC<LoanDetailSheetProps> = ({ loan, onClose, onMarkPaid, onDelete, onEdit }) => {
+  const isLent = loan.loanType === 'lent';
+  const isPaid = loan.status === 'paid';
+
+  return (
+    <SwipeableBottomSheet isOpen={true} onClose={onClose}>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className={`size-20 rounded-full mx-auto flex items-center justify-center text-4xl mb-4 shadow-inner ${isPaid ? 'bg-emerald-100 text-emerald-600' :
+            isLent ? 'bg-violet-100 text-violet-600' : 'bg-rose-100 text-rose-600'
+            }`}>
+            <span className="material-symbols-outlined text-[40px]">
+              {isPaid ? 'check_circle' : isLent ? 'arrow_outward' : 'arrow_downward'}
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold text-app-text">{loan.borrowerName}</h2>
+          <div className="flex items-center justify-center gap-2 mt-1">
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border ${isLent
+              ? 'bg-violet-50 border-violet-100 text-violet-700'
+              : 'bg-rose-50 border-rose-100 text-rose-700'
+              }`}>
+              {isLent ? 'Te debe' : 'Le debes'}
+            </span>
+            {isPaid && <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">PAGADO</span>}
+          </div>
+        </div>
+
+        {/* Amount */}
+        <div className="text-center bg-app-subtle/50 p-6 rounded-3xl border border-app-border border-dashed">
+          <p className="text-sm font-medium text-app-muted uppercase tracking-wider mb-1">Monto Pendiente</p>
+          <p className={`text-4xl font-black font-numbers tracking-tight ${isPaid ? 'text-app-muted line-through opacity-50' : 'text-app-text'
+            }`}>
+            ${loan.remainingAmount.toLocaleString()}
+          </p>
+          {loan.remainingAmount !== loan.originalAmount && (
+            <p className="text-sm text-app-muted mt-2">Original: ${loan.originalAmount.toLocaleString()}</p>
+          )}
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="p-3 bg-app-subtle rounded-xl">
+            <p className="text-xs text-app-muted font-bold uppercase">Estado</p>
+            <p className="font-medium text-app-text flex items-center gap-1 mt-0.5">
+              {loan.status === 'active' ? 'Activo' : loan.status === 'partial' ? 'Abonado' : 'Pagado'}
+            </p>
+          </div>
+          <div className="p-3 bg-app-subtle rounded-xl">
+            <p className="text-xs text-app-muted font-bold uppercase">Fecha Préstamo</p>
+            <p className="font-medium text-app-text mt-0.5">{new Date(loan.loanDate).toLocaleDateString()}</p>
+          </div>
+          {loan.expectedPayDate && (
+            <div className="p-3 bg-app-subtle rounded-xl col-span-2">
+              <p className="text-xs text-app-muted font-bold uppercase">Fecha Promesa Pago</p>
+              <p className="font-medium text-app-text mt-0.5 flex items-center justify-between">
+                {new Date(loan.expectedPayDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {!isPaid && new Date(loan.expectedPayDate) < new Date() && (
+                  <span className="text-rose-500 text-xs font-bold flex items-center bg-rose-100 px-2 py-0.5 rounded-md">VENCIDO</span>
+                )}
+              </p>
+            </div>
+          )}
+          {loan.notes && (
+            <div className="p-3 bg-app-subtle rounded-xl col-span-2">
+              <p className="text-xs text-app-muted font-bold uppercase">Notas</p>
+              <p className="text-app-text mt-0.5 italic text-sm">"{loan.notes}"</p>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-3 pt-2">
+          {!isPaid && (
+            <Button onClick={onMarkPaid} className="w-full h-14 text-lg bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+              <span className="material-symbols-outlined mr-2">check_circle</span>
+              Marcar como Pagado
+            </Button>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button onClick={onEdit} variant="outline" className="h-12 border-app-border text-app-text hover:bg-app-subtle">
+              <span className="material-symbols-outlined mr-2 text-[18px]">edit</span>
+              Editar
+            </Button>
+            <Button onClick={onDelete} variant="ghost" className="h-12 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20">
+              <span className="material-symbols-outlined mr-2 text-[18px]">delete</span>
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      </div>
+    </SwipeableBottomSheet>
+  );
+};
 
 // ====== MAIN COMPONENT ======
+
+
 
 const LoansPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { openLoanSheet } = useGlobalSheets();
 
   const [filter, setFilter] = useState<'all' | 'lent' | 'borrowed'>('all');
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
@@ -171,6 +154,7 @@ const LoansPage: React.FC = () => {
   const { data: loans = [], isLoading } = useQuery<Loan[]>({ queryKey: ['loans'], queryFn: getLoans });
   const { data: summary } = useQuery<LoanSummary>({ queryKey: ['loans-summary'], queryFn: getLoanSummary });
 
+  // ... (Mutations existing code) ...
   const deleteMutation = useMutation({
     mutationFn: ({ id, revert }: { id: string; revert: boolean }) => deleteLoan(id, revert),
     onSuccess: () => {
@@ -205,14 +189,16 @@ const LoansPage: React.FC = () => {
     return loans.filter(l => l.loanType === filter);
   }, [loans, filter]);
 
+  const handleEdit = (loan: Loan) => {
+    setSelectedLoan(null); // Close detail
+    openLoanSheet(loan); // Open edit sheet
+  };
+
   if (isLoading) return <div className="min-h-dvh bg-app-bg pb-safe"><PageHeader title="Préstamos" showBackButton /><div className="p-4"><SkeletonTransactionList count={5} /></div></div>;
 
   return (
     <div className="min-h-dvh bg-app-bg text-app-text font-sans pb-safe">
-      <PageHeader
-        title="Préstamos"
-        showBackButton={true}
-      />
+      <PageHeader title="Préstamos" showBackButton={true} />
 
       <div className="max-w-2xl mx-auto px-4 py-4">
 
@@ -225,7 +211,7 @@ const LoansPage: React.FC = () => {
         <div className="flex justify-between items-center px-1 mb-4">
           <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Préstamos</h2>
           <button
-            onClick={() => navigate('/loans/new')}
+            onClick={() => openLoanSheet()}
             className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
           >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
@@ -233,7 +219,7 @@ const LoansPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Segmented Control */}
+        {/* ... (Segmented Control - unchanged) ... */}
         <div className="bg-app-subtle p-1 rounded-xl flex mb-6">
           {['all', 'lent', 'borrowed'].map((t) => {
             const label = t === 'all' ? 'Todos' : t === 'lent' ? 'Me deben' : 'Debo';
@@ -266,7 +252,7 @@ const LoansPage: React.FC = () => {
                   key={loan.id}
                   // Swipe RIGHT -> muestra leftAction (Editar)
                   leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                  onSwipeRight={() => navigate(`/loans/${loan.id}`, { replace: true })}
+                  onSwipeRight={() => handleEdit(loan)}
                   // Swipe LEFT -> muestra rightAction (Eliminar)
                   rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
                   onSwipeLeft={() => setLoanToDelete(loan)}
@@ -315,7 +301,7 @@ const LoansPage: React.FC = () => {
             setSelectedLoan(null);
             setLoanToDelete(selectedLoan);
           }}
-          onEdit={() => navigate(`/loans/${selectedLoan.id}`, { replace: true })}
+          onEdit={() => handleEdit(selectedLoan)}
         />
       )}
 

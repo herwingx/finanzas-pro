@@ -1,28 +1,48 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 
 const QUICK_ACTIONS = [
-  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense', hideOnPaths: [] as string[] },
-  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income', hideOnPaths: [] as string[] },
-  { icon: 'swap_horiz', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer', hideOnPaths: [] as string[] },
-  { icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new', hideOnPaths: ['/recurring'] },
-  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new', hideOnPaths: ['/installments'] },
-  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new', hideOnPaths: ['/loans'] },
+  { id: 'expense', icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', hideOnPaths: [] as string[] },
+  { id: 'income', icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', hideOnPaths: [] as string[] },
+  { id: 'transfer', icon: 'swap_horiz', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', hideOnPaths: [] as string[] },
+  { id: 'recurring', icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', hideOnPaths: ['/recurring'] },
+  { id: 'msi', icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', hideOnPaths: ['/installments'] },
+  { id: 'loan', icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', hideOnPaths: ['/loans'] },
+  { id: 'goal', icon: 'savings', label: 'Meta', colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400', hideOnPaths: ['/goals'] },
+  { id: 'investment', icon: 'trending_up', label: 'Inversión', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', hideOnPaths: ['/investments'] },
 ];
 
 export const DesktopFAB: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
+
+  const {
+    openTransactionSheet,
+    openRecurringSheet,
+    openInstallmentSheet,
+    openLoanSheet,
+    openGoalSheet,
+    openInvestmentSheet
+  } = useGlobalSheets();
 
   // Filter out redundant actions based on current path
   const filteredActions = QUICK_ACTIONS.filter(
     action => !action.hideOnPaths.some(p => location.pathname.startsWith(p))
   );
 
-  const handleAction = (path: string) => {
+  const handleAction = (id: string) => {
     setIsOpen(false);
-    navigate(path);
+    switch (id) {
+      case 'expense': openTransactionSheet(null, { type: 'expense' }); break;
+      case 'income': openTransactionSheet(null, { type: 'income' }); break;
+      case 'transfer': openTransactionSheet(null, { type: 'transfer' }); break;
+      case 'recurring': openRecurringSheet(); break;
+      case 'msi': openInstallmentSheet(); break;
+      case 'loan': openLoanSheet(); break;
+      case 'goal': openGoalSheet(); break;
+      case 'investment': openInvestmentSheet(); break;
+    }
   };
 
   return (
@@ -45,7 +65,7 @@ export const DesktopFAB: React.FC = () => {
           {filteredActions.map((action, idx) => (
             <button
               key={action.label}
-              onClick={() => handleAction(action.path)}
+              onClick={() => handleAction(action.id)}
               style={{ transitionDelay: `${isOpen ? (filteredActions.length - 1 - idx) * 30 : 0}ms` }}
               className="group flex items-center justify-end gap-3"
             >

@@ -8,6 +8,7 @@ import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SkeletonRecurring } from '../components/Skeleton';
 import { formatDateUTC, isDateBeforeUTC } from '../utils/dateUtils';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 
 // Detail Sheet Component
 const RecurringDetailSheet = ({
@@ -146,6 +147,7 @@ const RecurringDetailSheet = ({
 const Recurring: React.FC = () => {
     // --- Routing ---
     const navigate = useNavigate();
+    const { openRecurringSheet } = useGlobalSheets();
 
     // --- Data Queries ---
     const { data: recurring, isLoading } = useRecurringTransactions();
@@ -224,7 +226,10 @@ const Recurring: React.FC = () => {
 
     const handleEdit = (id: string) => {
         setSelectedItem(null);
-        navigate(`/recurring/edit/${id}`, { replace: true });
+        const itemToEdit = recurring?.find(t => t.id === id);
+        if (itemToEdit) {
+            openRecurringSheet(itemToEdit);
+        }
     };
 
     const handleItemClick = (tx: any) => {
@@ -244,7 +249,7 @@ const Recurring: React.FC = () => {
                 <div className="flex justify-between items-center px-1">
                     <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Suscripciones</h2>
                     <button
-                        onClick={() => navigate('/recurring/new')}
+                        onClick={() => openRecurringSheet()}
                         className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
                     >
                         <span className="material-symbols-outlined text-[18px]">add_circle</span>
@@ -319,7 +324,7 @@ const Recurring: React.FC = () => {
                             <span className="material-symbols-outlined text-4xl mb-3 text-app-muted">event_busy</span>
                             <p className="text-sm font-medium">Sin recurrentes</p>
                             <button
-                                onClick={() => navigate('/recurring/new')}
+                                onClick={() => openRecurringSheet()}
                                 className="mt-4 btn btn-secondary text-xs px-4 py-2"
                             >
                                 Crear Primero

@@ -69,7 +69,7 @@ export interface InstallmentPurchase {
   paidAmount: number;
 }
 
-export type AccountType = 'DEBIT' | 'CREDIT' | 'CASH';
+export type AccountType = 'DEBIT' | 'CREDIT' | 'CASH' | 'LOAN' | 'INVESTMENT';
 
 export interface Account {
   id: string;
@@ -79,6 +79,7 @@ export interface Account {
   creditLimit?: number;
   cutoffDay?: number;
   paymentDay?: number;
+  interestRate?: number;
   userId: string;
   transactions?: Transaction[];
 }
@@ -89,6 +90,9 @@ export interface Profile {
   currency: 'USD' | 'EUR' | 'GBP' | 'MXN';
   timezone: string;
   avatar?: string;
+  monthlyNetIncome?: number;
+  incomeFrequency?: 'weekly' | 'biweekly' | 'monthly';
+  taxRate?: number;
 }
 
 export type LoanStatus = 'active' | 'partial' | 'paid';
@@ -127,4 +131,53 @@ export interface LoanSummary {
   // Balance neto (positivo = me deben más, negativo = debo más)
   netBalance: number;
   totalRecovered: number;
+}
+
+export type InvestmentType = 'STOCK' | 'CRYPTO' | 'BOND' | 'FUND' | 'ETF' | 'REAL_ESTATE' | 'OTHER';
+
+export interface Investment {
+  id: string;
+  name: string;
+  type: InvestmentType;
+  ticker?: string;
+  quantity: number;
+  avgBuyPrice: number;
+  currentPrice?: number;
+  currency: string;
+  purchaseDate: string;
+  lastPriceUpdate?: string;
+  notes?: string;
+  userId: string;
+}
+
+export interface SavingsContribution {
+  id: string;
+  amount: number;
+  date: string;
+  notes?: string;
+  savingsGoalId: string;
+  transactionId?: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: string;
+  icon?: string;
+  color?: string;
+  priority: number;
+  status: 'active' | 'completed' | 'paused';
+  contributions?: SavingsContribution[];
+}
+
+export interface TransactionFormInitialData {
+  type?: TransactionType;
+  amount?: string;
+  description?: string;
+  categoryId?: string;
+  accountId?: string;
+  destinationAccountId?: string;
+  installmentPurchaseId?: string;
 }

@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useTransactions, useCategories, useProfile, useAccounts } from '../hooks/useApi';
+import { useTransactions, useCategories, useProfile, useAccounts, useInvestments, useLoans, useGoals } from '../hooks/useApi';
 import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
 import { FinancialPlanningWidget } from '../components/FinancialPlanningWidget';
@@ -214,27 +215,25 @@ const TopCategoriesChart: React.FC<{
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Donut Chart - Centrado arriba */}
-      <div className="h-24 w-24 relative mx-auto shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              innerRadius={28}
-              outerRadius={42}
-              paddingAngle={3}
-              cornerRadius={4}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-              ))}
-            </Pie>
-            <Tooltip
-              content={<CustomTooltip formatter={format} />}
-              wrapperStyle={{ zIndex: 100 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+      <div className="h-24 w-24 relative mx-auto shrink-0 flex items-center justify-center">
+        <PieChart width={96} height={96}>
+          <Pie
+            data={data}
+            dataKey="value"
+            innerRadius={28}
+            outerRadius={42}
+            paddingAngle={3}
+            cornerRadius={4}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={<CustomTooltip formatter={format} />}
+            wrapperStyle={{ zIndex: 100 }}
+          />
+        </PieChart>
       </div>
 
       {/* Legend - Lista debajo */}
@@ -271,9 +270,26 @@ const TopCategoriesChart: React.FC<{
 // --- Componente Principal ---
 
 const Dashboard: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const { openTransactionSheet } = useGlobalSheets();
+
+  React.useEffect(() => {
+    const typeParam = searchParams.get('type');
+    const actionParam = searchParams.get('action');
+
+    if (actionParam === 'new' || typeParam) {
+      const type = (['income', 'expense', 'transfer'].includes(typeParam || '') ? typeParam : 'expense') as any;
+      openTransactionSheet(null, { type });
+    }
+  }, [searchParams, openTransactionSheet]);
+
   const { data: transactions, isLoading: isLoadingTx } = useTransactions();
   const { data: profile, isLoading: isLoadingProfile } = useProfile();
   const { data: accounts, isLoading: isLoadingAcc } = useAccounts();
+  const { data: investments, isLoading: isLoadingInv } = useInvestments();
+
+  const { data: loans, isLoading: isLoadingLoans } = useLoans();
+  const { data: goals, isLoading: isLoadingGoals } = useGoals();
   const { data: categories } = useCategories();
 
   // Cálculos...
@@ -286,9 +302,38 @@ const Dashboard: React.FC = () => {
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'MXN', maximumFractionDigits: 0 }).format(val);
 
   const netWorth = useMemo(() => {
-    if (!accounts) return 0;
-    return accounts.reduce((acc, a) => acc + (a.type === 'CREDIT' ? -a.balance : a.balance), 0);
-  }, [accounts]);
+    let total = 0;
+
+    // 1. Cuentas (Efectivo + Débito - Crédito)
+    if (accounts) {
+      total += accounts.reduce((acc, a) => acc + (a.type === 'CREDIT' ? -a.balance : a.balance), 0);
+    }
+
+    // 2. Inversiones (Valor Actual)
+    if (investments) {
+      total += investments.reduce((sum, inv) => sum + ((inv.currentPrice || inv.avgBuyPrice) * inv.quantity), 0);
+    }
+
+    // 3. Préstamos Por Cobrar (Activos)
+    if (loans) {
+      // Sumar solo lo que "presté" (lent) y que está activo/parcial
+      total += loans
+        .filter(l => l.loanType === 'lent' && ['active', 'partial'].includes(l.status))
+        .reduce((sum, l) => sum + l.remainingAmount, 0);
+
+      // Restar lo que "pedí prestado" (borrowed) - Opcional, pero técnicamente es deuda personal
+      total -= loans
+        .filter(l => l.loanType === 'borrowed' && ['active', 'partial'].includes(l.status))
+        .reduce((sum, l) => sum + l.remainingAmount, 0);
+    }
+
+    // 4. Metas de Ahorro (Dinero apartado)
+    if (goals) {
+      total += goals.reduce((sum, g) => sum + g.currentAmount, 0);
+    }
+
+    return total;
+  }, [accounts, investments, loans, goals]);
 
   const availableFunds = useMemo(() => {
     if (!accounts) return 0;
@@ -333,7 +378,7 @@ const Dashboard: React.FC = () => {
     };
   }, [transactions]);
 
-  if (isLoadingTx || isLoadingProfile || isLoadingAcc) return <SkeletonDashboard />;
+  if (isLoadingTx || isLoadingProfile || isLoadingAcc || isLoadingInv || isLoadingLoans || isLoadingGoals) return <SkeletonDashboard />;
 
   return (
     <div className="w-full">
@@ -382,7 +427,11 @@ const Dashboard: React.FC = () => {
 
           {/* Trend Chart - 2 columnas en md, 3 en xl */}
           <BentoCard title="Tendencia de Gastos" className="col-span-2 xl:col-span-3 min-h-[280px] lg:min-h-[320px]">
-            {transactions && <SpendingTrendChart transactions={transactions} />}
+            {transactions && (
+              <div className="w-full h-[300px]">
+                <SpendingTrendChart transactions={transactions} />
+              </div>
+            )}
           </BentoCard>
 
           {/* Top 5 Categories - 2 columnas en mobile (full width), 1 en xl */}
@@ -397,11 +446,13 @@ const Dashboard: React.FC = () => {
             }
           >
             {transactions && categories && (
-              <TopCategoriesChart
-                transactions={transactions}
-                categories={categories}
-                format={formatCurrency}
-              />
+              <div className="w-full h-full min-h-[200px]">
+                <TopCategoriesChart
+                  transactions={transactions}
+                  categories={categories}
+                  format={formatCurrency}
+                />
+              </div>
             )}
           </BentoCard>
 

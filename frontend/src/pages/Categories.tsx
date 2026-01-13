@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCategories, useDeleteCategory } from '../hooks/useApi';
 import { Category } from '../types';
 import { toastSuccess, toastError } from '../utils/toast';
@@ -11,6 +11,7 @@ import { Button } from '../components/Button';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 import { getValidIcon } from '../utils/icons';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 
 // ============== CATEGORY DETAIL SHEET ==============
 const CategoryDetailSheet = ({
@@ -87,15 +88,23 @@ const CategoryDetailSheet = ({
 };
 
 const Categories: React.FC = () => {
-    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { data: categories, isLoading } = useCategories();
     const deleteMutation = useDeleteCategory();
+    const { openCategorySheet } = useGlobalSheets();
 
     // Reassignment Modal State
     const [reassignData, setReassignData] = useState<{ categoryToDelete: Category } | null>(null);
     const [reassignTargetId, setReassignTargetId] = useState<string>('');
     const [deleteConfirmation, setDeleteConfirmation] = useState<Category | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+
+    // Deep link handler
+    useEffect(() => {
+        if (searchParams.get('action') === 'new') {
+            openCategorySheet();
+        }
+    }, [searchParams, openCategorySheet]);
 
     // Derived Data
     const expenses = useMemo(() => categories?.filter(c => c.type === 'expense') || [], [categories]);
@@ -106,7 +115,7 @@ const Categories: React.FC = () => {
 
     // Handlers
     const handleEdit = (cat: Category) => {
-        navigate(`/categories/edit/${cat.id}`, { replace: true });
+        openCategorySheet(cat);
     };
 
     const handleDeleteClick = (category: Category) => {
@@ -196,7 +205,7 @@ const Categories: React.FC = () => {
                 <div className="flex justify-between items-center px-1">
                     <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Gestionar Categorías</h2>
                     <button
-                        onClick={() => navigate('/categories/new')}
+                        onClick={() => openCategorySheet()}
                         className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
                     >
                         <span className="material-symbols-outlined text-[18px]">add_circle</span>

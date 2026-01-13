@@ -373,38 +373,21 @@ export const FinancialPlanningWidget: React.FC = () => {
           </p>
         </div>
 
-        <div className="relative inline-flex bg-app-subtle p-1 rounded-xl shadow-inner">
-          {(['semanal', 'quincenal', 'mensual'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setPeriodType(t)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-all ${periodType === t
-                ? 'bg-app-surface text-app-text shadow-sm ring-1 ring-black/5'
-                : 'text-app-muted hover:text-app-text'
-                }`}
-            >
-              {t}
-            </button>
-          ))}
-
-          <div className="relative flex items-center">
-            <select
-              className={`
-                appearance-none bg-transparent text-xs font-bold outline-none pl-3 pr-6 py-1.5 cursor-pointer transition-colors rounded-lg
-                ${['bimestral', 'semestral', 'anual'].includes(periodType) ? 'text-app-primary bg-app-surface shadow-sm ring-1 ring-black/5' : 'text-app-muted hover:text-app-text'}
-              `}
-              value={['bimestral', 'semestral', 'anual'].includes(periodType) ? periodType : ''}
-              onChange={(e) => e.target.value && setPeriodType(e.target.value as any)}
-            >
-              <option value="" disabled className="hidden">Más...</option>
-              <option value="bimestral">Bimestral</option>
-              <option value="semestral">Semestral</option>
-              <option value="anual">Anual</option>
-            </select>
-            <span className={`pointer-events-none absolute right-1 material-symbols-outlined text-[14px] ${['bimestral', 'semestral', 'anual'].includes(periodType) ? 'text-app-primary' : 'text-app-muted'}`}>
-              expand_more
-            </span>
-          </div>
+        <div className="relative inline-flex items-center">
+          <select
+            value={periodType}
+            onChange={(e) => setPeriodType(e.target.value as any)}
+            className="appearance-none bg-app-subtle hover:bg-app-subtle/80 active:bg-app-surface text-app-text text-xs font-bold pl-3 pr-8 py-1.5 rounded-lg outline-none focus:ring-2 ring-app-primary/20 cursor-pointer capitalize transition-all border border-app-border/10 hover:border-app-border shadow-sm"
+          >
+            <option value="quincenal">Quincenal</option>
+            <option value="mensual">Mensual</option>
+            <option value="bimestral">Bimestral</option>
+            <option value="semestral">Semestral</option>
+            <option value="anual">Anual</option>
+          </select>
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[16px] text-app-muted">
+            expand_more
+          </span>
         </div>
       </div>
 

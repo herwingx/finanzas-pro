@@ -1,407 +1,242 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 @import "tailwindcss";
 
 @theme {
-  /* Colors */
+  /* =========================================
+     PALETA DE COLORES (SEMÁNTICA 2026)
+     ========================================= */
+
+  /* Backgrounds */
   --color-app-bg: var(--bg-canvas);
   --color-app-surface: var(--bg-surface);
   --color-app-subtle: var(--bg-subtle);
   --color-app-elevated: var(--bg-elevated);
-  --color-app-card: var(--bg-surface);
+
+  /* Borders & Strokes */
   --color-app-border: var(--border-default);
   --color-app-border-strong: var(--border-strong);
+
+  /* Typography */
   --color-app-text: var(--text-main);
   --color-app-muted: var(--text-muted);
   --color-app-inverted: var(--text-inverted);
+
+  /* Actions */
   --color-app-primary: var(--brand-primary);
   --color-app-primary-dark: var(--brand-primary-dark);
+
+  /* Feedback States */
   --color-app-success: var(--semantic-success);
   --color-app-danger: var(--semantic-danger);
   --color-app-warning: var(--semantic-warning);
   --color-app-info: var(--semantic-info);
 
-  --color-brand-primary: var(--brand-primary);
-  --color-brand-primary-dark: var(--brand-primary-dark);
+  /* Financial Products (Pasteles en Dark Mode) */
+  --color-account-credit-bg: var(--bg-credit);
+  --color-account-debit-bg: var(--bg-debit);
 
-  /* Account Colors */
-  --color-account-credit: var(--color-account-credit);
-  --color-account-credit-bg: var(--color-account-credit-bg);
-  --color-account-debit: var(--color-account-debit);
-  --color-account-debit-bg: var(--color-account-debit-bg);
-  --color-account-cash: var(--color-account-cash);
-  --color-account-cash-bg: var(--color-account-cash-bg);
-  --color-msi: var(--color-msi);
-  --color-msi-bg: var(--color-msi-bg);
-
-  /* Fonts */
-  --font-sans: Inter, system-ui, sans-serif;
-  --font-numbers: Inter, sans-serif;
-
-  /* Radius */
+  /* System */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-numbers: "Inter", sans-serif;
   --radius-3xl: 1.5rem;
-  --radius-4xl: 2rem;
 
-  /* Shadows */
+  /* Effects */
   --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-float: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  --shadow-float: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 20px rgba(var(--brand-primary), 0.15);
 }
 
-/* Dark Mode Class Override */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ==========================================================================
-   1. Clean SaaS Design System (The "Monarch/Linear" Look)
-   ========================================================================== */
-
 :root {
-  /* --- 🎨 LIGHT MODE (Default) --- */
+  /* LIGHT MODE (Clean, Stripe-like) */
   color-scheme: light;
 
-  /* Backgrounds */
-  --bg-canvas: #F9FAFB;
-  /* Gray 50 - Fondo general suave */
+  /* Canvas: Un gris casi imperceptible en lugar de blanco plano para reducir fatiga */
+  --bg-canvas: #FAFAFA;
   --bg-surface: #FFFFFF;
-  /* Blanco puro - Tarjetas */
   --bg-subtle: #F3F4F6;
-  /* Gray 100 - Hovers / Ítems secundarios */
+  /* Gray 100 */
   --bg-elevated: #FFFFFF;
-  /* Modales / Dropdowns */
 
-  /* Text */
-  --text-main: #111827;
-  /* Gray 900 - Contraste alto pero no negro puro */
-  --text-muted: #6B7280;
-  /* Gray 500 */
+  --text-main: #0A0A0A;
+  /* Neutral 950 */
+  --text-muted: #64748B;
+  /* Slate 500 */
   --text-inverted: #FFFFFF;
 
-  /* Borders & Dividers (Sutiles) */
-  --border-default: #E5E7EB;
-  /* Gray 200 */
-  --border-strong: #D1D5DB;
-  /* Gray 300 */
+  --border-default: #E2E8F0;
+  /* Slate 200 */
+  --border-strong: #CBD5E1;
+  /* Slate 300 */
 
-  /* Brand Colors - Azul Profesional (Inter/Stripe blue) */
-  --brand-primary: #2563EB;
-  --brand-primary-dark: #1D4ED8;
-  --color-primary-glow: rgba(37, 99, 235, 0.15);
-  /* Mucho más suave */
+  /* Primary Blue (Refined Indigo) */
+  --brand-primary: #3b82f6;
+  --brand-primary-dark: #2563EB;
 
-  /* Semantic - Clean Status Colors */
   --semantic-success: #10B981;
-  /* Emerald */
   --semantic-danger: #EF4444;
-  /* Red */
   --semantic-warning: #F59E0B;
-  /* Amber */
   --semantic-info: #0EA5E9;
-  /* Sky */
 
-  /* === Transaction/Account Categories (Refinados para no ser neón) === */
-  /* Credit Card -> Rose matizado */
-  --color-account-credit: #E11D48;
-  --color-account-credit-bg: #FFE4E6;
-
-  /* Debit -> Blue standard */
-  --color-account-debit: #2563EB;
-  --color-account-debit-bg: #DBEAFE;
-
-  /* Cash -> Emerald */
-  --color-account-cash: #059669;
-  --color-account-cash-bg: #D1FAE5;
-
-  /* MSI / Installments -> Orange/Indigo mix */
-  --color-msi: #4F46E5;
-  --color-msi-bg: #E0E7FF;
+  /* Product Tint Backgrounds */
+  --bg-credit: #FFF1F2;
+  /* Rose 50 */
+  --bg-debit: #EFF6FF;
+  /* Blue 50 */
 }
 
 .dark {
-  /* --- 🌙 DARK MODE (OLED Premium) --- */
+  /* DARK MODE (Deep OLED, Apple-like) */
   color-scheme: dark;
 
-  /* Backgrounds - Negro OLED Puro */
+  /* Backgrounds: Pure Black + Zinc levels */
   --bg-canvas: #000000;
   --bg-surface: #121212;
-  --bg-subtle: #18181B; /* Zinc 900 */
-  --bg-elevated: #1C1C1E; /* Para modales */
+  --bg-subtle: #1C1C1E;
+  /* Zinc 900+ (Card hover) */
+  --bg-elevated: #27272A;
+  /* Modal / Popovers */
 
-  /* Text */
-  --text-main: #FFFFFF;
+  --text-main: #EDEDED;
   --text-muted: #A1A1AA;
   --text-inverted: #000000;
 
-  /* Borders - Ultra sutiles */
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.15);
+  /* Bordes ultra-sutiles para separar capas sin líneas duras */
+  --border-default: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
 
-  /* Brand */
-  --brand-primary: #3B82F6;
+  /* Primary Blue (Más luminoso para contraste oscuro) */
+  --brand-primary: #4796ff;
   --brand-primary-dark: #60A5FA;
-  --color-primary-glow: rgba(59, 130, 246, 0.15);
 
-  /* Semantic Overrides */
+  /* Colores semánticos desaturados para no molestar la vista */
   --semantic-success: #34D399;
   --semantic-danger: #F87171;
   --semantic-warning: #FBBF24;
 
-  /* Categories (Tinted) */
-  --color-account-credit-bg: rgba(225, 29, 72, 0.15);
-  --color-account-debit-bg: rgba(37, 99, 235, 0.15);
-  --color-account-cash-bg: rgba(5, 150, 105, 0.15);
-  --color-msi-bg: rgba(79, 70, 229, 0.15);
+  --bg-credit: rgba(225, 29, 72, 0.15);
+  --bg-debit: rgba(37, 99, 235, 0.15);
 }
 
-/* ⚠️ ELIMINADO: .light class. (Usamos :root como default para menor complejidad) */
-
-
-/* ==========================================================================
-   2. Base Global
-   ========================================================================== */
+/* =========================================
+   BASE & RESET
+   ========================================= */
 
 html,
 body {
   @apply bg-app-bg text-app-text antialiased;
-  /* Typography Global */
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-
-  /* Font Inter aplicada vía Tailwind config 'font-sans' */
-  overflow-x: hidden;
-  max-width: 100vw;
+  -webkit-tap-highlight-color: transparent;
+  /* PWA Touch Clean */
 }
 
-/* iOS Overscroll Background Fix */
+/* iOS Safe Areas & Scroll Fixes */
 html {
-  background-color: var(--bg-canvas);
+  overscroll-behavior-y: none;
+  /* Previene el rebote elástico global */
 }
 
-/* Ensure body fills the entire viewport */
 body {
   min-height: 100vh;
   min-height: 100dvh;
 }
 
-/* Scrollbar minimalista */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-/* ==========================================================================
-   3. Reset de Formularios Limpio (Estilo Stripe/Linear)
-   ========================================================================== */
-
-/* Eliminamos los fondos hardcoded y usas Tailwind classes en los componentes */
-/* Ej: <input className="bg-app-surface border border-app-border focus:ring-2..." /> */
-
-input,
-select,
-textarea {
-  color-scheme: light dark;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  /* Focus ring debe ser manejado por Tailwind focus:ring */
-}
-
-/* ==========================================================================
-   4. Clases Utilitarias "Opinionated" (Reducidas)
-   ========================================================================== */
-
+/* Typography Enhancements for Fintech */
 .font-numbers {
-  font-feature-settings: "tnum";
+  font-family: 'Inter', system-ui, sans-serif;
+  font-feature-settings: "tnum" 1, "ss01" 1, "cv05" 1;
+  /* Tabular numbers + Alt 1 */
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
-/* Botón base limpio, sin brillos raros */
-.btn {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
-}
-
-.btn-primary {
-  background-color: var(--brand-primary);
-  color: #fff;
-  /* Sombra suave "offset" en lugar de glow neón */
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(37, 99, 235, 0.2);
-}
-
-.btn-primary:hover {
-  @apply opacity-90;
-  transform: translateY(-1px);
-}
-
-.btn-secondary {
-  background-color: var(--bg-surface);
-  color: var(--text-main);
-  border: 1px solid var(--border-default);
-}
-
-.btn-secondary:hover {
-  background-color: var(--bg-subtle);
-}
-
-/* Card Estándar estilo Bento */
-.bento-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 1.5rem; /* 24px */
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-  @apply overflow-hidden transition-all duration-300;
-}
-
-/* Efecto hover elegante para escritorio */
-.bento-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2); /* Sombra más dramática en dark */
-}
-
-/* Glass Panel Utility */
-.glass-panel {
-  background: rgba(18, 18, 18, 0.7); /* Fallback */
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-
-/* ==========================================================================
-   5. Animations
-   ========================================================================== */
-
-/* Shimmer simplificado */
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Slide up animation for bottom sheets */
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-
-/* ==========================================================================
-   6. PWA & iOS Safety Net (IMPORTANTE: Esto sí lo mantuve y pulí)
-   ========================================================================== */
-
-/* Dynamic Viewport para móviles */
-.h-dvh {
-  height: 100dvh;
-}
-
-.min-h-dvh {
-  min-height: 100dvh;
-}
-
-/* Safe Areas */
-.pt-safe {
-  padding-top: env(safe-area-inset-top);
-}
-
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.pl-safe {
-  padding-left: env(safe-area-inset-left);
-}
-
-.pr-safe {
-  padding-right: env(safe-area-inset-right);
-}
-
-/* Prevent Rubber Banding / Overscroll en iOS */
-html,
-body {
-  overscroll-behavior: none;
-  overscroll-behavior-y: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Extra specificity for iOS Safari PWA */
-@supports (-webkit-touch-callout: none) {
-
-  html,
-  body {
-    overscroll-behavior-y: none;
-  }
-
-  /* Ensure root element has correct background during overscroll */
-  #root {
-    background-color: var(--bg-canvas);
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-}
-
-/* Ocultar scrollbar visual pero mantener función */
+/* Scrollbar invisible (pero funcional) */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
-
 
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-/* Hide Spin Buttons */
-.no-spin-button::-webkit-outer-spin-button,
-.no-spin-button::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+/* =========================================
+   UTILITY CLASSES (Design Tokens)
+   ========================================= */
+
+/* Cards estilo Bento (Monarch/Linear inspiration) */
+.bento-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 1.5rem;
+  /* 24px */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.no-spin-button[type=number] {
-  -moz-appearance: textfield;
+/* Efecto Hover solo en dispositivos con ratón */
+@media (hover: hover) {
+  .bento-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
+  }
 }
 
-/* Disable scroll wheel on number inputs */
-input[type="number"] {
-  -moz-appearance: textfield;
+/* Skeleton Shimmer Loading */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.skeleton-loader {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-subtle);
+}
+
+.skeleton-loader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+/* Fade In Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Button Reset & Base */
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:active {
+  transform: scale(0.96);
+  transition: transform 0.1s;
 }

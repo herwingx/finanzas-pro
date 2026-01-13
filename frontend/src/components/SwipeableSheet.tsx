@@ -26,6 +26,14 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
     }
   };
 
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (isOpen && scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -76,7 +84,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-safe">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-6 pb-safe">
               {children}
             </div>
           </motion.div>

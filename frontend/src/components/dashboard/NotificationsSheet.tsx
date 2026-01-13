@@ -48,7 +48,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ isOpen, 
 
   return (
     <SwipeableSheet isOpen={isOpen} onClose={onClose} title="Alertas e Insights">
-      <div className="pb-8">
+      <div className="pb-24">
 
         {/* Header Action */}
         {hasUnread && (

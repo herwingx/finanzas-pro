@@ -33,8 +33,7 @@ const HistoryHeader: React.FC<{
         </div>
 
         {/* Filter Pill List - Estilo iOS/Apple */}
-        {/* Filter Pill List - Edge-to-Edge Scroll for Premium Details */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 md:-mx-6 md:px-6 mask-gradient-r">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mask-gradient-r pb-1">
           {[
             { id: 'all', label: 'Todos' },
             { id: 'expense', label: 'Gastos' },
@@ -46,19 +45,18 @@ const HistoryHeader: React.FC<{
               onClick={() => setFilter(f.id as any)}
               className={`shrink-0 h-9 px-5 rounded-full text-xs font-bold transition-all border ${filter === f.id
                 ? f.id === 'all'
-                  ? 'bg-app-text text-app-bg border-transparent shadow-lg transform scale-105'
+                  ? 'bg-app-text text-app-bg border-transparent shadow-lg'
                   : f.id === 'income'
-                    ? 'bg-emerald-500 text-white border-transparent shadow-lg shadow-emerald-500/30 transform scale-105'
+                    ? 'bg-emerald-500 text-white border-transparent shadow-lg shadow-emerald-500/30'
                     : f.id === 'expense'
-                      ? 'bg-rose-500 text-white border-transparent shadow-lg shadow-rose-500/30 transform scale-105'
-                      : 'bg-blue-500 text-white border-transparent shadow-lg shadow-blue-500/30 transform scale-105'
-                : 'bg-app-surface text-app-muted border-app-border hover:bg-app-subtle hover:text-app-text active:scale-95'
+                      ? 'bg-rose-500 text-white border-transparent shadow-lg shadow-rose-500/30'
+                      : 'bg-blue-500 text-white border-transparent shadow-lg shadow-blue-500/30'
+                : 'bg-app-surface text-app-muted border-app-border hover:bg-app-subtle hover:text-app-text'
                 }`}
             >
               {f.label}
             </button>
           ))}
-          <div className="w-2 shrink-0" /> {/* Extra padding right */}
         </div>
       </div>
     </div>

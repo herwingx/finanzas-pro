@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
         <StatWidget label="Gastos" value={stats.monthStats.expense} type="expense" format={stats.formatCurrency} />
 
         {/* Financial Planning Widget - Ancho completo */}
-        <div className="col-span-2 xl:col-span-4">
+        <div className="col-span-1 md:col-span-2 lg:col-span-4 xl:col-span-4">
           <FinancialPlanningWidget />
         </div>
         {/* 4. Chart Grande */}
@@ -156,7 +156,7 @@ const Dashboard: React.FC = () => {
         </BentoCard>
 
         {/* 5. Placeholder Presupuesto */}
-        <BentoCard className="col-span-1 min-h-[200px]" title="Alertas">
+        <BentoCard className="col-span-1 md:col-span-2 lg:col-span-1 min-h-[200px]" title="Alertas">
           {unreadCount > 0 ? (
             <div className="h-full flex flex-col justify-center items-center text-center">
               <span className="size-3 bg-app-danger rounded-full animate-ping mb-2" />

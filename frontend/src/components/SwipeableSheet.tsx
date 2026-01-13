@@ -9,6 +9,8 @@ interface SwipeableSheetProps {
   triggerHaptic?: () => void;
 }
 
+import { createPortal } from 'react-dom';
+
 export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
   isOpen,
   onClose,
@@ -17,6 +19,11 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
   triggerHaptic
 }) => {
   const controls = useDragControls();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // If dragged down enough (velocity or distance), close it
@@ -34,7 +41,9 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
     }
   }, [isOpen]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -46,7 +55,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
             exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 lg:hidden pointer-events-auto bg-black/40 backdrop-blur-sm"
-            style={{ zIndex: 60 }}
+            style={{ zIndex: 9998 }}
           />
 
           {/* Sheet */}
@@ -63,7 +72,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
             dragSnapToOrigin
             onDragEnd={handleDragEnd}
             className="fixed bottom-0 left-0 right-0 bg-app-surface border-t border-app-border rounded-t-[32px] overflow-hidden lg:hidden shadow-[0_-8px_32px_rgba(0,0,0,0.12)] max-h-[90dvh] flex flex-col pointer-events-auto"
-            style={{ zIndex: 70 }}
+            style={{ zIndex: 9999 }}
           >
             {/* Handle & Header Wrapper - Draggable Area */}
             <div
@@ -95,7 +104,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="hidden lg:flex fixed inset-0 items-center justify-center p-4"
-            style={{ zIndex: 60 }}
+            style={{ zIndex: 9998 }}
           >
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
             <motion.div
@@ -103,6 +112,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto bg-app-surface border border-app-border rounded-2xl shadow-2xl p-6"
+              style={{ zIndex: 9999 }}
             >
               <button
                 onClick={onClose}
@@ -116,6 +126,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = ({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

@@ -109,79 +109,94 @@ export const SkeletonPlanningWidget = () => (
 );
 
 export const SkeletonDashboard = () => (
-  <div className="w-full">
+  <div className="w-full min-h-dvh bg-app-bg pb-6 md:pb-12">
     {/* Header */}
-    <div className="flex items-center gap-4 py-4 md:py-6 px-4 md:px-6 lg:px-8">
-      <SkeletonAvatar size="size-10 md:size-12" />
-      <div className="space-y-2">
-        <SkeletonText w="w-48" className="h-6" />
-        <SkeletonText w="w-32" />
+    <header className="pt-6 pb-2 px-4 md:px-8 max-w-[1400px] mx-auto flex justify-between items-center">
+      <div className="flex items-center gap-3">
+        {/* Mobile Avatar Placeholder */}
+        <div className="size-10 rounded-full bg-gray-200 dark:bg-zinc-800 animate-pulse md:hidden" />
+        <div className="space-y-2">
+          <SkeletonText w="w-24" className="h-3" />
+          <SkeletonText w="w-32" className="h-7" />
+        </div>
       </div>
-    </div>
-
-    <div className="px-4 md:px-6 lg:px-8">
-      {/* Bento Grid - Now matching Dashboard.tsx responsive grid */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
-
-        {/* Main Balance (Span 2) */}
-        <div className="col-span-2 h-48 bg-app-surface border border-app-border rounded-3xl p-6 relative overflow-hidden">
-          <SkeletonText w="w-32" className="mb-4" />
-          <SkeletonText w="w-64" className="h-12" />
-          <div className="mt-6 flex gap-3">
-            <SkeletonText w="w-24" className="h-8 rounded-full" />
-            <SkeletonText w="w-32" className="h-8" />
-          </div>
-        </div>
-
-        {/* Quick Stats - Side by side on mobile (naturally 1 col each in 2-col grid) */}
-        <div className="h-32 bg-app-surface border border-app-border rounded-3xl p-5 flex flex-col justify-between">
-          <div className="size-10 rounded-xl bg-gray-200 dark:bg-zinc-800 animate-pulse" />
-          <div className="space-y-1">
-            <SkeletonText w="w-20" className="h-3" />
-            <SkeletonText w="w-24" className="h-6" />
-          </div>
-        </div>
-        <div className="h-32 bg-app-surface border border-app-border rounded-3xl p-5 flex flex-col justify-between">
-          <div className="size-10 rounded-xl bg-gray-200 dark:bg-zinc-800 animate-pulse" />
-          <div className="space-y-1">
-            <SkeletonText w="w-20" className="h-3" />
-            <SkeletonText w="w-24" className="h-6" />
-          </div>
-        </div>
-
-        {/* Planning Widget (Span 2 or 4) */}
-        <div className="col-span-2 xl:col-span-4">
-          <SkeletonPlanningWidget />
-        </div>
-
-        {/* Chart (Span 2 or 3) */}
-        <div className="col-span-2 xl:col-span-3 h-[320px] bg-app-surface border border-app-border rounded-3xl p-6 relative">
-          <SkeletonText w="w-40" className="mb-8" />
-          <div className="w-full h-48 bg-gray-100 dark:bg-zinc-800/50 rounded-xl animate-pulse" />
-        </div>
-
-        {/* Top Categories (Span 2 or 1) */}
-        <div className="col-span-2 xl:col-span-1 h-[320px] bg-app-surface border border-app-border rounded-3xl p-5 flex flex-col items-center justify-center space-y-4">
-          <div className="size-32 rounded-full border-8 border-gray-200 dark:border-zinc-800 animate-pulse" />
-          <div className="w-full space-y-2">
-            <SkeletonTransaction />
-            <SkeletonTransaction />
-          </div>
-        </div>
-
-        {/* Recent Transactions (Span 2 or 4) */}
-        <div className="col-span-2 xl:col-span-4 h-64 bg-app-surface border border-app-border rounded-3xl p-6 relative">
-          <div className="flex justify-between items-center mb-6">
-            <SkeletonText w="w-48" />
-            <SkeletonText w="w-24" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <SkeletonTransactionList count={3} />
-          </div>
-        </div>
-
+      <div className="flex items-center gap-3">
+        <div className="size-10 rounded-full bg-gray-200 dark:bg-zinc-800 animate-pulse" />
+        <div className="size-10 rounded-full bg-gray-200 dark:bg-zinc-800 animate-pulse hidden md:block" />
       </div>
-    </div>
+    </header>
+
+    <main className="px-4 md:px-8 py-4 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {/* 1. Main Balance (Span 2) */}
+      <div className="md:col-span-2 row-span-2 h-[260px] md:h-auto bg-app-surface border border-app-border rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between">
+        <div className="space-y-4">
+          <SkeletonText w="w-24" className="h-3" />
+          <SkeletonText w="w-64" className="h-12 md:h-16" />
+        </div>
+        <div className="space-y-2">
+          <SkeletonText w="w-20" className="h-3" />
+          <SkeletonText w="w-40" className="h-6" />
+        </div>
+      </div>
+
+      {/* 2. Stats Widgets */}
+      <div className="h-32 bg-app-surface border border-app-border rounded-3xl p-5 flex flex-col justify-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="size-6 rounded-md bg-gray-200 dark:bg-zinc-800 animate-pulse" />
+          <SkeletonText w="w-16" className="h-3" />
+        </div>
+        <SkeletonText w="w-32" className="h-8" />
+      </div>
+      <div className="h-32 bg-app-surface border border-app-border rounded-3xl p-5 flex flex-col justify-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="size-6 rounded-md bg-gray-200 dark:bg-zinc-800 animate-pulse" />
+          <SkeletonText w="w-16" className="h-3" />
+        </div>
+        <SkeletonText w="w-32" className="h-8" />
+      </div>
+
+      {/* 3. Planning Widget (Span 4) */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-4">
+        <SkeletonPlanningWidget />
+      </div>
+
+      {/* 4. Chart (Span 3) */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-3 min-h-[300px] bg-app-surface border border-app-border rounded-3xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <SkeletonText w="w-32" className="h-4" />
+          <SkeletonText w="w-20" className="h-4" />
+        </div>
+        <div className="w-full h-48 bg-gray-100 dark:bg-zinc-800/10 rounded-xl animate-pulse mt-auto" />
+      </div>
+
+      {/* 5. Alertas (Span 1) */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-1 min-h-[200px] bg-app-surface border border-app-border rounded-3xl p-6 flex flex-col items-center justify-center space-y-3">
+        <div className="size-10 rounded-full bg-gray-200 dark:bg-zinc-800 animate-pulse" />
+        <SkeletonText w="w-24" className="h-3" />
+      </div>
+
+      {/* 6. Recent Transactions (Full width) */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-app-surface border border-app-border rounded-3xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <SkeletonText w="w-48" className="h-4" />
+          <SkeletonText w="w-20" className="h-4" />
+        </div>
+        <div className="space-y-1">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-3">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-gray-200 dark:bg-zinc-800 animate-pulse" />
+                <div className="space-y-2">
+                  <SkeletonText w="w-32" className="h-4" />
+                  <SkeletonText w="w-24" className="h-2" />
+                </div>
+              </div>
+              <SkeletonText w="w-20" className="h-5" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
   </div>
 );
 
@@ -290,7 +305,7 @@ export const SkeletonReports = () => (
         <div className="flex flex-col lg:flex-row gap-8 items-center">
           {/* Donut Chart placeholder */}
           <div className="h-48 w-48 relative shrink-0">
-            <div className="absolute inset-0 rounded-full border-[14px] border-gray-200 dark:border-zinc-800" />
+            <div className="absolute inset-0 rounded-full border-14 border-gray-200 dark:border-zinc-800" />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <SkeletonText w="w-12" className="h-3" />
               <SkeletonText w="w-16" className="h-5 mt-1" />
@@ -346,7 +361,7 @@ export const SkeletonRecurring = () => (
       </div>
 
       {/* Intro Card */}
-      <div className="bento-card p-5 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
+      <div className="bento-card p-5 bg-linear-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
         <div className="flex gap-4">
           <div className="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 shrink-0" />
           <div className="flex-1 space-y-2">

@@ -373,11 +373,11 @@ export const FinancialPlanningWidget: React.FC = () => {
           </p>
         </div>
 
-        <div className="relative inline-flex items-center">
+        <div className="relative inline-flex items-center bg-app-subtle rounded-lg">
           <select
             value={periodType}
             onChange={(e) => setPeriodType(e.target.value as any)}
-            className="appearance-none bg-app-subtle hover:bg-app-subtle/80 active:bg-app-surface text-app-text text-xs font-bold pl-3 pr-8 py-1.5 rounded-lg outline-none focus:ring-2 ring-app-primary/20 cursor-pointer capitalize transition-all border border-app-border/10 hover:border-app-border shadow-sm"
+            className="appearance-none bg-transparent hover:bg-black/5 active:bg-black/10 text-app-text text-xs font-bold pl-3 pr-7 py-1.5 rounded-lg outline-none cursor-pointer capitalize transition-all"
           >
             <option value="quincenal">Quincenal</option>
             <option value="mensual">Mensual</option>
@@ -385,7 +385,7 @@ export const FinancialPlanningWidget: React.FC = () => {
             <option value="semestral">Semestral</option>
             <option value="anual">Anual</option>
           </select>
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[16px] text-app-muted">
+          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[16px] text-app-muted">
             expand_more
           </span>
         </div>

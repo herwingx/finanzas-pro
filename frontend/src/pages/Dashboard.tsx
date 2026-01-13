@@ -77,7 +77,7 @@ const Dashboard: React.FC = () => {
   if (loadingTx || loadingAcc || loadingProfile) return <SkeletonDashboard />;
 
   return (
-    <div className="w-full min-h-dvh pb-24 md:pb-12 bg-app-bg transition-colors duration-300">
+    <div className="w-full min-h-dvh pb-6 md:pb-12 bg-app-bg transition-colors duration-300">
 
       {/* === HEADER CON CAMPANA DE NOTIFICACIONES === */}
       <header className="pt-6 pb-2 px-4 md:px-8 max-w-[1400px] mx-auto flex justify-between items-center sticky top-0 z-30 bg-app-bg/80 backdrop-blur-xl md:static md:bg-transparent">

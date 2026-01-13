@@ -500,11 +500,6 @@ export const FinancialPlanningWidget: React.FC = () => {
         <div className="space-y-3">
           <h3 className="px-1 text-xs font-bold text-app-muted uppercase tracking-wider flex items-center justify-between">
             Ingresos por Recibir
-            {!showAllIncome && summary.expectedIncome.length > 3 && (
-              <span className="text-emerald-600 dark:text-emerald-400 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                +{summary.expectedIncome.length - 3}
-              </span>
-            )}
           </h3>
           <div className="rounded-2xl border border-app-border bg-app-surface overflow-hidden shadow-sm">
             {(showAllIncome ? summary.expectedIncome : summary.expectedIncome.slice(0, 3)).map((item: any) => (

@@ -197,7 +197,7 @@ const History: React.FC = () => {
           <div className="space-y-6">
             {Object.entries(filteredData.groups).map(([dateLabel, groupTxs]) => (
               <div key={dateLabel}>
-                <div className="sticky top-[140px] z-10 py-1 px-3 mb-2 rounded-lg bg-app-subtle/80 backdrop-blur border border-app-border w-fit">
+                <div className="sticky top-28 md:top-32 z-20 py-1.5 px-3 mb-4 rounded-lg bg-app-bg/95 backdrop-blur border border-app-border w-fit shadow-sm">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-app-muted">
                     {dateLabel}
                   </span>

@@ -7,7 +7,11 @@ import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
 import { FinancialPlanningWidget } from '../components/FinancialPlanningWidget';
 import { InfoTooltip } from '../components/InfoTooltip';
-import { toastInfo } from '../utils/toast';
+import { toastInfo, toastSuccess, toastError } from '../utils/toast';
+import { useNotifications, useDismissNotification, useTriggerDebugNotification, useAddTransaction, useMarkAllNotificationsRead } from '../hooks/useApi';
+import { InsightCard } from '../components/InsightCard';
+import { AnimatePresence } from 'framer-motion';
+import { SwipeableSheet } from '../components/SwipeableSheet';
 
 // --- Sub-components para modularidad visual ---
 
@@ -39,7 +43,9 @@ const DashboardHeader: React.FC<{
   avatar?: string;
   greeting: string;
   emoji: string;
-}> = ({ name, avatar, greeting, emoji }) => (
+  onNotificationsClick: () => void;
+  hasUnread: boolean;
+}> = ({ name, avatar, greeting, emoji, onNotificationsClick, hasUnread }) => (
   <header className="flex items-center justify-between py-4 md:py-6 px-4 md:px-6 lg:px-8 gap-3">
     <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
       {/* Avatar */}
@@ -65,13 +71,24 @@ const DashboardHeader: React.FC<{
       </div>
     </div>
 
+    {/* Botón Simular (Debug) - Solo visible si hay espacio o temporalmente */}
+    <button
+      onClick={() => { (window as any).triggerDebug(); }} // Will hook this up in main component
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-app-subtle text-xs font-bold text-app-muted hover:text-app-text hover:bg-app-surface border border-transparent hover:border-app-border transition-all"
+    >
+      <span className="material-symbols-outlined text-[16px]">bug_report</span>
+      Test Alert
+    </button>
+
     {/* Botón Notificaciones - Perfectamente circular */}
     <button
-      onClick={() => toastInfo('Notificaciones')}
+      onClick={onNotificationsClick}
       className="size-10 rounded-full bg-app-surface border border-app-border text-app-text hover:bg-app-subtle active:scale-95 transition-all relative shrink-0 flex items-center justify-center"
     >
       <span className="material-symbols-outlined text-[20px]">notifications</span>
-      <span className="absolute top-1 right-1 size-2.5 bg-app-danger rounded-full border-2 border-app-surface"></span>
+      {hasUnread && (
+        <span className="absolute top-1 right-1 size-2.5 bg-app-danger rounded-full border-2 border-app-surface"></span>
+      )}
     </button>
   </header>
 );
@@ -378,7 +395,54 @@ const Dashboard: React.FC = () => {
     };
   }, [transactions]);
 
+  // Notifications Logic
+  const { data: notifications } = useNotifications();
+  const { mutate: dismiss } = useDismissNotification();
+  const { mutate: markAllRead } = useMarkAllNotificationsRead();
+  const { mutate: triggerDebug } = useTriggerDebugNotification();
+  const { mutate: addTransaction } = useAddTransaction();
+
+  const handlePaymentAction = (n: any) => {
+    if (n.type === 'PAYMENT_DUE') {
+      const { amount, description, categoryId, accountId } = n.data || {};
+
+      // If we have enough data, we can "Quick Pay"
+      if (amount && accountId) {
+        addTransaction({
+          amount,
+          description: description || n.title.replace('Simulación: ', '').replace(' Vence Hoy', ''),
+          date: new Date().toISOString(),
+          type: 'expense',
+          categoryId: categoryId || 'other', // Fallback
+          accountId: accountId,
+        }, {
+          onSuccess: () => {
+            toastSuccess('Pago registrado correctamente');
+            dismiss(n.id);
+          },
+          onError: () => {
+            toastError('Error al registrar el pago');
+          }
+        });
+      } else {
+        // Fallback: Open transaction form with pre-filled data
+        // For now, just a toast
+        toastInfo('Abre el formulario de transacciones para completar el pago');
+      }
+    }
+  };
+
+  // Expose trigger to header via window hack or props
+  React.useEffect(() => {
+    (window as any).triggerDebug = triggerDebug;
+  }, [triggerDebug]);
+
+  // State for notifications sheet
+  const [showNotifications, setShowNotifications] = React.useState(false);
+
   if (isLoadingTx || isLoadingProfile || isLoadingAcc || isLoadingInv || isLoadingLoans || isLoadingGoals) return <SkeletonDashboard />;
+
+  const hasUnread = (notifications?.length || 0) > 0;
 
   return (
     <div className="w-full">
@@ -388,11 +452,61 @@ const Dashboard: React.FC = () => {
         avatar={profile?.avatar}
         greeting={greeting.text}
         emoji={greeting.emoji}
+        onNotificationsClick={() => setShowNotifications(true)}
+        hasUnread={hasUnread}
       />
+
+      {/* Notifications Drawer */}
+      <SwipeableSheet
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        title="Alertas e Insights"
+      >
+        <div className="space-y-4 pb-12">
+          {hasUnread && (
+            <div className="flex justify-end px-1">
+              <button
+                onClick={() => markAllRead()}
+                className="text-[10px] font-bold text-app-primary uppercase tracking-wider hover:underline"
+              >
+                Marcar todo como leído
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {notifications?.map((n: any) => (
+                <InsightCard
+                  key={n.id}
+                  type={n.type}
+                  title={n.title}
+                  body={n.body}
+                  onDismiss={() => dismiss(n.id)}
+                  actionLabel={n.type === 'PAYMENT_DUE' ? 'Pagar' : undefined}
+                  onAction={() => handlePaymentAction(n)}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {(!notifications || notifications.length === 0) && (
+            <div className="py-12 text-center text-app-muted animate-fade-in">
+              <div className="size-20 mx-auto mb-4 bg-app-subtle rounded-full flex items-center justify-center">
+                <span className="material-symbols-outlined text-4xl opacity-20 text-app-primary">notifications_off</span>
+              </div>
+              <p className="text-sm font-medium">No tienes alertas pendientes</p>
+              <p className="text-[11px] opacity-60 mt-1">Te avisaremos cuando algo requiera tu atención.</p>
+            </div>
+          )}
+        </div>
+      </SwipeableSheet>
 
       {/* Grid principal con layout responsive */}
       <div className="px-4 md:px-6 lg:px-8">
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
+
+
 
           {/* Balance Card - Ocupa 2 columnas siempre (full width en mobile/tablet) */}
           <div className="col-span-2">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Transaction, Category, Account } from '../types';
-import { SwipeableBottomSheet } from './SwipeableBottomSheet';
+import { SwipeableSheet } from './SwipeableSheet';
 
 interface TransactionDetailSheetProps {
   transaction: Transaction | null;
@@ -51,8 +51,8 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
   };
 
   return (
-    <SwipeableBottomSheet isOpen={isOpen} onClose={onClose}>
-      {/* Header */}
+    <SwipeableSheet isOpen={isOpen} onClose={onClose}>
+      {/* Header (Visual only, no logic) */}
       <div className="pb-4 border-b border-app-border -mx-6 px-6 -mt-2">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0 flex-1">
@@ -81,9 +81,10 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
               </div>
             </div>
           </div>
+          {/* Mobile Close Button (Since Desktop has one in Modal, we might want to hide this on desktop or keep it as content close) */}
           <button
             onClick={onClose}
-            className="p-2 hover:bg-app-subtle rounded-full transition-colors shrink-0"
+            className="lg:hidden p-2 hover:bg-app-subtle rounded-full transition-colors shrink-0"
           >
             <span className="material-symbols-outlined text-app-muted">close</span>
           </button>
@@ -185,7 +186,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
           <span className="material-symbols-outlined text-lg">delete</span>
         </button>
       </div>
-    </SwipeableBottomSheet>
+    </SwipeableSheet>
   );
 };
 

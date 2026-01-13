@@ -64,9 +64,11 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
       const date = new Date(tx.date);
       // Sort Key: YYYY-MM
       const sortKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-      // Display Key: Ene (usando UTC)
-      const monthName = formatDateUTC(date, { style: 'chart' });
-      const displayKey = monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', '');
+
+      // Display Key: Ene (consistent UTC formatting)
+      const formatter = new Intl.DateTimeFormat('es-MX', { month: 'short', timeZone: 'UTC' });
+      const monthName = formatter.format(date).replace('.', '');
+      const displayKey = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
       if (!acc[sortKey]) acc[sortKey] = { mes: displayKey, Ingresos: 0, Gastos: 0 };
 
@@ -121,18 +123,21 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
       {/* Chart Area */}
       <div ref={setContainerNode} className="h-[250px] w-full min-w-0 relative">
         {dims.width > 0 && dims.height > 0 && (
-          <AreaChart width={dims.width} height={dims.height} data={data} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+          <AreaChart width={dims.width} height={dims.height} data={data} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="gradIngresos" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--semantic-success)" stopOpacity={0.15} />
+                <stop offset="0%" stopColor="var(--semantic-success)" stopOpacity={0.2} />
                 <stop offset="90%" stopColor="var(--semantic-success)" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="gradGastos" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--semantic-danger)" stopOpacity={0.15} />
+                <stop offset="0%" stopColor="var(--semantic-danger)" stopOpacity={0.2} />
                 <stop offset="90%" stopColor="var(--semantic-danger)" stopOpacity={0} />
               </linearGradient>
+              <filter id="shadowLine" height="200%">
+                <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(0,0,0,0.2)" />
+              </filter>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-default)" strokeOpacity={0.6} />
+            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="var(--border-default)" strokeOpacity={0.4} />
             <XAxis
               dataKey="mes"
               axisLine={false}
@@ -146,13 +151,16 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
               tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
               tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
             />
-            <Tooltip content={<ModernTooltip />} cursor={{ stroke: 'var(--text-muted)', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Tooltip content={<ModernTooltip />} cursor={{ stroke: 'var(--text-muted)', strokeWidth: 1, strokeDasharray: '4 4' }} isAnimationActive={false} />
             <Area
               type="monotone"
               dataKey="Ingresos"
               stroke="var(--semantic-success)"
               strokeWidth={2}
               fill="url(#gradIngresos)"
+              filter="url(#shadowLine)"
+              animationDuration={1500}
+              animationEasing="ease-out"
             />
             <Area
               type="monotone"
@@ -160,6 +168,9 @@ export const SpendingTrendChart: React.FC<SpendingTrendProps> = ({ transactions 
               stroke="var(--semantic-danger)"
               strokeWidth={2}
               fill="url(#gradGastos)"
+              filter="url(#shadowLine)"
+              animationDuration={1500}
+              animationEasing="ease-out"
             />
           </AreaChart>
         )}
@@ -256,7 +267,7 @@ export const BalanceOverTimeChart: React.FC<{ transactions: Transaction[] }> = (
 
   return (
     <ResponsiveContainer width="99%" height={200} minWidth={0}>
-      <AreaChart data={data} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
         <defs>
           <linearGradient id="gradBalance" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--brand-primary)" stopOpacity={0.2} />
@@ -268,7 +279,15 @@ export const BalanceOverTimeChart: React.FC<{ transactions: Transaction[] }> = (
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
           tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val} />
         <Tooltip content={<ModernTooltip />} cursor={false} />
-        <Area type="monotone" dataKey="Saldo" stroke="var(--brand-primary)" strokeWidth={2} fill="url(#gradBalance)" />
+        <Area
+          type="monotone"
+          dataKey="Saldo"
+          stroke="var(--brand-primary)"
+          strokeWidth={2}
+          fill="url(#gradBalance)"
+          animationDuration={2000}
+          animationEasing="ease-out"
+        />
       </AreaChart>
     </ResponsiveContainer>
   );

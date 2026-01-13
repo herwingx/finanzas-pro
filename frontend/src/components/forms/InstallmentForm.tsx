@@ -46,7 +46,10 @@ export const InstallmentForm: React.FC<InstallmentFormProps> = ({
       setInstallments(String(existingPurchase.installments));
       setPurchaseDate(new Date(existingPurchase.purchaseDate));
       setAccountId(existingPurchase.accountId);
-      if (existingPurchase.generatedTransactions?.length) {
+
+      if (existingPurchase.categoryId) {
+        setCategoryId(existingPurchase.categoryId);
+      } else if (existingPurchase.generatedTransactions?.length) {
         setCategoryId(existingPurchase.generatedTransactions[0].categoryId);
       }
     } else if (!isEditMode) {
@@ -75,7 +78,12 @@ export const InstallmentForm: React.FC<InstallmentFormProps> = ({
 
     try {
       if (isEditMode) {
-        await updateMutation.mutateAsync({ id: id!, purchase: payload });
+        const targetId = id || existingPurchase?.id;
+        if (!targetId) {
+          toastError("Error: No se pudo encontrar el ID del plan.");
+          return;
+        }
+        await updateMutation.mutateAsync({ id: targetId, purchase: payload });
         toastSuccess('Plan actualizado');
         onSuccess();
       } else {
@@ -126,7 +134,6 @@ export const InstallmentForm: React.FC<InstallmentFormProps> = ({
                     value={totalAmount}
                     onChange={e => setTotalAmount(e.target.value)}
                     placeholder="0.00"
-                    disabled={isEditMode}
                     className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-60 outline-none no-spin-button"
                   />
                 </div>

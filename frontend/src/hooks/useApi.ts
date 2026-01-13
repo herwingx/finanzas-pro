@@ -207,6 +207,65 @@ export const useDeleteCategory = () => {
     });
 };
 
+// --- AI ---
+export const useAIChat = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ message, conversationId }: { message: string, conversationId?: string }) => {
+            // Assuming you added postAIChat similarly, or fix this line too if needed. 
+            // For now let's focus on notifications which caused the issue.
+            // revert this part if apiService has no generic post.
+            const response = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, // simple fallback or add to apiService
+                body: JSON.stringify({ message, conversationId })
+            });
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['ai-history'] });
+        }
+    });
+};
+
+// --- Notifications ---
+export const useNotifications = () => {
+    return useQuery({
+        queryKey: ['notifications'],
+        queryFn: apiService.getNotifications
+    });
+};
+
+export const useDismissNotification = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: apiService.markNotificationRead,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+    });
+};
+
+export const useMarkAllNotificationsRead = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: apiService.markAllNotificationsRead,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+    });
+};
+
+export const useTriggerDebugNotification = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: apiService.triggerDebugNotification,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+    });
+};
+
 export const useProfile = () => {
     return useQuery<Profile, Error>({
         queryKey: ['profile'],

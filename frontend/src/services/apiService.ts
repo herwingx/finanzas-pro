@@ -715,3 +715,38 @@ export const withdrawFromGoal = async (id: string, withdrawal: { amount: number;
     }
     return response.json();
 };
+
+// ============== NOTIFICATIONS API ==============
+
+export const getNotifications = async (): Promise<any[]> => {
+    const response = await fetch(`${API_URL}/notifications`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch notifications');
+    return response.json();
+};
+
+export const markNotificationRead = async (id: string): Promise<any> => {
+    const response = await fetch(`${API_URL}/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to mark notification as read');
+    return response.json();
+};
+
+export const markAllNotificationsRead = async (): Promise<any> => {
+    const response = await fetch(`${API_URL}/notifications/read-all`, {
+        method: 'PUT',
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to mark all notifications as read');
+    return response.json();
+};
+
+export const triggerDebugNotification = async (): Promise<any> => {
+    const response = await fetch(`${API_URL}/notifications/debug-trigger`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to trigger debug notification');
+    return response.json();
+};

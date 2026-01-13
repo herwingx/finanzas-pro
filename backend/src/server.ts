@@ -23,6 +23,7 @@ import loansRoutes from './routes/loans';
 import investmentsRoutes from './routes/investments';
 import goalsRoutes from './routes/goals';
 import aiRoutes from './routes/ai';
+import notificationRoutes from './routes/notifications';
 
 // Jobs (P0 - Persistencia Crítica)
 import { generateCreditCardStatements, createDailyAccountSnapshots } from './jobs';
@@ -92,6 +93,7 @@ app.use('/api/loans', loansRoutes);
 app.use('/api/investments', investmentsRoutes); // P2: Inversiones
 app.use('/api/goals', goalsRoutes); // P2: Metas de ahorro
 app.use('/api/ai', aiRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // =============================================================================
 // Server Startup with Security Info

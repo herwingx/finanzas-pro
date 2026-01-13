@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
 import { usePayRecurringTransaction, useAccounts, usePayFullStatement, usePayMsiInstallment } from '../hooks/useApi';
@@ -108,20 +109,32 @@ const SwipeableExpenseRow = ({
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-app-text truncate">{item.description}</p>
-            <div className="flex items-center gap-1.5">
-              {item.isOverdue && (
-                <span className="text-[9px] font-bold text-white bg-rose-500 px-1 py-0.5 rounded">VENCIDO</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-sm font-medium text-app-text truncate">{item.description}</p>
+              {item.count > 1 && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-app-subtle text-app-primary rounded-lg font-bold">x{item.count}</span>
               )}
-              <span className={`text-[11px] ${item.isOverdue ? 'text-app-danger' : 'text-app-muted'}`}>
-                {formatDate(item.dueDate)}
-              </span>
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                {item.isOverdue && (
+                  <span className="text-[9px] font-bold text-white bg-rose-500 px-1 py-0.5 rounded">VENCIDO</span>
+                )}
+                <p className={`text-[11px] ${item.isOverdue ? 'text-app-danger' : 'text-app-muted'}`}>
+                  {item.count > 1 ? `Próximo: ${formatDate(item.dueDate)}` : formatDate(item.dueDate)}
+                </p>
+              </div>
+              {item.count > 1 && (
+                <p className="text-[10px] text-app-muted italic">
+                  {item.count} pagos de {formatCurrency(item.amount)}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-app-text tabular-nums">{formatCurrency(item.amount)}</span>
+          <span className="text-sm font-semibold text-app-text tabular-nums">{formatCurrency(item.totalAmount || item.amount)}</span>
           <button
             onClick={(e) => { e.stopPropagation(); onPay(); }}
             className="hidden md:flex size-7 items-center justify-center rounded-full bg-app-success/10 text-app-success opacity-0 group-hover:opacity-100 transition-all hover:bg-app-success hover:text-white"
@@ -205,19 +218,31 @@ const SwipeableIncomeRow = ({
               <span className="material-symbols-outlined text-[16px]">{item.category?.icon || 'payments'}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-app-text truncate">{item.description}</p>
-              <div className="flex items-center gap-1.5">
-                {item.isOverdue && (
-                  <span className="text-[9px] font-bold text-white bg-amber-500 px-1 py-0.5 rounded">PENDIENTE</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="text-sm font-medium text-app-text truncate">{item.description}</p>
+                {item.count > 1 && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-app-subtle text-emerald-600 dark:text-emerald-400 rounded-lg font-bold">x{item.count}</span>
                 )}
-                <span className={`text-[11px] ${item.isOverdue ? 'text-amber-600' : 'text-app-muted'}`}>
-                  {formatDate(item.dueDate)}
-                </span>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  {item.isOverdue && (
+                    <span className="text-[9px] font-bold text-white bg-amber-500 px-1 py-0.5 rounded">PENDIENTE</span>
+                  )}
+                  <p className={`text-[11px] ${item.isOverdue ? 'text-amber-600' : 'text-app-muted'}`}>
+                    {item.count > 1 ? `Próximo: ${formatDate(item.dueDate)}` : formatDate(item.dueDate)}
+                  </p>
+                </div>
+                {item.count > 1 && (
+                  <p className="text-[10px] text-app-muted italic">
+                    {item.count} depósitos de {formatCurrency(item.amount)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{formatCurrency(item.amount)}</span>
+            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{formatCurrency(item.totalAmount || item.amount)}</span>
             <button
               onClick={(e) => { e.stopPropagation(); onReceive(); }}
               className="hidden md:flex size-7 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-500 hover:text-white"
@@ -282,7 +307,7 @@ const CreditCardBill = ({
       <div onClick={onToggleExpand} className="p-4 cursor-pointer select-none">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-600 dark:text-indigo-400">
+            <div className="size-10 rounded-xl flex items-center justify-center bg-linear-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-600 dark:text-indigo-400">
               <span className="material-symbols-outlined text-xl">credit_card</span>
             </div>
             <div>
@@ -353,15 +378,15 @@ const CreditCardBill = ({
                 <div className="truncate pr-3 flex-1">
                   <div className="font-medium text-app-text flex items-center gap-1">
                     {item.isLastInstallment && <span className="material-symbols-outlined text-emerald-500 text-[12px]">check_circle</span>}
-                    {item.purchaseName || item.description}
+                    {item.purchaseName || item.description?.replace(/^Cuota \d+\/\d+ - /, '')}
                   </div>
                   <div className="text-[10px] text-app-muted">
                     {item.isMsi
                       ? (item.isLastInstallment
                         ? '¡Última cuota!'
-                        : item.installmentNumber && item.totalInstallments
-                          ? `Cuota ${item.installmentNumber}/${item.totalInstallments}`
-                          : 'MSI'
+                        : item.count > 1
+                          ? `${item.count} pagos de ${formatCurrency(item.amount)} • Cuotas ${item.minInstallment}-${item.maxInstallment}`
+                          : `Cuota ${item.installmentNumber}/${item.totalInstallments}`
                       )
                       : 'Consumo'}
                     {item.dueDate && ` • ${formatDate(item.dueDate)}`}
@@ -506,6 +531,42 @@ export const FinancialPlanningWidget: React.FC = () => {
     }
   };
 
+  // --- Grouping Logic for Recurring Items ---
+  const groupedExpenses = useMemo(() => {
+    if (!summary?.expectedExpenses) return [];
+    const map = new Map<string, any>();
+    summary.expectedExpenses.forEach((item: any) => {
+      const key = item.id; // Recurring Transaction ID
+      if (!map.has(key)) {
+        map.set(key, { ...item, count: 1, totalAmount: item.amount });
+      } else {
+        const existing = map.get(key);
+        existing.count += 1;
+        existing.totalAmount += item.amount;
+        if (new Date(item.dueDate) < new Date(existing.dueDate)) existing.dueDate = item.dueDate;
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }, [summary]);
+
+  const groupedIncome = useMemo(() => {
+    if (!summary?.expectedIncome) return [];
+    const map = new Map<string, any>();
+    summary.expectedIncome.forEach((item: any) => {
+      const key = item.id;
+      if (!map.has(key)) {
+        map.set(key, { ...item, count: 1, totalAmount: item.amount });
+      } else {
+        const existing = map.get(key);
+        existing.count += 1;
+        existing.totalAmount += item.amount;
+        if (new Date(item.dueDate) < new Date(existing.dueDate)) existing.dueDate = item.dueDate;
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }, [summary]);
+
+  // Handle early returns AFTER all hooks
   if (isLoading) return <SkeletonPlanningWidget />;
 
   if (isError || !summary) return (
@@ -516,8 +577,8 @@ export const FinancialPlanningWidget: React.FC = () => {
   );
 
   const hasCards = Object.keys(groupedCreditCardPayments).length > 0;
-  const hasExpenses = summary.expectedExpenses.length > 0;
-  const hasIncome = summary.expectedIncome.length > 0;
+  const hasExpenses = groupedExpenses.length > 0;
+  const hasIncome = groupedIncome.length > 0;
   const cardTotal = summary.msiPaymentsDue?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
   const fixedTotal = summary.expectedExpenses?.reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
 
@@ -576,7 +637,7 @@ export const FinancialPlanningWidget: React.FC = () => {
             </div>
             <div className="h-1.5 w-full rounded-full bg-app-border/30 overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-app-primary to-indigo-400 transition-all duration-500 rounded-full"
+                className="h-full bg-linear-to-r from-app-primary to-indigo-400 transition-all duration-500 rounded-full"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -616,7 +677,7 @@ export const FinancialPlanningWidget: React.FC = () => {
           <div className="flex items-center gap-1.5 mb-1">
             <span className="material-symbols-outlined text-rose-600 dark:text-rose-400 text-[14px]">credit_card</span>
             <p className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-400">Pagos TDC</p>
-            <InfoTooltip content="Pagos de deuda de tarjetas: MSI y consumos del período (no son gastos nuevos)" iconSize="12px" className="text-rose-500/50 hover:text-rose-500" />
+            <InfoTooltip content="Pagos de deuda de tarjetas: MSI y consumos del período" iconSize="12px" className="text-rose-500/50 hover:text-rose-500" />
           </div>
           <p className="text-lg font-bold text-rose-700 dark:text-rose-400 tabular-nums">{formatCurrency(cardTotal)}</p>
         </div>
@@ -630,24 +691,33 @@ export const FinancialPlanningWidget: React.FC = () => {
           <p className="text-lg font-bold text-app-text tabular-nums">{formatCurrency(fixedTotal)}</p>
         </div>
 
-        <div className={`p-3 rounded-xl border-2 ${summary.isSufficient
-          ? 'bg-indigo-50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-800'
-          : 'bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800'}`}>
-          <div className="flex items-center gap-1.5 mb-1">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`p-3 rounded-2xl border-2 transition-all duration-500 overflow-hidden relative ${summary.isSufficient
+            ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-800'
+            : 'bg-rose-50/50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800'}`}
+        >
+          {/* Decorative pulse for low balance */}
+          {!summary.isSufficient && (
+            <div className="absolute inset-0 bg-rose-500/5 animate-pulse" />
+          )}
+
+          <div className="relative flex items-center gap-1.5 mb-1">
             <span className={`material-symbols-outlined text-[14px] ${summary.isSufficient ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600 dark:text-rose-400'}`}>
               {summary.isSufficient ? 'savings' : 'warning'}
             </span>
-            <p className={`text-[10px] uppercase font-bold ${summary.isSufficient ? 'text-indigo-700 dark:text-indigo-400' : 'text-rose-700 dark:text-rose-400'}`}>Disponible</p>
+            <p className={`text-[10px] uppercase font-black ${summary.isSufficient ? 'text-indigo-700 dark:text-indigo-400' : 'text-rose-700 dark:text-rose-400'}`}>Disponible</p>
             <InfoTooltip
               content="Tu balance actual + ingresos esperados - todos los compromisos del período"
               iconSize="12px"
               className={summary.isSufficient ? 'text-indigo-500/50 hover:text-indigo-500' : 'text-rose-500/50 hover:text-rose-500'}
             />
           </div>
-          <p className={`text-lg font-bold tabular-nums ${summary.isSufficient ? 'text-indigo-700 dark:text-indigo-400' : 'text-rose-700 dark:text-rose-400'}`}>
+          <p className={`text-lg font-black tabular-nums ${summary.isSufficient ? 'text-indigo-700 dark:text-indigo-400' : 'text-rose-700 dark:text-rose-400'}`}>
             {formatCurrency(summary.disposableIncome)}
           </p>
-        </div>
+        </motion.div>
       </div>
 
       {/* 50/30/20 Budget Bar */}
@@ -702,19 +772,30 @@ export const FinancialPlanningWidget: React.FC = () => {
       })()}
 
       {/* Warning Alert */}
-      {summary.warnings?.length > 0 && (
-        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 flex items-start gap-2">
-          <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg shrink-0">warning</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">{summary.warnings[0]}</p>
-            {summary.warnings.length > 1 && (
-              <Link to="/analysis" className="text-[10px] text-amber-600 dark:text-amber-400 font-medium hover:underline">
-                +{summary.warnings.length - 1} alertas más
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {summary.warnings?.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="group relative p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 flex items-center gap-3 overflow-hidden"
+          >
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
+            <div className="size-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
+              <span className="material-symbols-outlined text-xl">priority_high</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-amber-900 dark:text-amber-200 leading-tight">{summary.warnings[0]}</p>
+              {summary.warnings.length > 1 && (
+                <Link to="/analysis" className="text-[10px] text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5 mt-0.5">
+                  Ver {summary.warnings.length - 1} alertas críticas más
+                  <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                </Link>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Expected Income Section */}
       {hasIncome && (
@@ -727,23 +808,23 @@ export const FinancialPlanningWidget: React.FC = () => {
             </Link>
           </div>
           <div className="border border-emerald-200 dark:border-emerald-900 rounded-xl bg-emerald-50/30 dark:bg-emerald-900/10 overflow-hidden">
-            {(showAllIncome ? summary.expectedIncome : summary.expectedIncome.slice(0, 3)).map((income: any) => (
+            {(showAllIncome ? groupedIncome : groupedIncome.slice(0, 3)).map((income: any) => (
               <SwipeableIncomeRow
-                key={income.uniqueId || income.id}
+                key={income.id}
                 item={income}
                 onReceive={() => handleReceive(income.id, income.amount, income.description)}
                 formatCurrency={formatCurrency}
                 formatDate={formatDate}
               />
             ))}
-            {summary.expectedIncome.length > 3 && (
+            {groupedIncome.length > 3 && (
               <button
                 onClick={() => setShowAllIncome(!showAllIncome)}
                 className="block w-full p-2.5 text-center text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
               >
                 {showAllIncome
                   ? 'Ver menos ↑'
-                  : `Ver ${summary.expectedIncome.length - 3} más →`
+                  : `Ver ${groupedIncome.length - 3} más →`
                 }
               </button>
             )}
@@ -791,23 +872,23 @@ export const FinancialPlanningWidget: React.FC = () => {
             </Link>
           </div>
           <div className="border border-app-border rounded-xl bg-app-bg divide-y divide-app-border overflow-hidden">
-            {(showAllExpenses ? summary.expectedExpenses : summary.expectedExpenses.slice(0, 5)).map((expense: any) => (
+            {(showAllExpenses ? groupedExpenses : groupedExpenses.slice(0, 5)).map((expense: any) => (
               <SwipeableExpenseRow
-                key={expense.uniqueId || expense.id}
+                key={expense.id}
                 item={expense}
                 onPay={() => handlePay(expense.id, expense.amount, expense.description)}
                 formatCurrency={formatCurrency}
                 formatDate={formatDate}
               />
             ))}
-            {summary.expectedExpenses.length > 5 && (
+            {groupedExpenses.length > 5 && (
               <button
                 onClick={() => setShowAllExpenses(!showAllExpenses)}
                 className="block w-full p-2.5 text-center text-xs text-app-primary font-medium hover:bg-app-subtle transition-colors"
               >
                 {showAllExpenses
                   ? 'Ver menos ↑'
-                  : `Ver ${summary.expectedExpenses.length - 5} más →`
+                  : `Ver ${groupedExpenses.length - 5} más →`
                 }
               </button>
             )}

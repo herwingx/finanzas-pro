@@ -35,6 +35,7 @@ router.get('/', async (req: AuthRequest, res) => {
                 monthlyNetIncome: true,
                 incomeFrequency: true,
                 taxRate: true,
+                notificationsEnabled: true,
                 _count: { select: { categories: true } }
             }
         });
@@ -74,7 +75,8 @@ router.get('/', async (req: AuthRequest, res) => {
                 avatar: true,
                 monthlyNetIncome: true,
                 incomeFrequency: true,
-                taxRate: true
+                taxRate: true,
+                notificationsEnabled: true,
             }
         });
 
@@ -87,19 +89,20 @@ router.get('/', async (req: AuthRequest, res) => {
 
 router.put('/', multer().any(), async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { name, currency, timezone, avatar, monthlyNetIncome, incomeFrequency, taxRate } = req.body;
+    const { name, currency, timezone, avatar, monthlyNetIncome, incomeFrequency, taxRate, notificationsEnabled } = req.body;
 
     try {
         const updatedUser = await prisma.user.update({
             where: { id: userId },
             data: {
-                name,
-                currency,
-                timezone,
-                avatar,
-                monthlyNetIncome: monthlyNetIncome ? parseFloat(monthlyNetIncome) : null,
-                incomeFrequency,
-                taxRate: taxRate ? parseFloat(taxRate) : null,
+                name: name !== undefined ? name : undefined,
+                currency: currency !== undefined ? currency : undefined,
+                timezone: timezone !== undefined ? timezone : undefined,
+                avatar: avatar !== undefined ? avatar : undefined,
+                monthlyNetIncome: monthlyNetIncome !== undefined ? (monthlyNetIncome === null ? null : parseFloat(monthlyNetIncome)) : undefined,
+                incomeFrequency: incomeFrequency !== undefined ? incomeFrequency : undefined,
+                taxRate: taxRate !== undefined ? (taxRate === null ? null : parseFloat(taxRate)) : undefined,
+                notificationsEnabled: notificationsEnabled !== undefined ? (typeof notificationsEnabled === 'boolean' ? notificationsEnabled : notificationsEnabled === 'true') : undefined,
             },
             select: {
                 name: true,
@@ -110,6 +113,7 @@ router.put('/', multer().any(), async (req: AuthRequest, res) => {
                 monthlyNetIncome: true,
                 incomeFrequency: true,
                 taxRate: true,
+                notificationsEnabled: true,
             }
         });
 

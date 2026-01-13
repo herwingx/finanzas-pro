@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import useTheme from '../hooks/useTheme';
+import { useProfile, useUpdateProfile } from '../hooks/useApi';
+import { toastSuccess, toastError } from '../utils/toast';
 
 // --- Sub-component: Switch (Toggle) ---
 interface SwitchProps {
@@ -56,13 +58,32 @@ const SettingRow: React.FC<SettingRowProps> = ({ icon, label, description, contr
     </div>
   </div>
 );
-
-
 const Settings: React.FC = () => {
   const [theme, setTheme] = useTheme();
-  // Estado local para notificaciones (simulado, se conectaría a un hook real o localStorage)
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const updateProfile = useUpdateProfile();
+
+  // Local state for UI responsiveness
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
+
+  // Sync local state with profile data
+  useEffect(() => {
+    if (profile) {
+      setNotificationsEnabled(profile.notificationsEnabled ?? true);
+    }
+  }, [profile]);
+
+  const handleNotificationsToggle = async (checked: boolean) => {
+    setNotificationsEnabled(checked);
+    try {
+      await updateProfile.mutateAsync({ notificationsEnabled: checked });
+      toastSuccess(checked ? 'Notificaciones activadas' : 'Notificaciones desactivadas');
+    } catch (error) {
+      setNotificationsEnabled(!checked); // Revert if failed
+      toastError('Error al actualizar preferencias');
+    }
+  };
 
   // Logic: "dark" or system preference handling
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -102,7 +123,13 @@ const Settings: React.FC = () => {
               icon="notifications"
               label="Notificaciones"
               description="Recordatorios de pago y alertas"
-              control={<Switch checked={notificationsEnabled} onChange={setNotificationsEnabled} />}
+              control={(
+                <Switch
+                  checked={notificationsEnabled}
+                  onChange={handleNotificationsToggle}
+                  disabled={updateProfile.isPending || isProfileLoading}
+                />
+              )}
             />
 
             <SettingRow

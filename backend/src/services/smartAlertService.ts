@@ -112,7 +112,17 @@ export class SmartAlertService {
 
   // --- Helper ---
   private static async createNotification(userId: string, params: { type: string, title: string, body: string, data?: any }) {
-    // Prevent spam: Check if similar notification exists for today (optional optimization)
+    // 1. Check if user has notifications enabled
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationsEnabled: true }
+    });
+
+    if (!user || user.notificationsEnabled === false) {
+      return; // Skip creation if disabled
+    }
+
+    // 2. Prevent spam: Check if similar notification exists for today (optional optimization)
     // For now, just create.
     await prisma.notification.create({
       data: {

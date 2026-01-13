@@ -1,5 +1,5 @@
 generator client {
-  provider   = "prisma-client"
+  provider   = "prisma-client-js"
   output     = "../src/generated/prisma"
   engineType = "client"
 }
@@ -57,6 +57,7 @@ model User {
   taxRate               Float?                 // Tasa de impuestos estimada (0.0 - 1.0)
   netWorth              Float?                 @default(0) // Cache del patrimonio neto calculado
   financialScore        Int?                   @default(0) // Score de salud financiera (0-100)
+  notificationsEnabled  Boolean                @default(true) // Notificaciones activas/desactivas
   
   // Relaciones
   accounts              Account[]

@@ -93,6 +93,7 @@ export interface Profile {
   monthlyNetIncome?: number;
   incomeFrequency?: 'weekly' | 'biweekly' | 'monthly';
   taxRate?: number;
+  notificationsEnabled?: boolean;
 }
 
 export type LoanStatus = 'active' | 'partial' | 'paid';

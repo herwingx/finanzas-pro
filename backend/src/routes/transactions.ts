@@ -25,7 +25,7 @@ router.get('/', async (req: AuthRequest, res) => {
     const transactions = await prisma.transaction.findMany({
       where: { userId, deletedAt: null },
       orderBy: { date: 'desc' },
-      include: { category: true, account: true },
+      include: { category: true, account: true, loan: true },
     });
     res.json(transactions);
   } catch (error) {
@@ -226,7 +226,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
   try {
     const transaction = await prisma.transaction.findFirst({
       where: { id, userId },
-      include: { category: true, account: true, destinationAccount: true },
+      include: { category: true, account: true, destinationAccount: true, loan: true },
     });
 
     if (!transaction) {

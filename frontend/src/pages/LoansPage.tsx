@@ -187,7 +187,7 @@ const LoansPage: React.FC = () => {
   const { openLoanSheet } = useGlobalSheets();
 
   // State
-  const [filter, setFilter] = useState<'all' | 'lent' | 'borrowed'>('all');
+  const [filter, setFilter] = useState<'all' | 'lent' | 'borrowed' | 'paid'>('all');
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [loanToDelete, setLoanToDelete] = useState<Loan | null>(null);
 
@@ -195,11 +195,71 @@ const LoansPage: React.FC = () => {
   const { data: loans = [], isLoading } = useQuery<Loan[]>({ queryKey: ['loans'], queryFn: getLoans });
   const { data: summary } = useQuery<LoanSummary>({ queryKey: ['loans-summary'], queryFn: getLoanSummary });
 
-  // Filter Logic
+  // Filtering Logic
   const filteredLoans = useMemo(() => {
-    if (filter === 'all') return loans;
-    return loans.filter(l => l.loanType === filter);
+    if (filter === 'paid') return loans.filter(l => l.status === 'paid');
+
+    // For other tabs, we only show active ones
+    const active = loans.filter(l => l.status !== 'paid');
+    if (filter === 'all') return active;
+    return active.filter(l => l.loanType === filter);
   }, [loans, filter]);
+
+  // Render Helper for Loan items
+  const renderLoanItem = (loan: Loan) => {
+    const isLent = loan.loanType === 'lent';
+    const isPaid = loan.status === 'paid';
+
+    // Icon Colors
+    const iconBg = isPaid ? 'bg-emerald-50' : isLent ? 'bg-violet-50' : 'bg-rose-50';
+    const iconColor = isPaid ? 'text-emerald-500' : isLent ? 'text-violet-600' : 'text-rose-500';
+    const darkIconBg = isPaid ? 'dark:bg-emerald-900/20' : isLent ? 'dark:bg-violet-900/20' : 'dark:bg-rose-900/20';
+
+    return (
+      <SwipeableItem
+        key={loan.id}
+        leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
+        onSwipeRight={() => { setSelectedLoan(null); setTimeout(() => openLoanSheet(loan), 50); }}
+        rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
+        onSwipeLeft={() => handleDeleteRequest(loan)}
+        className="rounded-3xl"
+      >
+        <div
+          onClick={() => setSelectedLoan(loan)}
+          className="bento-card p-4 flex items-center gap-4 cursor-pointer hover:border-app-border-strong active:scale-[0.99] transition-all bg-app-surface group"
+        >
+          <div className={`size-12 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-colors ${iconBg} ${iconColor} ${darkIconBg}`}>
+            <span className="material-symbols-outlined">
+              {isPaid ? 'check' : isLent ? 'call_made' : 'call_received'}
+            </span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start mb-0.5">
+              <h4 className={`font-bold text-sm text-app-text truncate ${isPaid ? 'opacity-60 line-through font-medium' : ''}`}>
+                {loan.borrowerName}
+              </h4>
+              <span className={`font-black font-numbers text-[15px] ${isPaid ? 'text-app-muted' : isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                ${loan.remainingAmount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center text-xs text-app-muted">
+              <span className="truncate">{new Date(loan.loanDate).toLocaleDateString()}</span>
+              {loan.remainingAmount < loan.originalAmount && !isPaid && (
+                <span className="text-[10px] font-bold bg-app-subtle px-1.5 py-0.5 rounded">Parcial</span>
+              )}
+              {isPaid && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">Saldado</span>
+              )}
+            </div>
+          </div>
+
+          <span className="material-symbols-outlined text-app-border group-hover:text-app-text text-xl">chevron_right</span>
+        </div>
+      </SwipeableItem>
+    );
+  };
 
   // Mutations
   const markPaidMutation = useMutation({
@@ -207,6 +267,8 @@ const LoansPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toastSuccess('Marcado como pagado');
     }
   });
@@ -217,6 +279,7 @@ const LoansPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Because of potential refunds
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toastSuccess('Préstamo eliminado');
       setLoanToDelete(null);
     },
@@ -262,79 +325,35 @@ const LoansPage: React.FC = () => {
         />
 
         {/* 2. FILTER SEGMENT */}
-        <div className="bg-app-subtle p-1 rounded-xl flex mx-auto">
-          {['all', 'lent', 'borrowed'].map((t) => {
-            const label = t === 'all' ? 'Todos' : t === 'lent' ? 'Me deben' : 'Debo';
-            return (
-              <button
-                key={t} onClick={() => setFilter(t as any)}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${filter === t ? 'bg-app-surface shadow-sm text-app-text' : 'text-app-muted hover:text-app-text'}`}
-              >
-                {label}
-              </button>
-            )
-          })}
+        <div className="bg-app-subtle p-1 rounded-xl flex mx-auto gap-1">
+          {[
+            { id: 'all', label: 'Todos' },
+            { id: 'lent', label: 'Me deben' },
+            { id: 'borrowed', label: 'Debo' },
+            { id: 'paid', label: 'Saldados' }
+          ].map((t) => (
+            <button
+              key={t.id} onClick={() => setFilter(t.id as any)}
+              className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filter === t.id ? 'bg-app-surface shadow-sm text-app-text' : 'text-app-muted hover:text-app-text'}`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
         {/* 3. LOAN LIST */}
         <div className="space-y-3">
           {filteredLoans.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-app-muted opacity-50 border-2 border-dashed border-app-border rounded-3xl">
-              <span className="material-symbols-outlined text-4xl mb-3">handshake</span>
-              <p className="text-sm font-medium">No hay registros activos</p>
+              <span className="material-symbols-outlined text-4xl mb-3">
+                {filter === 'paid' ? 'history' : 'handshake'}
+              </span>
+              <p className="text-sm font-medium">
+                {filter === 'paid' ? 'No hay registros saldados' : 'No hay deudas pendientes'}
+              </p>
             </div>
           ) : (
-            filteredLoans.map(loan => {
-              const isLent = loan.loanType === 'lent';
-              const isPaid = loan.status === 'paid';
-
-              // Icon Colors
-              const iconBg = isPaid ? 'bg-emerald-50' : isLent ? 'bg-violet-50' : 'bg-rose-50';
-              const iconColor = isPaid ? 'text-emerald-500' : isLent ? 'text-violet-600' : 'text-rose-500';
-              const darkIconBg = isPaid ? 'dark:bg-emerald-900/20' : isLent ? 'dark:bg-violet-900/20' : 'dark:bg-rose-900/20';
-
-              return (
-                <SwipeableItem
-                  key={loan.id}
-                  leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
-                  onSwipeRight={() => { setSelectedLoan(null); setTimeout(() => openLoanSheet(loan), 50); }}
-                  rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
-                  onSwipeLeft={() => handleDeleteRequest(loan)}
-                  className="rounded-3xl"
-                >
-                  <div
-                    onClick={() => setSelectedLoan(loan)}
-                    className="bento-card p-4 flex items-center gap-4 cursor-pointer hover:border-app-border-strong active:scale-[0.99] transition-all bg-app-surface group"
-                  >
-                    <div className={`size-12 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-colors ${iconBg} ${iconColor} ${darkIconBg}`}>
-                      <span className="material-symbols-outlined">
-                        {isPaid ? 'check' : isLent ? 'call_made' : 'call_received'}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-0.5">
-                        <h4 className={`font-bold text-sm text-app-text truncate ${isPaid ? 'opacity-60 line-through' : ''}`}>
-                          {loan.borrowerName}
-                        </h4>
-                        <span className={`font-black font-numbers text-[15px] ${isPaid ? 'text-app-muted' : isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          ${loan.remainingAmount.toLocaleString()}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center text-xs text-app-muted">
-                        <span className="truncate">{new Date(loan.loanDate).toLocaleDateString()}</span>
-                        {loan.remainingAmount < loan.originalAmount && (
-                          <span className="text-[10px] font-bold bg-app-subtle px-1.5 py-0.5 rounded">Parcial</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <span className="material-symbols-outlined text-app-border group-hover:text-app-text text-xl">chevron_right</span>
-                  </div>
-                </SwipeableItem>
-              )
-            })
+            filteredLoans.map(loan => renderLoanItem(loan))
           )}
         </div>
 

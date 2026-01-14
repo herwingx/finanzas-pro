@@ -212,6 +212,7 @@ const History: React.FC = () => {
                     const isIncome = tx.type === 'income';
                     const isTransfer = tx.type === 'transfer';
                     const isMsi = !!tx.installmentPurchaseId;
+                    const isLoan = !!tx.loanId;
 
                     const displayIcon = isTransfer ? 'swap_horiz' : cat.icon;
 
@@ -254,9 +255,18 @@ const History: React.FC = () => {
                               {isMsi && !isExpense && (
                                 <span className="text-[9px] font-bold bg-indigo-500/10 text-indigo-500 px-1.5 rounded">MSI</span>
                               )}
+                              {isLoan && (
+                                <span className="text-[9px] font-bold bg-violet-500/10 text-violet-600 px-1.5 rounded">Préstamo</span>
+                              )}
                             </div>
                             <div className="flex items-center gap-1 text-xs text-app-muted truncate">
-                              <span>{isTransfer ? 'Interno' : cat.name}</span>
+                              {isLoan && tx.loan ? (
+                                <span className="text-violet-600 dark:text-violet-400 font-medium">
+                                  {tx.loan.loanType === 'lent' ? 'Préstamo otorgado' : 'Préstamo recibido'}
+                                </span>
+                              ) : (
+                                <span>{isTransfer ? 'Interno' : cat.name}</span>
+                              )}
                               <span className="opacity-40">•</span>
                               <span className="truncate max-w-[120px]">{accName}</span>
                             </div>

@@ -15,6 +15,7 @@ export interface Transaction {
   recurringTransactionId?: string;
   installmentPurchaseId?: string;
   loanId?: string;
+  loan?: Loan;
   deletedAt?: string; // Soft delete timestamp
 }
 

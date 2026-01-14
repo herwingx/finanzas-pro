@@ -168,6 +168,25 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
             </div>
           </div>
         )}
+
+        {/* Loan Link */}
+        {transaction.loan && (
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-violet-600 text-xl">
+                {transaction.loan.loanType === 'lent' ? 'call_made' : 'call_received'}
+              </span>
+            </div>
+            <div>
+              <p className="text-[10px] text-app-muted uppercase font-bold">
+                {transaction.loan.loanType === 'lent' ? 'Préstamo a' : 'Recibido de'}
+              </p>
+              <p className="text-sm font-semibold text-app-text">
+                {transaction.loan.borrowerName}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}

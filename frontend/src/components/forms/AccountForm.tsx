@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAddAccount, useUpdateAccount, useDeleteAccount, useAddTransaction, useCategories, useAddCategory } from '../../hooks/useApi';
+import { useAddAccount, useUpdateAccount, useAddTransaction, useCategories, useAddCategory, useDeleteAccount } from '../../hooks/useApi';
 import { Account, AccountType } from '../../types';
 import { toastSuccess, toastError, toast } from '../../utils/toast';
+import { ToggleGroup } from '../Button';
 
 interface AccountFormProps {
   existingAccount?: Account | null;
@@ -11,286 +12,352 @@ interface AccountFormProps {
 export const AccountForm: React.FC<AccountFormProps> = ({ existingAccount, onClose }) => {
   const isEditMode = !!existingAccount;
 
-  // --- Form State ---
+  /* --- DATA & MUTATIONS --- */
+  const { data: categories } = useCategories();
+  const addAccount = useAddAccount();
+  const updateAccount = useUpdateAccount();
+  const addTransaction = useAddTransaction();
+  const addCategory = useAddCategory();
+  const deleteAccount = useDeleteAccount();
+
+  /* --- STATE --- */
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('DEBIT');
   const [balance, setBalance] = useState('');
-  const [creditLimit, setCreditLimit] = useState('');
-  const [cutoffDay, setCutoffDay] = useState('');
-  const [paymentDay, setPaymentDay] = useState('');
-  const [interestRate, setInterestRate] = useState('');
 
-  // --- UI State ---
-  const [showAdjustment, setShowAdjustment] = useState(false);
-  const [adjustmentAmount, setAdjustmentAmount] = useState('');
-  const [adjustmentDescription, setAdjustmentDescription] = useState('');
+  // Credit details
+  const [limit, setLimit] = useState('');
+  const [cutoff, setCutoff] = useState('');
+  const [payDay, setPayDay] = useState('');
+  const [rate, setRate] = useState('');
 
-  // --- Mutations ---
-  const addAccountMutation = useAddAccount();
-  const updateAccountMutation = useUpdateAccount();
-  const addTransactionMutation = useAddTransaction();
-  const addCategoryMutation = useAddCategory();
-  const { data: categories } = useCategories();
+  // Adjustment Logic
+  const [showAdj, setShowAdj] = useState(false);
+  const [adjAmount, setAdjAmount] = useState('');
+  const [adjDesc, setAdjDesc] = useState('');
 
-
-  // Init form
+  /* --- INIT --- */
   useEffect(() => {
     if (existingAccount) {
       setName(existingAccount.name);
       setType(existingAccount.type);
       setBalance(String(existingAccount.balance));
-      setCreditLimit(existingAccount.creditLimit?.toString() || '');
-      setCutoffDay(existingAccount.cutoffDay?.toString() || '');
-      setPaymentDay(existingAccount.paymentDay?.toString() || '');
-      setInterestRate(existingAccount.interestRate ? String(existingAccount.interestRate) : '');
+      setLimit(existingAccount.creditLimit?.toString() || '');
+      setCutoff(existingAccount.cutoffDay?.toString() || '');
+      setPayDay(existingAccount.paymentDay?.toString() || '');
+      setRate(existingAccount.interestRate?.toString() || '');
     } else {
-      setName('');
       setType('DEBIT');
-      setBalance('');
-      setCreditLimit('');
-      setCutoffDay('');
-      setPaymentDay('');
-      setInterestRate('');
     }
   }, [existingAccount]);
 
-  // --- Handlers ---
-
+  /* --- HANDLERS --- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name) return toastError('Falta nombre');
 
-    // Validation basic
-    if (!name) return toast.error('Ingresa un nombre para la cuenta');
-
-    const accountData: any = {
+    const payload: any = {
       name,
       type,
       balance: parseFloat(balance) || 0,
-      creditLimit: creditLimit ? parseFloat(creditLimit) : undefined,
-      cutoffDay: cutoffDay ? parseInt(cutoffDay, 10) : undefined,
-      paymentDay: paymentDay ? parseInt(paymentDay, 10) : undefined,
-      interestRate: interestRate ? parseFloat(interestRate) : undefined
+      creditLimit: limit ? parseFloat(limit) : undefined,
+      cutoffDay: cutoff ? parseInt(cutoff) : undefined,
+      paymentDay: payDay ? parseInt(payDay) : undefined,
+      interestRate: rate ? parseFloat(rate) : undefined
     };
-
-    // Clean irrelevant fields
-    if (type !== 'CREDIT') {
-      delete accountData.creditLimit;
-      delete accountData.cutoffDay;
-      delete accountData.paymentDay;
-    }
-
-    // Interest applies to CREDIT and LOAN
-    if (type !== 'CREDIT' && type !== 'LOAN') {
-      delete accountData.interestRate;
-    }
 
     try {
       if (isEditMode && existingAccount) {
-        await updateAccountMutation.mutateAsync({ id: existingAccount.id, account: accountData });
+        await updateAccount.mutateAsync({ id: existingAccount.id, account: payload });
         toastSuccess('Cuenta actualizada');
       } else {
-        await addAccountMutation.mutateAsync(accountData);
+        await addAccount.mutateAsync(payload);
         toastSuccess('Cuenta creada');
       }
       onClose();
-    } catch (error: any) {
-      toastError(error.message);
-    }
+    } catch (e: any) { toastError(e.message || 'Error'); }
   };
 
-  const handleAdjustment = async () => {
+  const executeAdjustment = async () => {
     if (!existingAccount) return;
-
-    const target = parseFloat(adjustmentAmount);
-    if (isNaN(target)) return;
-
+    const target = parseFloat(adjAmount);
     const current = parseFloat(balance);
     const diff = target - current;
+    if (Math.abs(diff) < 0.01) { setShowAdj(false); return; }
 
-    if (Math.abs(diff) < 0.01) {
-      setShowAdjustment(false);
-      return;
-    }
+    let txType: 'income' | 'expense';
+    if (type === 'CREDIT') txType = target > current ? 'expense' : 'income'; // More debt = expense
+    else txType = target > current ? 'income' : 'expense'; // More cash = income
 
     try {
-      let adjType: 'income' | 'expense';
-      let adjAmount = Math.abs(diff);
-
-      // Logic correction for CREDIT vs DEBIT
-      if (type === 'CREDIT') {
-        // En credito, BALANCE POSITIVO ES DEUDA.
-        // Si quiero SUBIR el balance (subir deuda), es GASTO.
-        // Si quiero BAJAR el balance (pagar deuda), es INGRESO.
-        adjType = target > current ? 'expense' : 'income';
-      } else {
-        // En debito, normal.
-        adjType = target > current ? 'income' : 'expense';
+      // Find or create 'Adjustment' category
+      let catId = categories?.find(c => c.name.includes('Ajuste') && c.type === txType)?.id;
+      if (!catId) {
+        const res = await addCategory.mutateAsync({ name: 'Ajuste Manual', type: txType, icon: 'tune', color: '#64748b' } as any);
+        catId = res.id;
       }
 
-      // Find or create Category
-      let catId: string | undefined;
-      const catName = adjType === 'income' ? 'Ajuste (+)' : 'Ajuste (-)';
-
-      const existingCat = categories?.find((c: any) => c.name.includes('Ajuste') && c.type === adjType);
-      if (existingCat) {
-        catId = existingCat.id;
-      } else {
-        // Try create one implicitly
-        const newCat = await addCategoryMutation.mutateAsync({
-          name: catName, type: adjType, icon: 'tune', color: '#94a3b8', userId: ''
-        } as any);
-        catId = newCat.id;
-      }
-
-      await addTransactionMutation.mutateAsync({
-        amount: adjAmount,
-        description: `🔧 Ajuste: ${adjustmentDescription || 'Corrección manual'}`,
+      await addTransaction.mutateAsync({
+        amount: Math.abs(diff),
+        description: `🔧 Ajuste: ${adjDesc || 'Manual'}`,
         date: new Date().toISOString(),
-        type: adjType,
+        type: txType,
         accountId: existingAccount.id,
         categoryId: catId!
       });
 
-      toastSuccess(`Saldo ajustado a ${target}`);
-      setShowAdjustment(false);
-      onClose(); // Close form after adjustment success? Or just update UI? 
-      // Better to close, as balance changed effectively.
-    } catch (e) {
-      toastError('Error al crear ajuste');
+      toastSuccess(`Saldo corregido a ${target}`);
+      onClose();
+    } catch (e) { toastError('Falló ajuste'); }
+  };
+
+  const handleDelete = async () => {
+    if (!existingAccount) return;
+    if (window.confirm('¿Eliminar esta cuenta? Se perderá todo su historial.')) {
+      try {
+        await deleteAccount.mutateAsync(existingAccount.id);
+        toastSuccess('Cuenta eliminada');
+        onClose();
+      } catch (e) { toastError('Error al eliminar'); }
     }
   };
 
+  const isSaving = addAccount.isPending || updateAccount.isPending;
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="text-center py-4 border-b border-app-border">
-        <h2 className="text-lg font-bold text-app-text">{isEditMode ? 'Editar Cuenta' : 'Nueva Cuenta'}</h2>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* 1. HEADER (Sheet Style) */}
+      <div className="flex justify-between items-center px-4 py-3 border-b border-app-border shrink-0">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-sm font-medium text-app-muted hover:text-app-text px-2"
+        >
+          Cancelar
+        </button>
+        <h2 className="text-lg font-bold text-app-text">
+          {isEditMode ? 'Editar Cuenta' : 'Nueva Cuenta'}
+        </h2>
+        {isEditMode ? (
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="text-sm font-bold text-rose-500 hover:text-rose-600 px-2"
+          >
+            Borrar
+          </button>
+        ) : (
+          <div className="w-12" />
+        )}
       </div>
 
-      <main className="flex-1 overflow-y-auto p-5 pb-safe">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 2. FORM BODY (Scrollable) */}
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        <form id="account-form" onSubmit={handleSubmit} className="px-6 pt-6 pb-24 space-y-6">
 
-          {/* Primary Info */}
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Nombre</label>
-              <input
-                type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. BBVA Débito" autoFocus
-                className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none text-app-text"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Tipo</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['DEBIT', 'CREDIT', 'CASH', 'LOAN', 'INVESTMENT'] as AccountType[]).map(t => (
-                  <button
-                    type="button" key={t} onClick={() => setType(t)}
-                    className={`py-3 rounded-xl text-xs font-bold transition-all border 
-                                        ${type === t
-                        ? 'bg-app-text text-app-bg border-app-text shadow-md'
-                        : 'bg-app-surface text-app-muted border-app-border hover:bg-app-subtle'
-                      }`}
-                  >
-                    {t === 'DEBIT' ? 'DÉBITO' : t === 'CREDIT' ? 'CRÉDITO' : t === 'CASH' ? 'EFECTIVO' : t === 'LOAN' ? 'PRÉSTAMO' : 'INVERSIÓN'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Balance */}
-          <div className="pt-2">
-            <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">
-              {type === 'CREDIT' ? 'Deuda Inicial' : 'Saldo Inicial'}
+          {/* A. HERO BALANCE INPUT */}
+          <div className="flex flex-col items-center mb-4">
+            <label className="text-[10px] font-bold text-app-text uppercase tracking-widest opacity-60 mb-2">
+              {type === 'CREDIT' ? 'Deuda Actual' : 'Saldo Inicial'}
             </label>
-            <div className={`flex items-center bg-app-surface border border-app-border rounded-2xl px-4 py-4 ${isEditMode ? 'opacity-70 bg-app-subtle cursor-not-allowed' : 'focus-within:ring-2 focus-within:ring-app-primary'}`}>
-              <span className="text-xl font-bold text-app-muted mr-2">$</span>
+            <div className="relative group">
+              <span className="absolute -left-5 top-2 text-2xl text-app-muted font-light opacity-30">$</span>
               <input
-                type="number" inputMode="decimal" step="0.01" min="0" onWheel={(e) => e.currentTarget.blur()}
-                value={balance} onChange={e => setBalance(e.target.value)} placeholder="0.00" disabled={isEditMode}
-                className="bg-transparent text-2xl font-bold text-app-text outline-none w-full placeholder-app-muted/30 no-spin-button"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={balance}
+                onChange={e => setBalance(e.target.value)}
+                placeholder="0.00"
+                disabled={isEditMode}
+                className="w-48 bg-transparent text-center text-5xl font-black text-app-text outline-none placeholder:text-app-muted/20 caret-app-primary no-spin-button py-2 disabled:opacity-80"
               />
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => { setAdjAmount(balance); setShowAdj(true); }}
+                  className="block mx-auto mt-2 text-[10px] font-black text-app-primary uppercase tracking-tighter bg-app-primary/10 px-2.5 py-1 rounded-full hover:bg-app-primary/20 transition-all"
+                >
+                  Ajustar Saldo
+                </button>
+              )}
             </div>
-            {isEditMode && (
-              <button type="button" onClick={() => { setAdjustmentAmount(balance); setShowAdjustment(true); }} className="mt-2 text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">build</span> Corregir saldo manual
-              </button>
-            )}
           </div>
 
-          {/* Credit Specifics */}
+          {/* B. NAME INPUT */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-app-text uppercase tracking-wider ml-1 opacity-70">
+              Nombre de la Cuenta
+            </label>
+            <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-3 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all shadow-sm">
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Ej. Nómina, Efectivo, Tarjeta..."
+                autoFocus={!isEditMode}
+                className="w-full bg-transparent text-sm font-bold outline-none text-app-text placeholder:text-app-muted/40"
+              />
+            </div>
+          </div>
+
+          {/* C. TYPE TOGGLE */}
+          <div className="space-y-3">
+            <label className="text-[11px] font-bold text-app-text uppercase tracking-wider ml-1 opacity-70">
+              Tipo de Cuenta
+            </label>
+            <div className="flex flex-wrap justify-center gap-2">
+              {([
+                { v: 'DEBIT', l: 'Débito', icon: 'account_balance_wallet' },
+                { v: 'CASH', l: 'Efectivo', icon: 'payments' },
+                { v: 'CREDIT', l: 'Crédito', icon: 'credit_card' },
+                { v: 'LOAN', l: 'Pasivo', icon: 'handshake' },
+                { v: 'INVESTMENT', l: 'Inversión', icon: 'trending_up' }
+              ] as const).map(t => (
+                <button
+                  key={t.v}
+                  type="button"
+                  onClick={() => setType(t.v)}
+                  className={`flex flex-col items-center justify-center min-w-[68px] h-[68px] rounded-2xl border transition-all duration-200 shadow-sm
+                    ${type === t.v
+                      ? 'bg-app-primary border-app-primary text-white scale-[1.02] shadow-app-primary/30 z-10'
+                      : 'bg-app-surface border-app-border text-app-muted hover:border-app-border-strong hover:bg-app-subtle'
+                    }`}
+                >
+                  <span className="material-symbols-outlined text-[20px] mb-1">{t.icon}</span>
+                  <span className="text-[9px] font-black uppercase tracking-tighter">{t.l}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* D. CREDIT CARD SPECIFIC FIELDS */}
           {type === 'CREDIT' && (
-            <div className="space-y-4 pt-4 border-t border-app-border">
-              <p className="text-xs font-bold text-app-text">Detalles de Tarjeta</p>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-app-muted block mb-1">Día Corte</label>
-                  <input type="number" min="1" max="31" onWheel={(e) => e.currentTarget.blur()} placeholder="14" value={cutoffDay} onChange={e => setCutoffDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold no-spin-button text-app-text" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-app-muted block mb-1">Día Pago</label>
-                  <input type="number" min="1" max="31" onWheel={(e) => e.currentTarget.blur()} placeholder="4" value={paymentDay} onChange={e => setPaymentDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold no-spin-button text-app-text" />
-                </div>
+            <div className="bg-app-subtle/50 p-4 rounded-2xl border border-app-border space-y-4 animate-scale-in">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-app-primary text-lg">settings</span>
+                <p className="text-[10px] font-black text-app-text uppercase tracking-widest opacity-80">Configuración de Tarjeta</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-app-muted block mb-1">Límite de Crédito</label>
-                  <input type="number" min="0" step="0.01" onWheel={(e) => e.currentTarget.blur()} placeholder="50000" value={creditLimit} onChange={e => setCreditLimit(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 font-bold no-spin-button text-app-text" />
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-app-muted uppercase ml-1">Corte (Día)</label>
+                  <div className="bg-app-surface border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
+                    <input
+                      type="number"
+                      placeholder="Ej. 14"
+                      value={cutoff}
+                      onChange={e => setCutoff(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold outline-none text-app-text text-center"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-app-muted block mb-1">Tasa Anual (%)</label>
-                  <input type="number" min="0" step="0.1" onWheel={(e) => e.currentTarget.blur()} placeholder="65.5" value={interestRate} onChange={e => setInterestRate(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 font-bold no-spin-button text-app-text" />
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-app-muted uppercase ml-1">Límite Pago</label>
+                  <div className="bg-app-surface border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
+                    <input
+                      type="number"
+                      placeholder="Ej. 4"
+                      value={payDay}
+                      onChange={e => setPayDay(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold outline-none text-app-text text-center"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-app-muted uppercase ml-1">Límite Crédito</label>
+                  <div className="bg-app-surface border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
+                    <input
+                      type="number"
+                      placeholder="$"
+                      value={limit}
+                      onChange={e => setLimit(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold outline-none text-app-text text-center"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-app-muted uppercase ml-1">Interés ANUAL %</label>
+                  <div className="bg-app-surface border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
+                    <input
+                      type="number"
+                      placeholder="%"
+                      value={rate}
+                      onChange={e => setRate(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold outline-none text-app-text text-center"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Loan Specifics */}
-          {type === 'LOAN' && (
-            <div className="space-y-4 pt-4 border-t border-app-border">
-              <p className="text-xs font-bold text-app-text">Detalles del Préstamo</p>
-              <div>
-                <label className="text-[10px] font-bold text-app-muted block mb-1">Tasa de Interés Anual (%) (Opcional)</label>
-                <p className="text-[10px] text-app-muted mb-2">Si el banco cobra intereses, ingrésalo aquí para proyectar pagos mensuales estimados.</p>
-                <input type="number" min="0" step="0.1" onWheel={(e) => e.currentTarget.blur()} placeholder="15.0" value={interestRate} onChange={e => setInterestRate(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 font-bold no-spin-button text-app-text" />
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="pt-8 pb-12">
-            <button type="submit" disabled={addAccountMutation.isPending || updateAccountMutation.isPending}
-              className="w-full py-4 bg-app-primary hover:bg-app-primary-dark text-white font-bold rounded-2xl shadow-xl shadow-app-primary/30 transition-all active:scale-95 disabled:opacity-50">
-              {isEditMode ? 'Guardar Cambios' : 'Crear Cuenta'}
-            </button>
-          </div>
         </form>
-      </main>
+      </div>
 
-      {/* Modal de Ajuste (Modal Manual, Tailwind limpio) */}
-      {showAdjustment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-app-surface border border-app-border rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-scale-in">
-            <h3 className="text-lg font-bold text-app-text mb-4">Ajuste de Saldo</h3>
-            <p className="text-sm text-app-muted mb-4">Ingresa el saldo real de tu banco. Se creará una transacción de ajuste automáticamente.</p>
+      {/* 3. STICKY FOOTER */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none">
+        <button
+          form="account-form"
+          type="submit"
+          disabled={isSaving}
+          className="w-full h-14 bg-app-primary text-white text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl shadow-app-primary/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-3 pointer-events-auto"
+        >
+          {isSaving && <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+          {isEditMode ? 'Guardar Cambios' : 'Confirmar Cuenta'}
+        </button>
+      </div>
 
-            <div className="mb-4">
-              <label className="text-[10px] font-bold uppercase text-app-muted block mb-1">Nuevo Saldo Real</label>
-              <input
-                type="number" autoFocus min="0" step="0.01" onWheel={(e) => e.currentTarget.blur()} value={adjustmentAmount} onChange={e => setAdjustmentAmount(e.target.value)}
-                className="w-full p-3 bg-app-bg border border-app-border rounded-xl font-bold text-xl outline-none focus:border-app-primary no-spin-button text-app-text"
-              />
+      {/* ADJUSTMENT MODAL OVERLAY (Sleek Alert Style) */}
+      {showAdj && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-zinc-950/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-app-surface border border-app-border rounded-[32px] p-8 w-full max-w-sm shadow-2xl animate-scale-in">
+            <div className="flex flex-col items-center text-center mb-8">
+              <div className="size-16 rounded-3xl bg-app-primary/10 flex items-center justify-center mb-4 text-app-primary">
+                <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
+              </div>
+              <h3 className="text-xl font-black text-app-text">Corregir Saldo</h3>
+              <p className="text-sm text-app-muted mt-2 px-2 leading-relaxed opacity-80">
+                Se generará un movimiento de **ajuste manual** para igualar el balance actual.
+              </p>
             </div>
-            <input
-              type="text" placeholder="Motivo (opcional)" value={adjustmentDescription} onChange={e => setAdjustmentDescription(e.target.value)}
-              className="w-full p-3 mb-6 bg-app-bg border border-app-border rounded-xl text-sm outline-none text-app-text"
-            />
 
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setShowAdjustment(false)} className="flex-1 py-3 font-bold text-sm text-app-muted hover:bg-app-bg rounded-xl transition-colors">Cancelar</button>
-              <button type="button" onClick={handleAdjustment} className="flex-1 py-3 font-bold text-sm bg-app-primary text-white rounded-xl hover:bg-app-primary-dark shadow-lg shadow-app-primary/20">Aplicar</button>
+            <div className="space-y-5">
+              <div className="relative group">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-app-muted opacity-30">$</span>
+                <input
+                  type="number"
+                  autoFocus
+                  value={adjAmount}
+                  onChange={e => setAdjAmount(e.target.value)}
+                  className="w-full h-16 bg-app-subtle border-2 border-app-border focus:border-app-primary rounded-2xl text-center text-3xl font-black text-app-text outline-none transition-all"
+                />
+              </div>
+
+              <div className="bg-app-subtle border border-app-border rounded-xl px-4 py-3">
+                <input
+                  type="text"
+                  placeholder="Motivo (opcional)"
+                  value={adjDesc}
+                  onChange={e => setAdjDesc(e.target.value)}
+                  className="w-full bg-transparent text-sm font-bold text-center outline-none text-app-text placeholder:text-app-muted/30"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={executeAdjustment}
+                  className="h-12 bg-app-primary text-white font-bold rounded-2xl shadow-lg hover:shadow-app-primary/20 transition-all active:scale-95"
+                >
+                  Actualizar Saldo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAdj(false)}
+                  className="h-12 bg-app-subtle text-app-text font-bold rounded-2xl hover:bg-app-border transition-colors outline-none"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -298,3 +365,5 @@ export const AccountForm: React.FC<AccountFormProps> = ({ existingAccount, onClo
     </div>
   );
 };
+
+export default AccountForm;

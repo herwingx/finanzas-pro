@@ -40,7 +40,8 @@ export const LoanForm: React.FC<LoanFormProps> = ({ existingLoan, onClose, isShe
     loanDate: new Date(),
     expectedPayDate: undefined as Date | undefined,
     notes: "",
-    accountId: "", // Para el movimiento de caja
+    accountId: "",
+    affectBalance: true, // New flag
   });
 
   // Effects
@@ -56,7 +57,23 @@ export const LoanForm: React.FC<LoanFormProps> = ({ existingLoan, onClose, isShe
         loanDate: new Date(existingLoan.loanDate),
         expectedPayDate: existingLoan.expectedPayDate ? new Date(existingLoan.expectedPayDate) : undefined,
         notes: existingLoan.notes || "",
-        accountId: "", // En edición no movemos saldos
+        accountId: existingLoan.accountId || "",
+        affectBalance: !!existingLoan.accountId, // Sincronizado: Si ya tiene cuenta, es "Sí"
+      });
+    } else {
+      // RESET COMPLETO para creación
+      setFormData({
+        borrowerName: "",
+        borrowerPhone: "",
+        borrowerEmail: "",
+        reason: "",
+        loanType: "lent",
+        originalAmount: "",
+        loanDate: new Date(),
+        expectedPayDate: undefined,
+        notes: "",
+        accountId: "",
+        affectBalance: true,
       });
     }
   }, [existingLoan]);
@@ -66,6 +83,7 @@ export const LoanForm: React.FC<LoanFormProps> = ({ existingLoan, onClose, isShe
     queryClient.invalidateQueries({ queryKey: ['loans'] });
     queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
     queryClient.invalidateQueries({ queryKey: ['accounts'] }); // balance changes
+    queryClient.invalidateQueries({ queryKey: ['transactions'] }); // history sync
     onClose();
   };
 
@@ -84,12 +102,12 @@ export const LoanForm: React.FC<LoanFormProps> = ({ existingLoan, onClose, isShe
       originalAmount: val,
       loanDate: formData.loanDate.toISOString(),
       expectedPayDate: formData.expectedPayDate ? formData.expectedPayDate.toISOString() : null,
-      // Cleanup empties
       borrowerPhone: formData.borrowerPhone || null,
       borrowerEmail: formData.borrowerEmail || null,
       reason: formData.reason || null,
       notes: formData.notes || null,
-      accountId: formData.accountId || null
+      accountId: formData.accountId || null,
+      affectBalance: formData.affectBalance
     };
 
     if (isEditing) updateM.mutate({ id: existingLoan.id, data: payload });
@@ -216,23 +234,36 @@ export const LoanForm: React.FC<LoanFormProps> = ({ existingLoan, onClose, isShe
               </div>
             </div>
 
-            {/* D. LINK TO WALLET (Create Mode Only) - Compact */}
-            {!isEditing && (
-              <div className="pt-1">
-                <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Afectar Saldo de Caja</label>
-                <div className="relative">
-                  <select
-                    value={formData.accountId}
-                    onChange={e => setFormData(p => ({ ...p, accountId: e.target.value }))}
-                    className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary shadow-sm transition-all"
-                  >
-                    <option value="">-- No registrar --</option>
-                    {liquidAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-2 top-2.5 text-app-muted pointer-events-none text-[20px]">account_balance_wallet</span>
-                </div>
+            {/* D. LINK TO WALLET - Compact */}
+            <div className="pt-2 border-t border-app-border/40 mt-2 space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <label className="text-[10px] font-bold text-app-text uppercase tracking-wide opacity-70">Afectar Saldo de Caja</label>
+                <ToggleGroup
+                  options={[{ value: 'true', label: 'Sí' }, { value: 'false', label: 'No' }]}
+                  value={String(formData.affectBalance)}
+                  onChange={(v) => {
+                    const isAffecting = v === 'true';
+                    setFormData(p => ({
+                      ...p,
+                      affectBalance: isAffecting,
+                      accountId: isAffecting ? p.accountId : ""
+                    }));
+                  }}
+                />
               </div>
-            )}
+
+              <div className={`relative transition-all duration-300 ${!formData.affectBalance ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                <select
+                  value={formData.accountId}
+                  onChange={e => setFormData(p => ({ ...p, accountId: e.target.value }))}
+                  className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary shadow-sm transition-all"
+                >
+                  <option value="">-- No registrar --</option>
+                  {liquidAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <span className="material-symbols-outlined absolute right-2 top-2.5 text-app-muted pointer-events-none text-[20px]">account_balance_wallet</span>
+              </div>
+            </div>
 
           </div>
 

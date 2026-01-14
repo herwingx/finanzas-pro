@@ -247,11 +247,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 <select
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full bg-app-surface border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-semibold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/20 transition-all"
+                  className="w-full bg-app-subtle border border-app-border h-12 rounded-xl pl-3 pr-9 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/20 shadow-sm transition-all"
                 >
-                  {allAccounts.map(a => <option key={a.id} value={a.id}>{a.name} (${a.balance})</option>)}
+                  {allAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <span className="material-symbols-outlined absolute right-3 top-3 text-app-muted pointer-events-none text-[20px]">expand_more</span>
+                <span className="material-symbols-outlined absolute right-3 top-3 text-app-muted pointer-events-none text-[20px]">account_balance_wallet</span>
               </div>
             </div>
 

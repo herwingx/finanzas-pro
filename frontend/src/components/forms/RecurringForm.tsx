@@ -2,10 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useCategories, useAccounts, useAddRecurringTransaction, useUpdateRecurringTransaction } from '../../hooks/useApi';
 import { FrequencyType, TransactionType, RecurringTransaction } from '../../types';
 import { toastSuccess, toastError, toast } from '../../utils/toast';
+
+// Components
 import { PageHeader } from '../PageHeader';
 import { DatePicker } from '../DatePicker';
 import { CategorySelector } from '../CategorySelector';
-import { ToggleButtonGroup } from '../Button';
+import { ToggleGroup } from '../Button';
 import { formatDateUTC } from '../../utils/dateUtils';
 
 interface RecurringFormProps {
@@ -14,19 +16,14 @@ interface RecurringFormProps {
   isSheetMode?: boolean;
 }
 
-export const RecurringForm: React.FC<RecurringFormProps> = ({
-  existingTransaction,
-  onClose,
-  isSheetMode = false
-}) => {
+export const RecurringForm: React.FC<RecurringFormProps> = ({ existingTransaction, onClose, isSheetMode = false }) => {
   const isEditMode = !!existingTransaction;
 
-  // Queries
-  const { data: categories, isLoading: isLoadingCategories } = useCategories();
-  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
-
-  const addMutation = useAddRecurringTransaction();
-  const updateMutation = useUpdateRecurringTransaction();
+  // Hooks & Mutations
+  const { data: categories } = useCategories();
+  const { data: accounts } = useAccounts();
+  const addTx = useAddRecurringTransaction();
+  const updateTx = useUpdateRecurringTransaction();
 
   // State
   const [type, setType] = useState<TransactionType>('expense');
@@ -36,28 +33,22 @@ export const RecurringForm: React.FC<RecurringFormProps> = ({
   const [accountId, setAccountId] = useState('');
   const [frequency, setFrequency] = useState<FrequencyType>('monthly');
   const [startDate, setStartDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [hasEndDate, setHasEndDate] = useState(false);
-  const [alreadyPaidCurrent, setAlreadyPaidCurrent] = useState(false);
 
-  // Derived Data
-  const availableCategories = useMemo(() => categories?.filter(c => c.type === type) || [], [categories, type]);
-  const availableAccounts = useMemo(() => accounts || [], [accounts]);
+  // Logic Gates
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [hasEnd, setHasEnd] = useState(false);
+  const [skipFirst, setSkipFirst] = useState(false);
+
+  // Derived
+  const filteredCats = useMemo(() => categories?.filter(c => c.type === type) || [], [categories, type]);
+  const accountsList = useMemo(() => accounts || [], [accounts]);
 
   // Effects
+  useEffect(() => { if (accountsList.length && !accountId) setAccountId(accountsList[0].id); }, [accountsList, accountId]);
   useEffect(() => {
-    if (availableAccounts.length > 0 && !accountId) setAccountId(availableAccounts[0].id);
-  }, [availableAccounts, accountId]);
-
-  useEffect(() => {
-    if (availableCategories.length > 0 && !categoryId) setCategoryId(availableCategories[0].id);
-  }, [availableCategories, categoryId]);
-
-  useEffect(() => {
-    if (!isEditMode) {
-      setCategoryId('');
-    }
-  }, [type, isEditMode]);
+    // Reset cat if type change unless editing initial load
+    if (!isEditMode && filteredCats.length && !categoryId) setCategoryId(filteredCats[0].id);
+  }, [type, isEditMode, filteredCats, categoryId]);
 
   useEffect(() => {
     if (existingTransaction) {
@@ -70,284 +61,231 @@ export const RecurringForm: React.FC<RecurringFormProps> = ({
       setStartDate(new Date(existingTransaction.startDate));
       if (existingTransaction.endDate) {
         setEndDate(new Date(existingTransaction.endDate));
-        setHasEndDate(true);
+        setHasEnd(true);
       }
     }
   }, [existingTransaction]);
 
-  // Logic
-  const calculateNextDueDate = () => {
-    const nextDate = new Date(startDate);
-    nextDate.setUTCHours(12, 0, 0, 0);
-
-    if (alreadyPaidCurrent) {
-      if (frequency === 'daily') {
-        nextDate.setUTCDate(nextDate.getUTCDate() + 1);
-      } else if (frequency === 'weekly') {
-        nextDate.setUTCDate(nextDate.getUTCDate() + 7);
-      } else if (frequency === 'biweekly') {
-        nextDate.setUTCDate(nextDate.getUTCDate() + 14);
-      } else if (frequency === 'biweekly_15_30') {
-        const day = nextDate.getUTCDate();
-        const currentMonth = nextDate.getUTCMonth();
-        const currentYear = nextDate.getUTCFullYear();
-
+  // Logic Calc
+  const calcNextDate = () => {
+    const next = new Date(startDate);
+    if (skipFirst) {
+      if (frequency === 'weekly') next.setDate(next.getDate() + 7);
+      else if (frequency === 'monthly') next.setMonth(next.getMonth() + 1);
+      else if (frequency === 'biweekly') next.setDate(next.getDate() + 14);
+      else if (frequency === 'yearly') next.setFullYear(next.getFullYear() + 1);
+      else if (frequency === 'biweekly_15_30') {
+        const day = next.getDate();
         if (day <= 15) {
-          const lastDayOfMonth = new Date(Date.UTC(currentYear, currentMonth + 1, 0)).getUTCDate();
-          nextDate.setUTCDate(lastDayOfMonth);
+          // Last day of current month
+          const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+          next.setDate(lastDay);
         } else {
-          nextDate.setUTCMonth(currentMonth + 1);
-          nextDate.setUTCDate(15);
+          // 15 of next month
+          next.setMonth(next.getMonth() + 1);
+          next.setDate(15);
         }
-      } else if (frequency === 'monthly') {
-        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-      } else if (frequency === 'yearly') {
-        nextDate.setUTCFullYear(nextDate.getUTCFullYear() + 1);
       }
     }
-    return nextDate;
+    return next;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = parseFloat(amount);
+    const val = parseFloat(amount);
+    if (!val || val <= 0) return toastError('Monto requerido');
+    if (!categoryId) return toastError('Falta categoría');
 
-    if (!amount || numAmount <= 0) return toast.error('Monto inválido');
-    if (!categoryId) return toast.error('Selecciona una categoría');
-    if (!accountId) return toast.error('Selecciona una cuenta');
-
-    const nextDueDate = calculateNextDueDate();
-
-    const recurringData = {
-      amount: numAmount,
+    const nextDate = calcNextDate();
+    const payload: any = {
+      amount: val,
       description: description || (type === 'expense' ? 'Gasto Recurrente' : 'Ingreso Recurrente'),
       categoryId,
       accountId,
-      startDate: startDate.toISOString(),
       type,
       frequency,
+      startDate: startDate.toISOString(),
+      nextDueDate: nextDate.toISOString(),
       active: true,
-      nextDueDate: nextDueDate.toISOString(),
-      endDate: hasEndDate && endDate ? endDate.toISOString() : null,
+      endDate: hasEnd && endDate ? endDate.toISOString() : null
     };
 
     try {
       if (isEditMode && existingTransaction) {
-        await updateMutation.mutateAsync({ id: existingTransaction.id, transaction: recurringData });
-        toastSuccess('Recurrente actualizado');
+        await updateTx.mutateAsync({ id: existingTransaction.id, transaction: payload });
+        toastSuccess('Actualizado correctamente');
       } else {
-        await addMutation.mutateAsync(recurringData);
-        toastSuccess('Recurrente programado', { description: `Próximo: ${formatDateUTC(nextDueDate, { style: 'short' })}` });
+        await addTx.mutateAsync(payload);
+        toastSuccess('Recurrente programado');
       }
       onClose();
-    } catch (error: any) {
-      toastError(error.message);
-    }
+    } catch (err) { toastError('Error al guardar'); }
   };
-
-  if (isLoadingCategories || isLoadingAccounts) {
-    return <div className="min-h-dvh flex items-center justify-center text-app-muted animate-pulse">Cargando...</div>;
-  }
-
-  // Frequency Configuration
-  const freqOptions: { value: FrequencyType; label: string; days: string }[] = [
-    { value: 'weekly', label: 'Semanal', days: '7d' },
-    { value: 'biweekly_15_30', label: 'Quincenal', days: '15/30' },
-    { value: 'monthly', label: 'Mensual', days: '1m' },
-    { value: 'yearly', label: 'Anual', days: '1a' },
-  ];
 
   const pageTitle = isEditMode ? "Editar Fijo" : "Nuevo Fijo";
 
   return (
     <>
       {isSheetMode ? (
-        <div className="flex justify-between items-center mb-6">
-          <button type="button" onClick={onClose} className="text-app-muted hover:text-app-text font-medium text-sm">Cancelar</button>
+        <div className="flex justify-between items-center mb-6 pt-2">
+          <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2">Cancelar</button>
           <h2 className="text-lg font-bold text-app-text">{pageTitle}</h2>
-          <div className="w-8"></div>
+          <div className="w-10" />
         </div>
       ) : (
-        <PageHeader title={pageTitle} showBackButton={true} onBack={onClose} />
+        <PageHeader title={pageTitle} showBackButton onBack={onClose} />
       )}
 
-      <div className={isSheetMode ? "" : "px-5 py-6 w-full max-w-lg mx-auto"}>
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className={`${isSheetMode ? '' : 'px-4 pt-4 max-w-lg mx-auto'} pb-safe flex flex-col h-full`}>
 
-          {/* Amount Section */}
-          <div className="text-center">
-            <div className={`inline-flex bg-app-surface border border-app-border rounded-xl p-1 mb-4 shadow-sm `}>
-              <ToggleButtonGroup
+        <form onSubmit={handleSubmit} className="space-y-3 flex-1 flex flex-col">
+
+          {/* Type Switch */}
+          {!isEditMode && (
+            <div className="flex justify-center mb-2 shrink-0">
+              <ToggleGroup
                 value={type}
-                onChange={(val) => setType(val as any)}
+                onChange={(v) => setType(v as any)}
                 options={[
                   { value: 'expense', label: 'Gasto' },
                   { value: 'income', label: 'Ingreso' }
                 ]}
               />
             </div>
+          )}
 
-            <div className="flex items-center justify-center">
-              <span className="text-2xl font-bold text-app-muted mr-2">$</span>
+          {/* Amount Hero */}
+          <div className="flex flex-col items-center shrink-0">
+            <div className="relative">
+              <span className="absolute -left-4 top-2 text-xl font-light text-app-muted opacity-50">$</span>
               <input
-                type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                autoFocus={!isEditMode && isSheetMode}
-                className="bg-transparent text-4xl font-black text-app-text outline-none text-center w-40 placeholder-app-muted/20 no-spin-button"
+                type="number" step="0.01" inputMode="decimal"
+                value={amount} onChange={e => setAmount(e.target.value)}
+                placeholder="0.00" autoFocus={!isEditMode}
+                className="text-center text-4xl font-black bg-transparent text-app-text w-40 outline-none placeholder:text-app-muted/20 py-1 transition-colors"
               />
             </div>
           </div>
 
-          {/* Details */}
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Concepto</label>
+          {/* Details Block - Scrollable Area */}
+          <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-y-auto">
+
+            {/* Concept */}
+            <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/30 transition-all shrink-0">
               <input
                 type="text"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={type === 'expense' ? 'Netflix, Renta...' : 'Nómina...'}
-                className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none transition-all"
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Concepto (ej. Netflix)"
+                className="w-full bg-transparent text-sm font-medium outline-none text-app-text placeholder:text-app-muted/60"
               />
             </div>
 
-            <div>
-              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Frecuencia</label>
-              <div className="grid grid-cols-4 gap-2 mb-2">
-                {freqOptions.map(f => (
-                  <button
-                    type="button" key={f.value}
-                    onClick={() => setFrequency(f.value)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${frequency === f.value
-                      ? 'border-app-primary bg-app-primary/5 text-app-primary'
-                      : 'border-app-border bg-app-surface hover:border-app-muted'
-                      }`}
-                  >
-                    <span className="text-lg font-black leading-none mb-1">{f.days}</span>
-                    <span className="text-[9px] uppercase font-bold">{f.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Inicio / Corte</label>
-                <DatePicker date={startDate} onDateChange={(d) => d && setStartDate(d)} className="bg-app-surface border-app-border" />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Cuenta Cargo</label>
+            {/* Freq */}
+            <div className="shrink-0">
+              <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Frecuencia</label>
+              <div className="relative">
                 <select
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full min-h-[46px] bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none appearance-none"
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value as FrequencyType)}
+                  className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/20 shadow-sm transition-all"
                 >
-                  {availableAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+                  <option value="weekly">Semanal</option>
+                  <option value="biweekly">Catorcenal</option>
+                  <option value="biweekly_15_30">Quincenal</option>
+                  <option value="monthly">Mensual</option>
+                  <option value="yearly">Anual</option>
                 </select>
+                <span className="material-symbols-outlined absolute right-2 top-2.5 text-app-muted pointer-events-none text-[20px]">event_repeat</span>
               </div>
             </div>
 
-            <div>
-              <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-2 block">Categoría</label>
+            {/* Dates & Account */}
+            <div className="grid grid-cols-2 gap-3 shrink-0">
+              <div>
+                <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Inicia</label>
+                <DatePicker
+                  date={startDate}
+                  onDateChange={(d) => d && setStartDate(d)}
+                  className="bg-app-subtle border-app-border h-11 rounded-xl px-3 text-sm font-bold shadow-sm hover:bg-app-subtle"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Cuenta</label>
+                <div className="relative">
+                  <select
+                    value={accountId} onChange={e => setAccountId(e.target.value)}
+                    className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/20 shadow-sm transition-all"
+                  >
+                    {accountsList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-2 top-2.5 text-app-muted pointer-events-none text-[20px]">account_balance_wallet</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Category */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Categoría</label>
               <CategorySelector
-                categories={availableCategories}
+                categories={filteredCats}
                 selectedId={categoryId}
                 onSelect={setCategoryId}
-                emptyMessage="Selecciona una categoría"
+                className="flex-1 min-h-0"
               />
             </div>
+
           </div>
 
-          {/* Logic Toggle */}
-          <div className="p-4 bg-app-surface border border-app-border rounded-2xl">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex gap-3">
-                <div className="size-10 bg-app-subtle rounded-full flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-app-muted">event_available</span>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-app-text">¿Pago de este periodo?</p>
-                  <p className="text-xs text-app-muted">{alreadyPaidCurrent ? 'Ya pagado, saltar al siguiente' : 'Pendiente para esta fecha'}</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={alreadyPaidCurrent} onChange={() => setAlreadyPaidCurrent(!alreadyPaidCurrent)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-app-subtle peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-app-primary/50 dark:peer-focus:ring-app-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-app-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
+          {/* Logic Settings (Sticky Bottom Area) */}
+          <div className="space-y-1 pt-2 border-t border-app-border/40 shrink-0 mt-auto">
+            <p className="text-[10px] font-bold text-app-text uppercase tracking-wide opacity-50 mb-1">Opciones Avanzadas</p>
+
+            {/* Skip First */}
+            <div className="flex justify-between items-center px-1 h-8">
+              <span className="text-xs text-app-text font-medium">Saltar primer cobro</span>
+              <label className="relative inline-flex items-center cursor-pointer scale-75 origin-right">
+                <input type="checkbox" checked={skipFirst} onChange={e => setSkipFirst(e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-app-subtle peer-focus:ring-2 peer-focus:ring-app-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
               </label>
             </div>
 
-            <div className="mt-3 pt-3 border-t border-app-subtle">
-              <p className="text-xs text-app-muted flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-app-primary">next_plan</span>
-                Próxima generación: <strong className="text-app-text">{formatDateUTC(calculateNextDueDate(), { style: 'full' })}</strong>
-              </p>
-            </div>
-          </div>
-
-          {/* End Date Toggle - Fecha Límite */}
-          <div className="p-4 bg-app-surface border border-app-border rounded-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-3">
-                <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${hasEndDate ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-app-subtle'}`}>
-                  <span className={`material-symbols-outlined ${hasEndDate ? 'text-amber-600 dark:text-amber-400' : 'text-app-muted'}`}>
-                    event_busy
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-app-text">¿Tiene fecha límite?</p>
-                  <p className="text-xs text-app-muted">
-                    {hasEndDate ? 'No se proyectará después de la fecha límite' : 'Se proyectará indefinidamente'}
-                  </p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hasEndDate}
-                  onChange={() => {
-                    setHasEndDate(!hasEndDate);
-                    if (!hasEndDate && !endDate) {
-                      const defaultEnd = new Date();
-                      defaultEnd.setMonth(defaultEnd.getMonth() + 3);
-                      setEndDate(defaultEnd);
+            {/* End Date Toggle */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center px-1 h-8">
+                <span className="text-xs text-app-text font-medium">¿Tiene fecha límite?</span>
+                <label className="relative inline-flex items-center cursor-pointer scale-75 origin-right">
+                  <input type="checkbox" checked={hasEnd} onChange={() => {
+                    setHasEnd(!hasEnd);
+                    if (!hasEnd && !endDate) {
+                      const d = new Date(); d.setMonth(d.getMonth() + 6); setEndDate(d);
                     }
-                  }}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-app-subtle peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-500/50 dark:peer-focus:ring-amber-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-app-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-              </label>
-            </div>
-
-            {hasEndDate && (
-              <div className="mt-4 pt-4 border-t border-app-subtle">
-                <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">
-                  Fecha de finalización
+                  }} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-app-subtle peer-focus:ring-2 peer-focus:ring-app-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>
                 </label>
-                <DatePicker
-                  date={endDate || new Date()}
-                  onDateChange={(d) => d && setEndDate(d)}
-                  className="bg-app-bg border-amber-200 dark:border-amber-900"
-                />
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">info</span>
-                  Después de esta fecha, no aparecerá en proyecciones
-                </p>
               </div>
-            )}
+
+              {hasEnd && (
+                <div className="px-1 animate-fade-in pt-1">
+                  <DatePicker
+                    date={endDate || new Date()}
+                    onDateChange={d => d && setEndDate(d)}
+                    className="bg-app-subtle border-app-border h-11 rounded-xl px-3 text-sm font-bold shadow-sm hover:bg-app-subtle w-full"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="pt-6 pb-4">
+          {/* Action */}
+          <div className="pt-4 pb-10 shrink-0 touch-none">
             <button
               type="submit"
-              disabled={addMutation.isPending || updateMutation.isPending}
-              className="w-full py-4 bg-app-primary hover:bg-app-primary-dark text-white font-bold text-lg rounded-2xl shadow-lg shadow-app-primary/30 active:scale-95 transition-all disabled:opacity-50"
+              disabled={addTx.isPending || updateTx.isPending}
+              className="w-full py-3.5 bg-app-primary text-white rounded-2xl font-bold shadow-lg shadow-app-primary/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isEditMode
-                ? (updateMutation.isPending ? 'Actualizando...' : 'Guardar Cambios')
-                : (addMutation.isPending ? 'Programando...' : 'Guardar Fijo')
-              }
+              {(addTx.isPending || updateTx.isPending) && <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {isEditMode ? 'Actualizar' : 'Programar'}
             </button>
           </div>
 
@@ -356,3 +294,8 @@ export const RecurringForm: React.FC<RecurringFormProps> = ({
     </>
   );
 };
+
+const styles = `
+  .label-sm { @apply text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block tracking-wider; }
+  .input-base { @apply w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-app-primary/50 transition-all text-app-text placeholder-app-muted; }
+`;

@@ -283,7 +283,7 @@ const AccountsPage: React.FC = () => {
 
                 {/* 2. ACCOUNTS LIST */}
                 <section>
-                    <div className="flex justify-between items-center mb-3 px-1">
+                    <div className="flex justify-between items-center px-1 mb-4 md:mb-6">
                         <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Cuentas</h2>
                         <span className="text-[10px] font-bold bg-app-subtle px-2 py-0.5 rounded-full text-app-muted">
                             {accounts?.length || 0} Activas
@@ -305,7 +305,7 @@ const AccountsPage: React.FC = () => {
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(account)}
                                     rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Eliminar' }}
-                                    className="rounded-2xl"
+                                    className="rounded-3xl"
                                 >
                                     <div
                                         onClick={() => setSelectedAccount(account)}

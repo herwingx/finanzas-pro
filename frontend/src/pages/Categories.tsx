@@ -150,8 +150,8 @@ const Categories: React.FC = () => {
 
     // Render Category List with Swipe
     const renderList = (title: string, list: Category[]) => (
-        <div className="mb-6">
-            <h3 className="text-xs font-bold text-app-muted uppercase mb-3 ml-2 tracking-wide flex items-center gap-2">
+        <div className="mb-6 md:mb-8">
+            <h3 className="text-xs font-bold text-app-muted uppercase mb-4 md:mb-6 ml-2 tracking-wide flex items-center gap-2">
                 {title} <span className="bg-app-subtle px-1.5 rounded text-[10px]">{list.length}</span>
             </h3>
 
@@ -163,11 +163,11 @@ const Categories: React.FC = () => {
                         leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                         onSwipeLeft={() => handleDeleteClick(cat)}
                         rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
-                        className="rounded-2xl"
+                        className="rounded-3xl"
                     >
                         <div
                             onClick={() => setSelectedCategory(cat)}
-                            className="bg-app-surface border border-app-border rounded-2xl p-3.5 flex items-center gap-3.5 cursor-pointer hover:border-app-primary/30 active:scale-[0.98] transition-all">
+                            className="bg-app-surface border border-app-border rounded-3xl p-3.5 flex items-center gap-3.5 cursor-pointer hover:border-app-primary/30 active:scale-[0.98] transition-all">
                             <div
                                 className="size-11 rounded-xl flex items-center justify-center shrink-0"
                                 style={{ backgroundColor: `${cat.color}15`, color: cat.color }}

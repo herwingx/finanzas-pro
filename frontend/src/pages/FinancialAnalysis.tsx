@@ -166,12 +166,24 @@ const FinancialAnalysis: React.FC = () => {
       const map = new Map();
       items.forEach(i => {
         const key = idFn(i);
-        if (!map.has(key)) map.set(key, { ...i, count: 1, totalAmount: i.amount });
-        else {
+        const instNum = i.installmentNumber ?? i.currentInstallment;
+        if (!map.has(key)) {
+          map.set(key, {
+            ...i,
+            count: 1,
+            totalAmount: i.amount,
+            minInstallment: instNum,
+            maxInstallment: instNum
+          });
+        } else {
           const ex = map.get(key);
           ex.count++;
           ex.totalAmount += i.amount;
           if (new Date(i.dueDate) < new Date(ex.dueDate)) ex.dueDate = i.dueDate;
+          if (instNum !== undefined) {
+            if (ex.minInstallment === undefined || instNum < ex.minInstallment) ex.minInstallment = instNum;
+            if (ex.maxInstallment === undefined || instNum > ex.maxInstallment) ex.maxInstallment = instNum;
+          }
         }
       });
       return Array.from(map.values()).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
@@ -441,15 +453,22 @@ const FinancialAnalysis: React.FC = () => {
               {upcomingPayments.msi.map((e: any, i) => {
                 // Safe description handling
                 const desc = e.purchaseName || (e.description ? e.description.replace(/^Cuota \d+\/\d+ - /, '') : 'Pago MSI');
-                const label = e.minInstallment === e.maxInstallment ? `Cuota ${e.minInstallment}` : `${e.minInstallment}-${e.maxInstallment}`;
+                const label = (e.minInstallment !== undefined && e.maxInstallment !== undefined)
+                  ? (e.minInstallment === e.maxInstallment ? `Cuota ${e.minInstallment}` : `${e.minInstallment}-${e.maxInstallment}`)
+                  : 'Cuota';
 
                 return (
                   <div key={i} className="flex justify-between items-center p-3 hover:bg-app-subtle/50 transition-colors">
                     <div className="flex-1 min-w-0 pr-2">
                       <p className="text-sm font-semibold text-app-text truncate">{desc}</p>
-                      <p className="text-[10px] text-app-muted mt-0.5">
-                        {label} de {e.totalInstallments}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] bg-app-subtle px-1.5 py-0.5 rounded text-app-muted font-medium font-mono">
+                          {formatDateUTC(e.dueDate, { day: 'numeric', month: 'short' })}
+                        </span>
+                        <span className="text-[10px] bg-indigo-500/10 px-1.5 py-0.5 rounded text-indigo-600 dark:text-indigo-400 font-bold">
+                          {label} de {e.totalInstallments}
+                        </span>
+                      </div>
                     </div>
                     <span className="text-sm font-bold font-numbers text-indigo-600 dark:text-indigo-400">-{formatCurrency(e.totalAmount)}</span>
                   </div>

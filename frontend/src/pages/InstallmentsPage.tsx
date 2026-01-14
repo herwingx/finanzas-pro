@@ -228,7 +228,7 @@ const InstallmentsPage: React.FC = () => {
             <div className="max-w-3xl mx-auto px-4 pt-4">
 
                 {/* Section Header with Add Button */}
-                <div className="flex justify-between items-center mb-4 px-1">
+                <div className="flex justify-between items-center px-1 mb-4 md:mb-6">
                     <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Planes Activos</h2>
                     <button
                         onClick={() => openInstallmentSheet()}
@@ -272,11 +272,11 @@ const InstallmentsPage: React.FC = () => {
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
-                                    className="mb-3 rounded-2xl"
+                                    className="mb-3 rounded-3xl"
                                 >
                                     <div
                                         onClick={() => setSelectedItem(purchase)}
-                                        className="group bg-app-surface border border-app-border rounded-2xl p-4 md:p-5 hover:border-app-border/80 transition-all active:scale-[0.99] cursor-pointer"
+                                        className="group bg-app-surface border border-app-border rounded-3xl p-4 md:p-5 hover:border-app-border/80 transition-all active:scale-[0.99] cursor-pointer"
                                     >
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex items-start gap-3">

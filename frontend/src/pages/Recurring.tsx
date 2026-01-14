@@ -246,7 +246,7 @@ const Recurring: React.FC = () => {
             <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
 
                 {/* Section Header with Add Button */}
-                <div className="flex justify-between items-center px-1">
+                <div className="flex justify-between items-center px-1 mb-4 md:mb-6">
                     <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Suscripciones</h2>
                     <button
                         onClick={() => openRecurringSheet()}
@@ -344,12 +344,12 @@ const Recurring: React.FC = () => {
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
                                     onSwipeRight={() => handleEdit(tx.id)}
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                                    className="mb-3 rounded-2xl"
+                                    className="mb-3 rounded-3xl"
                                 >
                                     <div
                                         onClick={() => handleItemClick(tx)}
                                         className={`
-                                            bg-app-surface border p-4 rounded-2xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform
+                                            bg-app-surface border p-4 rounded-3xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform
                                             ${isOverdue ? 'border-rose-200 dark:border-rose-900/50 bg-rose-50/30' : 'border-app-border hover:border-app-primary/30'}
                                         `}>
                                         <div

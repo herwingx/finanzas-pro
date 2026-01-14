@@ -208,7 +208,7 @@ const LoansPage: React.FC = () => {
         />
 
         {/* Section Header with Add Button */}
-        <div className="flex justify-between items-center px-1 mb-4">
+        <div className="flex justify-between items-center px-1 mb-4 md:mb-6">
           <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Préstamos</h2>
           <button
             onClick={() => openLoanSheet()}
@@ -256,9 +256,9 @@ const LoansPage: React.FC = () => {
                   // Swipe LEFT -> muestra rightAction (Eliminar)
                   rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
                   onSwipeLeft={() => setLoanToDelete(loan)}
-                  className="mb-3 rounded-2xl"
+                  className="mb-3 rounded-3xl"
                 >
-                  <div onClick={() => setSelectedLoan(loan)} className="bg-app-surface p-4 rounded-2xl border border-app-border hover:bg-app-subtle/50 transition-colors flex items-center gap-4 cursor-pointer">
+                  <div onClick={() => setSelectedLoan(loan)} className="bg-app-surface p-4 rounded-3xl border border-app-border hover:bg-app-subtle/50 transition-colors flex items-center gap-4 cursor-pointer">
                     <div className={`size-12 rounded-full flex items-center justify-center text-xl shrink-0 ${isPaid ? 'bg-emerald-100 text-emerald-600' :
                       isLent ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/20' : 'bg-rose-100 text-rose-600 dark:bg-rose-900/20'
                       }`}>

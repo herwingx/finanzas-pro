@@ -88,9 +88,9 @@ const TrashPage: React.FC = () => {
                     leftAction={msiPlanDead ? undefined : { icon: 'restore_from_trash', color: 'var(--brand-primary)', label: 'Restaurar' }}
                     onSwipeLeft={() => handlePermanentDelete(tx)}
                     rightAction={{ icon: 'delete_forever', color: '#ef4444', label: 'Eliminar Ya' }}
-                    className="mb-3 rounded-xl"
+                    className="mb-3 rounded-3xl"
                   >
-                    <div className="flex items-center gap-3 p-3 bg-app-surface border border-app-border rounded-xl opacity-75 hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-3 p-3 bg-app-surface border border-app-border rounded-3xl opacity-75 hover:opacity-100 transition-opacity">
                       <div
                         className="size-10 rounded-full flex items-center justify-center shrink-0 border border-transparent bg-app-subtle text-app-muted"
                       >
@@ -98,7 +98,7 @@ const TrashPage: React.FC = () => {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-app-text truncate decoration-slice line-through decoration-app-border">{tx.description}</p>
+                        <p className="text-sm font-semibold text-app-text truncate box-decoration-slice line-through decoration-app-border">{tx.description}</p>
                         <div className="flex gap-2 text-[10px] text-app-muted mt-0.5">
                           <span>{cat.name}</span>
                           <span>•</span>

@@ -177,7 +177,7 @@ const History: React.FC = () => {
         totalAmount={Math.abs(filteredData.totalSum)} // Optional visual
       />
 
-      <main className="px-4 max-w-2xl mx-auto mt-4 animate-fade-in">
+      <main className="px-4 max-w-2xl mx-auto mt-6 md:mt-10 pb-20 animate-fade-in">
         {isLoading ? (
           <SkeletonTransactionList count={8} />
         ) : Object.keys(filteredData.groups).length === 0 ? (
@@ -196,14 +196,14 @@ const History: React.FC = () => {
         ) : (
           <div className="space-y-6">
             {Object.entries(filteredData.groups).map(([dateLabel, groupTxs]) => (
-              <div key={dateLabel} className="mb-8 last:mb-0">
-                <div className="sticky top-[125px] md:top-[145px] z-20 py-1.5 px-3 mb-3 rounded-lg bg-app-bg/95 backdrop-blur border border-app-border w-fit shadow-sm">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-app-muted">
+              <div key={dateLabel} className="mb-10 md:mb-14 last:mb-0">
+                <div className="sticky top-[125px] md:top-[145px] z-20 py-1.5 px-3 mb-4 md:mb-6 rounded-lg bg-app-surface/95 backdrop-blur border border-app-border w-fit shadow-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-app-text/60">
                     {dateLabel}
                   </span>
                 </div>
 
-                <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden divide-y divide-app-border shadow-sm">
+                <div className="bg-app-surface border border-app-border rounded-3xl overflow-hidden divide-y divide-app-border shadow-sm">
                   {groupTxs.map(tx => {
                     const cat = getCategoryInfo(tx.categoryId);
                     const accName = getAccountName(tx.accountId);

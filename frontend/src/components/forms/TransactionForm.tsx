@@ -227,7 +227,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           </div>
 
           {/* C. DESCRIPTION */}
-          <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/30 transition-all">
+          {/* C. DESCRIPTION */}
+          <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
             <input
               type="text"
               value={description}
@@ -247,11 +248,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 <select
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full bg-app-subtle border border-app-border h-12 rounded-xl pl-3 pr-9 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/20 shadow-sm transition-all"
+                  className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-9 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary shadow-sm transition-all"
                 >
                   {allAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <span className="material-symbols-outlined absolute right-3 top-3 text-app-muted pointer-events-none text-[20px]">account_balance_wallet</span>
+                <span className="material-symbols-outlined absolute right-3 top-2.5 text-app-muted pointer-events-none text-[20px]">account_balance_wallet</span>
               </div>
             </div>
 
@@ -262,12 +263,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   <select
                     value={destAccountId}
                     onChange={(e) => setDestAccountId(e.target.value)}
-                    className="w-full bg-white dark:bg-zinc-800 border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-semibold appearance-none outline-none"
+                    className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary"
                   >
                     <option value="">Seleccionar...</option>
                     {allAccounts.filter(a => a.id !== accountId).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
-                  <span className="material-symbols-outlined absolute right-3 top-3 text-app-muted pointer-events-none text-[20px]">expand_more</span>
+                  <span className="material-symbols-outlined absolute right-3 top-2.5 text-app-muted pointer-events-none text-[20px]">expand_more</span>
                 </div>
 
                 {/* MSI Payment Linkage */}
@@ -317,7 +318,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           {/* F. DATE PICKER */}
           <div>
             <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Fecha</label>
-            <DatePicker date={date} onDateChange={(d) => d && setDate(d)} />
+            <DatePicker
+              date={date}
+              onDateChange={(d) => d && setDate(d)}
+              className="bg-app-subtle border-app-border h-11 rounded-xl px-3 text-sm font-bold shadow-sm hover:bg-app-subtle"
+            />
           </div>
 
           {/* SUBMIT */}

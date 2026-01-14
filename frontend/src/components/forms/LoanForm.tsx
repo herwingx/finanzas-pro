@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  getAccounts,
-  addLoan,
-  updateLoan,
-} from "../../services/apiService";
-import { useQuery } from "@tanstack/react-query";
-import { toastSuccess, toastError } from "../../utils/toast";
-import { PageHeader } from "../PageHeader";
-import { DatePicker } from "../DatePicker";
-import { LoanType, Account, Loan } from "../../types";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+// Services
+import { getAccounts, addLoan, updateLoan } from '../../services/apiService';
+
+// Hooks
+import { toastSuccess, toastError, toast } from '../../utils/toast';
+
+// Components
+import { PageHeader } from '../PageHeader';
+import { DatePicker } from '../DatePicker';
+import { ToggleGroup } from '../Button';
+
+// Types
+import { LoanType, Account, Loan } from '../../types';
 
 interface LoanFormProps {
   existingLoan?: Loan | null;
@@ -17,15 +21,15 @@ interface LoanFormProps {
   isSheetMode?: boolean;
 }
 
-export const LoanForm: React.FC<LoanFormProps> = ({
-  existingLoan,
-  onClose,
-  isSheetMode = false
-}) => {
+export const LoanForm: React.FC<LoanFormProps> = ({ existingLoan, onClose, isSheetMode = false }) => {
   const isEditing = !!existingLoan;
   const queryClient = useQueryClient();
 
-  // --- Form Data ---
+  /* --- DATA FETCHING --- */
+  const { data: accounts = [] } = useQuery<Account[]>({ queryKey: ['accounts'], queryFn: getAccounts });
+  const liquidAccounts = useMemo(() => accounts.filter(a => ['DEBIT', 'CASH'].includes(a.type)), [accounts]);
+
+  /* --- FORM STATE --- */
   const [formData, setFormData] = useState({
     borrowerName: "",
     borrowerPhone: "",
@@ -33,28 +37,13 @@ export const LoanForm: React.FC<LoanFormProps> = ({
     reason: "",
     loanType: "lent" as LoanType,
     originalAmount: "",
-    loanDate: new Date().toISOString().split("T")[0],
-    expectedPayDate: "",
+    loanDate: new Date(),
+    expectedPayDate: undefined as Date | undefined,
     notes: "",
-    accountId: "",
-    affectBalance: true,
+    accountId: "", // Para el movimiento de caja
   });
 
-  // --- Theme Helpers ---
-  const isLent = formData.loanType === "lent";
-  const themeClass = isLent
-    ? "text-violet-500 bg-violet-50 dark:bg-violet-900/20"
-    : "text-rose-500 bg-rose-50 dark:bg-rose-900/20";
-  const borderClass = isLent
-    ? "focus:border-violet-500 focus:ring-violet-500/20"
-    : "focus:border-rose-500 focus:ring-rose-500/20";
-
-  // --- Queries ---
-  const { data: accounts = [] } = useQuery<Account[]>({
-    queryKey: ["accounts"],
-    queryFn: getAccounts,
-  });
-
+  // Effects
   useEffect(() => {
     if (existingLoan) {
       setFormData({
@@ -63,360 +52,202 @@ export const LoanForm: React.FC<LoanFormProps> = ({
         borrowerEmail: existingLoan.borrowerEmail || "",
         reason: existingLoan.reason || "",
         loanType: existingLoan.loanType || "lent",
-        originalAmount: existingLoan.originalAmount.toString(),
-        loanDate: existingLoan.loanDate.split("T")[0],
-        expectedPayDate: existingLoan.expectedPayDate?.split("T")[0] || "",
+        originalAmount: String(existingLoan.originalAmount),
+        loanDate: new Date(existingLoan.loanDate),
+        expectedPayDate: existingLoan.expectedPayDate ? new Date(existingLoan.expectedPayDate) : undefined,
         notes: existingLoan.notes || "",
-        accountId: existingLoan.accountId || "",
-        affectBalance: true,
+        accountId: "", // En edición no movemos saldos
       });
     }
   }, [existingLoan]);
 
-  // --- Mutations ---
-  const addMutation = useMutation({
-    mutationFn: addLoan,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["loans"] });
-      queryClient.invalidateQueries({ queryKey: ["loans-summary"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      toastSuccess(isLent ? "Préstamo registrado" : "Deuda registrada");
-      onClose();
-    },
-    onError: (e: any) => toastError(e.message || "Error al registrar"),
-  });
+  /* --- MUTATIONS --- */
+  const onSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['loans'] });
+    queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['accounts'] }); // balance changes
+    onClose();
+  };
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: any) => updateLoan(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["loans"] });
-      if (existingLoan?.id) queryClient.invalidateQueries({ queryKey: ["loan", existingLoan.id] });
-      queryClient.invalidateQueries({ queryKey: ["loans-summary"] });
-      toastSuccess("Préstamo actualizado");
-      onClose();
-    },
-    onError: (e: any) => toastError(e.message || "Error al actualizar"),
-  });
+  const addM = useMutation({ mutationFn: addLoan, onSuccess, onError: (e: any) => toastError(e.message) });
+  const updateM = useMutation({ mutationFn: ({ id, data }: any) => updateLoan(id, data), onSuccess, onError: (e: any) => toastError(e.message) });
 
-  // --- Handlers ---
+  /* --- HANDLERS --- */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.borrowerName.trim()) return toastError("Nombre requerido");
-    if (!formData.originalAmount || parseFloat(formData.originalAmount) <= 0)
-      return toastError("Monto inválido");
+    const val = parseFloat(formData.originalAmount);
+    if (!val || val <= 0) return toastError('Monto requerido');
+    if (!formData.borrowerName) return toastError('Nombre de persona requerido');
 
     const payload = {
       ...formData,
-      borrowerPhone: formData.borrowerPhone || undefined,
-      borrowerEmail: formData.borrowerEmail || undefined,
-      reason: formData.reason || undefined,
-      expectedPayDate: formData.expectedPayDate || null,
-      notes: formData.notes || undefined,
-      accountId: formData.accountId || undefined,
-      originalAmount: parseFloat(formData.originalAmount),
+      originalAmount: val,
+      loanDate: formData.loanDate.toISOString(),
+      expectedPayDate: formData.expectedPayDate ? formData.expectedPayDate.toISOString() : null,
+      // Cleanup empties
+      borrowerPhone: formData.borrowerPhone || null,
+      borrowerEmail: formData.borrowerEmail || null,
+      reason: formData.reason || null,
+      notes: formData.notes || null,
+      accountId: formData.accountId || null
     };
 
-    if (isEditing && existingLoan?.id) {
-      updateMutation.mutate({ id: existingLoan.id, data: payload });
-    } else {
-      addMutation.mutate(payload);
-    }
+    if (isEditing) updateM.mutate({ id: existingLoan.id, data: payload });
+    else addM.mutate(payload);
   };
 
-  const debitAccounts = accounts.filter((a) => a.type !== "CREDIT");
-  const pageTitle = isEditing ? "Editar" : "Nuevo Préstamo";
+  // Styles Helpers
+  const isLent = formData.loanType === 'lent'; // Yo presto (Activo)
+  const themeColor = isLent ? 'violet' : 'rose';
+
+  const pageTitle = isEditing ? "Editar Préstamo" : "Registrar Préstamo";
 
   return (
     <>
+      {/* 1. HEADER */}
       {isSheetMode ? (
-        <div className="flex justify-between items-center mb-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-app-muted hover:text-app-text font-medium text-sm"
-          >
-            Cancelar
-          </button>
+        <div className="flex justify-between items-center mb-6 pt-2">
+          <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2">Cancelar</button>
           <h2 className="text-lg font-bold text-app-text">{pageTitle}</h2>
-          <div className="w-8"></div>
+          <div className="w-10" />
         </div>
       ) : (
-        <PageHeader title={pageTitle} showBackButton={true} onBack={onClose} />
+        <PageHeader title={pageTitle} showBackButton onBack={onClose} />
       )}
 
-      <div className={isSheetMode ? "" : "max-w-lg mx-auto px-5 py-6"}>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 1. Loan Type Select (Solo creación) */}
+      <div className={`${isSheetMode ? '' : 'px-4 pt-4 max-w-lg mx-auto'} pb-safe flex flex-col h-full`}>
+        <form onSubmit={handleSubmit} className="space-y-3 flex-1 flex flex-col">
+
+          {/* A. TOGGLE TYPE */}
           {!isEditing && (
-            <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="grid grid-cols-2 gap-2 mb-2 shrink-0">
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, loanType: "lent" })}
-                className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${formData.loanType === "lent"
-                  ? "border-violet-500 bg-violet-500/5 ring-1 ring-violet-500/20"
-                  : "border-app-border bg-app-surface hover:border-app-muted"
-                  }`}
+                onClick={() => setFormData(p => ({ ...p, loanType: 'lent' }))}
+                className={`p-2 rounded-xl border transition-all flex flex-col items-center gap-1 ${formData.loanType === 'lent'
+                  ? 'border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-1 ring-violet-500/20 shadow-sm'
+                  : 'border-app-border bg-app-surface text-app-muted hover:border-app-border-strong'}`}
               >
-                <div
-                  className={`size-10 rounded-full flex items-center justify-center mb-3 ${formData.loanType === "lent"
-                    ? "bg-violet-500 text-white"
-                    : "bg-app-subtle text-app-muted"
-                    }`}
-                >
-                  <span className="material-symbols-outlined">trending_up</span>
-                </div>
-                <p
-                  className={`text-sm font-bold ${formData.loanType === "lent"
-                    ? "text-violet-600 dark:text-violet-400"
-                    : "text-app-text"
-                    }`}
-                >
-                  Yo presté
-                </p>
-                <p className="text-[10px] text-app-muted">Me deben dinero</p>
+                <span className="material-symbols-outlined text-[20px]">arrow_outward</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Yo Presté</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, loanType: "borrowed" })}
-                className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${formData.loanType === "borrowed"
-                  ? "border-rose-500 bg-rose-500/5 ring-1 ring-rose-500/20"
-                  : "border-app-border bg-app-surface hover:border-app-muted"
-                  }`}
+                onClick={() => setFormData(p => ({ ...p, loanType: 'borrowed' }))}
+                className={`p-2 rounded-xl border transition-all flex flex-col items-center gap-1 ${formData.loanType === 'borrowed'
+                  ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-1 ring-rose-500/20 shadow-sm'
+                  : 'border-app-border bg-app-surface text-app-muted hover:border-app-border-strong'}`}
               >
-                <div
-                  className={`size-10 rounded-full flex items-center justify-center mb-3 ${formData.loanType === "borrowed"
-                    ? "bg-rose-500 text-white"
-                    : "bg-app-subtle text-app-muted"
-                    }`}
-                >
-                  <span className="material-symbols-outlined">trending_down</span>
-                </div>
-                <p
-                  className={`text-sm font-bold ${formData.loanType === "borrowed"
-                    ? "text-rose-600 dark:text-rose-400"
-                    : "text-app-text"
-                    }`}
-                >
-                  Me prestaron
-                </p>
-                <p className="text-[10px] text-app-muted">Yo debo dinero</p>
+                <span className="material-symbols-outlined text-[20px]">arrow_downward</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Me Prestaron</span>
               </button>
             </div>
           )}
 
-          {/* 2. Hero Amount */}
-          <div className="text-center py-4">
-            <label className="text-xs text-app-muted uppercase font-bold tracking-widest block mb-2">
-              Monto {isLent ? "a Prestar" : "Recibido"}
-            </label>
-            <div className="inline-flex items-center justify-center">
-              <span className="text-3xl text-app-muted font-bold mr-1 opacity-50">
-                $
-              </span>
+          {/* B. HERO AMOUNT */}
+          <div className="flex flex-col items-center shrink-0">
+            <div className="relative">
+              <span className="absolute -left-4 top-2 text-xl font-light text-app-muted opacity-50">$</span>
               <input
-                type="number"
-                step="0.01"
-                min="0"
-                inputMode="decimal"
-                onWheel={(e) => e.currentTarget.blur()}
+                type="number" step="0.01" inputMode="decimal"
                 value={formData.originalAmount}
-                onChange={(e) =>
-                  setFormData({ ...formData, originalAmount: e.target.value })
-                }
+                onChange={e => setFormData({ ...formData, originalAmount: e.target.value })}
                 placeholder="0.00"
-                autoFocus={!isEditing && isSheetMode}
-                className="w-48 bg-transparent text-5xl font-black text-center text-app-text placeholder-app-muted/20 outline-none no-spin-button"
+                autoFocus={!isEditing}
+                className={`text-center text-4xl font-black bg-transparent w-40 outline-none placeholder:text-app-muted/20 py-1 transition-colors ${isLent ? 'text-violet-500' : 'text-rose-500'}`}
               />
             </div>
           </div>
 
-          {/* 3. Details Card */}
-          <div className="bg-app-surface border border-app-border rounded-3xl p-5 space-y-5 shadow-sm">
-            {/* Name & Contact */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1">
-                  Nombre {isLent ? "del Deudor" : "del Prestamista"}
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-3.5 text-app-muted material-symbols-outlined text-[20px]">
-                    person
-                  </span>
-                  <input
-                    type="text"
-                    value={formData.borrowerName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, borrowerName: e.target.value })
-                    }
-                    className={`w-full pl-10 pr-4 py-3 bg-app-bg border border-app-border rounded-xl text-sm font-semibold outline-none focus:ring-2 ${borderClass} transition-all`}
-                    placeholder={isLent ? "Juan Pérez" : "Banco Azteca"}
-                  />
-                </div>
-              </div>
+          {/* C. SCROLLABLE DETAILS AREA */}
+          <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-y-auto">
 
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="tel"
-                  placeholder="Teléfono (Op.)"
-                  value={formData.borrowerPhone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, borrowerPhone: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs font-medium outline-none focus:border-app-muted"
-                />
+            {/* Person & Concept */}
+            <div className="space-y-3 shrink-0">
+              <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
                 <input
                   type="text"
-                  placeholder="Email (Op.)"
-                  value={formData.borrowerEmail}
-                  onChange={(e) =>
-                    setFormData({ ...formData, borrowerEmail: e.target.value })
-                  }
-                  className="w-full px-4 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs font-medium outline-none focus:border-app-muted"
+                  value={formData.borrowerName}
+                  onChange={e => setFormData({ ...formData, borrowerName: e.target.value })}
+                  placeholder={isLent ? "Nombre del Deudor" : "Nombre del Prestamista"}
+                  className="w-full bg-transparent text-sm font-medium outline-none text-app-text placeholder:text-app-muted/60"
+                />
+              </div>
+
+              <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
+                <input
+                  value={formData.reason}
+                  onChange={e => setFormData({ ...formData, reason: e.target.value })}
+                  placeholder="Motivo (Opcional)"
+                  className="w-full bg-transparent text-sm font-medium outline-none text-app-text placeholder:text-app-muted/60"
                 />
               </div>
             </div>
 
-            <div className="h-px bg-app-border/50"></div>
+            {/* Dates Grid */}
+            <div className="grid grid-cols-2 gap-3 shrink-0">
+              <div>
+                <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Fecha</label>
+                <DatePicker
+                  date={formData.loanDate}
+                  onDateChange={d => d && setFormData(p => ({ ...p, loanDate: d }))}
+                  className="bg-app-subtle border-app-border h-11 rounded-xl px-3 text-sm font-bold shadow-sm hover:bg-app-subtle"
+                />
+              </div>
 
-            {/* Dates & Reason */}
-            <div className="space-y-4">
-              <input
-                type="text"
-                value={formData.reason}
-                onChange={(e) =>
-                  setFormData({ ...formData, reason: e.target.value })
-                }
-                className={`w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl text-sm outline-none focus:ring-2 ${borderClass} transition-all`}
-                placeholder="Motivo (Ej. Renta, Emergencia...)"
-              />
-
-              <div
-                className={`grid gap-3 ${formData.expectedPayDate
-                  ? "grid-cols-[1fr_1fr_auto]"
-                  : "grid-cols-2"
-                  }`}
-              >
-                <div className="min-w-0">
-                  <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1">
-                    Fecha {isLent ? "Entrega" : "Recepción"}
-                  </label>
+              <div>
+                <label className={`text-[10px] font-bold ml-1 mb-1 block uppercase tracking-wide opacity-70 ${formData.expectedPayDate ? 'text-app-primary' : 'text-app-text'}`}>
+                  Vencimiento
+                </label>
+                <div className="flex gap-2">
                   <DatePicker
-                    date={new Date(formData.loanDate + "T00:00:00")}
-                    onDateChange={(d) =>
-                      d &&
-                      setFormData({
-                        ...formData,
-                        loanDate: d.toISOString().split("T")[0],
-                      })
-                    }
-                    disabled={isEditing}
-                    className="w-full bg-app-bg border border-app-border rounded-xl font-medium"
+                    date={formData.expectedPayDate}
+                    placeholder="Sin Límite"
+                    onDateChange={d => setFormData(p => ({ ...p, expectedPayDate: d }))}
+                    className={`bg-app-subtle border-app-border h-11 rounded-xl px-3 text-sm font-bold shadow-sm hover:bg-app-subtle flex-1 ${!formData.expectedPayDate && 'text-app-muted font-normal'}`}
                   />
-                </div>
-                <div className="min-w-0">
-                  <label className="block text-[10px] font-bold text-app-muted uppercase pl-1 mb-1 text-rose-500">
-                    Fecha Límite
-                  </label>
-                  <DatePicker
-                    date={
-                      formData.expectedPayDate
-                        ? new Date(formData.expectedPayDate + "T00:00:00")
-                        : undefined
-                    }
-                    onDateChange={(d) =>
-                      setFormData({
-                        ...formData,
-                        expectedPayDate: d ? d.toISOString().split("T")[0] : "",
-                      })
-                    }
-                    className="w-full bg-app-bg border border-app-border rounded-xl font-medium focus-within:border-app-text"
-                    placeholder="Sin límite"
-                  />
-                </div>
-                {/* Clear button - only shows when date is set */}
-                {formData.expectedPayDate && (
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData({ ...formData, expectedPayDate: "" })
-                      }
-                      className="size-[46px] rounded-xl bg-app-bg border border-app-border hover:bg-rose-100 hover:border-rose-300 dark:hover:bg-rose-900/30 dark:hover:border-rose-800 flex items-center justify-center transition-all active:scale-95 group"
-                      title="Quitar fecha límite"
-                    >
-                      <span className="material-symbols-outlined text-[18px] text-app-muted group-hover:text-rose-500">
-                        close
-                      </span>
+                  {formData.expectedPayDate && (
+                    <button type="button" onClick={() => setFormData(p => ({ ...p, expectedPayDate: undefined }))} className="size-11 rounded-xl border border-app-border flex items-center justify-center text-app-muted hover:bg-rose-50 hover:text-rose-500 transition-colors bg-app-surface shrink-0">
+                      <span className="material-symbols-outlined text-sm">close</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* D. LINK TO WALLET (Create Mode Only) - Compact */}
+            {!isEditing && (
+              <div className="pt-1">
+                <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Afectar Saldo de Caja</label>
+                <div className="relative">
+                  <select
+                    value={formData.accountId}
+                    onChange={e => setFormData(p => ({ ...p, accountId: e.target.value }))}
+                    className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary shadow-sm transition-all"
+                  >
+                    <option value="">-- No registrar --</option>
+                    {liquidAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-2 top-2.5 text-app-muted pointer-events-none text-[20px]">account_balance_wallet</span>
+                </div>
+              </div>
+            )}
+
           </div>
 
-          {/* 4. Link Account (Only on create) */}
-          {!isEditing && (
-            <div className="bg-app-surface border border-app-border rounded-3xl p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className={`size-8 rounded-lg flex items-center justify-center ${themeClass}`}
-                >
-                  <span className="material-symbols-outlined text-lg">
-                    account_balance
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-app-text">
-                    Movimiento de dinero
-                  </h3>
-                  <p className="text-[10px] text-app-muted">
-                    ¿Registrar en tus cuentas?
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <select
-                  value={formData.accountId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, accountId: e.target.value })
-                  }
-                  className="w-full px-4 py-3 bg-app-bg border border-app-border rounded-xl text-sm font-semibold outline-none appearance-none cursor-pointer"
-                >
-                  <option value="">No afectar mis saldos</option>
-                  {debitAccounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {isLent ? "Retirar de " : "Depositar a "} {account.name}
-                    </option>
-                  ))}
-                </select>
-
-                {formData.accountId && (
-                  <p className="text-[10px] text-app-muted text-center animate-fade-in px-2">
-                    Se creará una transacción de {isLent ? "Gasto" : "Ingreso"}{" "}
-                    automáticamente en la cuenta seleccionada.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 5. Submit */}
-          <div className="pt-2 pb-12">
+          {/* E. SUBMIT */}
+          <div className="pt-4 pb-10 mt-auto shrink-0 touch-none">
             <button
               type="submit"
-              disabled={addMutation.isPending || updateMutation.isPending}
-              className="w-full py-4 rounded-2xl font-bold text-lg text-white shadow-xl hover:shadow-2xl hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 bg-app-primary hover:bg-app-primary-dark shadow-app-primary/30"
+              disabled={addM.isPending || updateM.isPending}
+              className={`w-full py-3.5 rounded-2xl font-bold text-white shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${isLent ? 'bg-violet-600 shadow-violet-500/30' : 'bg-rose-500 shadow-rose-500/30'}`}
             >
-              {addMutation.isPending || updateMutation.isPending
-                ? "Guardando..."
-                : isEditing
-                  ? "Guardar Cambios"
-                  : "Confirmar"}
+              {(addM.isPending || updateM.isPending) && <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {isEditing ? 'Guardar Cambios' : (isLent ? 'Registrar Préstamo' : 'Confirmar Deuda')}
             </button>
           </div>
+
         </form>
       </div>
     </>

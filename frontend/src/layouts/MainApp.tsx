@@ -54,6 +54,7 @@ const GlobalSheetsContainer = () => {
     investmentToEdit,
     isGoalSheetOpen,
     closeGoalSheet,
+    goalToEdit,
     isInstallmentSheetOpen,
     closeInstallmentSheet,
     installmentToEdit,
@@ -88,7 +89,11 @@ const GlobalSheetsContainer = () => {
 
       {isGoalSheetOpen && (
         <SwipeableBottomSheet isOpen={true} onClose={closeGoalSheet}>
-          <GoalForm onClose={closeGoalSheet} />
+          <GoalForm
+            existingGoal={goalToEdit}
+            onClose={closeGoalSheet}
+            isSheetMode={true}
+          />
         </SwipeableBottomSheet>
       )}
 

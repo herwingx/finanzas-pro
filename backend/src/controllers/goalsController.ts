@@ -192,7 +192,7 @@ export const updateGoal = async (req: AuthRequest, res: Response) => {
       data: {
         name,
         targetAmount: targetAmount ? parseFloat(targetAmount) : undefined,
-        deadline: deadline ? new Date(deadline) : undefined,
+        deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : undefined,
         icon,
         color,
         priority: priority ? parseInt(priority) : undefined,

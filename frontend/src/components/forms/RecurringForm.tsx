@@ -171,7 +171,7 @@ export const RecurringForm: React.FC<RecurringFormProps> = ({ existingTransactio
           <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-y-auto">
 
             {/* Concept */}
-            <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/30 transition-all shrink-0">
+            <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all shrink-0">
               <input
                 type="text"
                 value={description}
@@ -188,7 +188,7 @@ export const RecurringForm: React.FC<RecurringFormProps> = ({ existingTransactio
                 <select
                   value={frequency}
                   onChange={(e) => setFrequency(e.target.value as FrequencyType)}
-                  className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/20 shadow-sm transition-all"
+                  className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary shadow-sm transition-all"
                 >
                   <option value="weekly">Semanal</option>
                   <option value="biweekly">Catorcenal</option>
@@ -215,7 +215,7 @@ export const RecurringForm: React.FC<RecurringFormProps> = ({ existingTransactio
                 <div className="relative">
                   <select
                     value={accountId} onChange={e => setAccountId(e.target.value)}
-                    className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/20 shadow-sm transition-all"
+                    className="w-full bg-app-subtle border border-app-border h-11 rounded-xl pl-3 pr-8 text-sm font-bold text-app-text appearance-none outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary shadow-sm transition-all"
                   >
                     {accountsList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>

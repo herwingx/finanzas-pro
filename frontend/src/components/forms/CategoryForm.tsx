@@ -2,266 +2,183 @@ import React, { useState, useEffect } from "react";
 import { useAddCategory, useUpdateCategory } from "../../hooks/useApi";
 import { TransactionType, Category } from "../../types";
 import { toastSuccess, toastError } from "../../utils/toast";
-import { ToggleButtonGroup, Button } from "../Button";
 import { IconSelector } from "../IconSelector";
-import { VALID_ICONS } from "../../utils/icons";
+import { VALID_ICONS, getValidIcon } from "../../utils/icons";
+import { ToggleGroup } from "../Button";
 
-// Presets
+// -- CONSTANTS --
+const PRESET_COLORS = ["#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#6366F1", "#EC4899", "#14B8A6", "#8B5CF6", "#06B6D4"];
 type BudgetType = "need" | "want" | "savings";
 
-const DEFAULT_CATEGORY_STATE = {
-  name: "",
-  icon: "category",
-  color: "#6B5FFF",
-  type: "expense" as TransactionType,
-  budgetType: undefined as BudgetType | undefined,
-};
-
-const COLORS = [
-  "#FF6B6B",
-  "#FFD166",
-  "#06D6A0",
-  "#118AB2",
-  "#073B4C",
-  "#6B5FFF",
-  "#FF9F1C",
-  "#FF477E",
-  "#34D399",
-  "#60A5FA",
-];
-
-interface CategoryFormProps {
+interface FormProps {
   existingCategory?: Category | null;
   onClose: () => void;
+  isSheetMode?: boolean;
 }
 
-export const CategoryForm: React.FC<CategoryFormProps> = ({ existingCategory, onClose }) => {
-  const isEditMode = !!existingCategory;
+export const CategoryForm: React.FC<FormProps> = ({ existingCategory, onClose, isSheetMode = false }) => {
+  const isEditing = !!existingCategory;
 
   // Data
-  const addMutation = useAddCategory();
-  const updateMutation = useUpdateCategory();
+  const addM = useAddCategory();
+  const updateM = useUpdateCategory();
 
-  // Form State
-  const [formState, setFormState] = useState(DEFAULT_CATEGORY_STATE);
+  // State
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("category");
+  const [color, setColor] = useState("#3B82F6");
+  const [type, setType] = useState<TransactionType>("expense");
+  const [budgetType, setBudgetType] = useState<BudgetType | undefined>(undefined);
 
-  // Load existing category data
+  // Load Initial Data
   useEffect(() => {
     if (existingCategory) {
-      setFormState({
-        name: existingCategory.name,
-        icon: existingCategory.icon,
-        color: existingCategory.color || "#6B5FFF",
-        type: existingCategory.type,
-        budgetType: existingCategory.budgetType,
-      });
-    } else {
-      setFormState(DEFAULT_CATEGORY_STATE);
+      setName(existingCategory.name);
+      setIcon(existingCategory.icon);
+      setColor(existingCategory.color || "#3B82F6");
+      setType(existingCategory.type);
+      setBudgetType(existingCategory.budgetType);
     }
   }, [existingCategory]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formState.name.trim()) {
-      toastError("El nombre es requerido");
-      return;
-    }
+    if (!name.trim()) return toastError("Nombre requerido");
 
     try {
-      if (isEditMode && existingCategory) {
-        await updateMutation.mutateAsync({ id: existingCategory.id, category: formState });
+      const payload = { name, icon, color, type, budgetType };
+
+      if (isEditing && existingCategory) {
+        await updateM.mutateAsync({ id: existingCategory.id, category: payload });
         toastSuccess("Categoría actualizada");
       } else {
-        await addMutation.mutateAsync(formState);
+        await addM.mutateAsync(payload);
         toastSuccess("Categoría creada");
       }
       onClose();
-    } catch (e: any) {
-      toastError(e.message);
-    }
+    } catch (e: any) { toastError(e.message || "Error al guardar"); }
   };
 
-  const isSaving = addMutation.isPending || updateMutation.isPending;
-  const pageTitle = isEditMode ? "Editar Categoría" : "Nueva Categoría";
+  const isSaving = addM.isPending || updateM.isPending;
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6 pl-5 pr-5 pt-4">
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-app-muted hover:text-app-text font-medium text-sm"
-        >
-          Cancelar
-        </button>
-        <h2 className="text-lg font-bold text-app-text text-center">{pageTitle}</h2>
-        <div className="w-8"></div>
+    <>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6 pt-2">
+        <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2">Cancelar</button>
+        <h2 className="text-lg font-bold text-app-text">{isEditing ? 'Editar' : 'Nueva'} Categoría</h2>
+        <div className="w-12" />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-safe">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Preview Card */}
-          <div className="bg-app-surface border border-app-border rounded-2xl p-6 flex items-center gap-4">
-            <div
-              className="size-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg transition-all"
-              style={{ backgroundColor: formState.color, color: "white" }}
-            >
-              <span className="material-symbols-outlined text-3xl">
-                {formState.icon}
-              </span>
+      <div className={`${isSheetMode ? '' : 'px-4 pt-4 max-w-lg mx-auto'} pb-safe flex flex-col h-full`}>
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+
+          <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar">
+
+            {/* 1. HERO PREVIEW */}
+            <div className="flex flex-col items-center shrink-0">
+              <div
+                className="size-20 rounded-2xl flex items-center justify-center text-4xl shadow-lg border border-black/5 mb-4"
+                style={{ backgroundColor: color, color: 'white', boxShadow: `0 8px 24px -6px ${color}80` }}
+              >
+                <span className="material-symbols-outlined">{getValidIcon(icon)}</span>
+              </div>
+
+              <ToggleGroup
+                value={type}
+                onChange={(v) => setType(v as TransactionType)}
+                options={[{ value: 'expense', label: 'Gasto' }, { value: 'income', label: 'Ingreso' }]}
+              />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-bold text-app-text truncate">
-                {formState.name || "Nombre de categoría"}
-              </p>
-              <p className="text-xs text-app-muted">
-                {formState.type === "expense" ? "Gasto" : "Ingreso"}
-                {formState.budgetType &&
-                  ` • ${formState.budgetType === "need"
-                    ? "Necesidad"
-                    : formState.budgetType === "want"
-                      ? "Deseo"
-                      : "Ahorro"
-                  }`}
-              </p>
-            </div>
-          </div>
 
-          {/* Name Input */}
-          <div>
-            <label className="text-[10px] font-bold text-app-muted uppercase mb-1.5 block pl-1">
-              Nombre
-            </label>
-            <input
-              type="text"
-              placeholder="Ej: Restaurantes"
-              value={formState.name}
-              onChange={(e) =>
-                setFormState({ ...formState, name: e.target.value })
-              }
-              required
-              autoFocus={!isEditMode}
-              className="w-full px-4 py-3 rounded-xl bg-app-surface border border-app-border text-sm font-medium focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary outline-none transition-all text-app-text"
-            />
-          </div>
-
-          {/* Type Selector */}
-          <div>
-            <label className="text-[10px] font-bold text-app-muted uppercase mb-1.5 block pl-1">
-              Tipo de transacción
-            </label>
-            <ToggleButtonGroup
-              options={[
-                { value: "expense", label: "Gastos" },
-                { value: "income", label: "Ingresos" },
-              ]}
-              value={formState.type}
-              onChange={(val) =>
-                setFormState({ ...formState, type: val as TransactionType })
-              }
-            />
-          </div>
-
-          {/* Colors Grid */}
-          <div>
-            <label className="text-[10px] font-bold text-app-muted uppercase mb-2 block pl-1">
-              Color
-            </label>
-            <div className="flex flex-wrap gap-3">
-              {COLORS.map((color) => (
-                <button
-                  type="button"
-                  key={color}
-                  onClick={() => setFormState({ ...formState, color })}
-                  className={`size-10 rounded-full transition-all duration-200 ${formState.color === color
-                    ? "ring-2 ring-offset-2 ring-offset-app-bg ring-app-text scale-110"
-                    : "hover:scale-110 active:scale-95"
-                    }`}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-              <div className="relative">
-                <input
-                  type="color"
-                  value={formState.color}
-                  onChange={(e) =>
-                    setFormState({ ...formState, color: e.target.value })
-                  }
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-                <div className="size-10 rounded-full border-2 border-dashed border-app-muted/50 flex items-center justify-center hover:border-app-muted hover:bg-app-subtle transition-colors">
-                  <span className="material-symbols-outlined text-[16px] text-app-muted">
-                    add
-                  </span>
+            {/* 2. BASICS */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-app-text ml-1 mb-1 block opacity-70">Nombre de Categoría</label>
+                <div className="bg-app-subtle border border-app-border rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-app-primary/50 focus-within:border-app-primary transition-all">
+                  <input
+                    value={name} onChange={e => setName(e.target.value)}
+                    className="w-full bg-transparent text-sm font-bold text-app-text outline-none placeholder:text-app-muted/60"
+                    placeholder="Ej. Restaurantes, Salario..." autoFocus={!isEditing}
+                  />
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Icon Selector */}
-          <div>
-            <label className="text-[10px] font-bold text-app-muted uppercase mb-2 block pl-1">
-              Icono
-            </label>
-            <IconSelector
-              icons={[...VALID_ICONS]}
-              selectedIcon={formState.icon}
-              onSelect={(icon) => setFormState({ ...formState, icon })}
-              selectedColor={formState.color}
-            />
-          </div>
+              {/* Color Picker */}
+              <div>
+                <label className="text-[10px] font-bold text-app-text ml-1 mb-2 block uppercase opacity-70">Color</label>
+                <div className="flex flex-wrap gap-3 px-1.5 py-1">
+                  {PRESET_COLORS.map(c => (
+                    <button
+                      key={c} type="button"
+                      onClick={() => setColor(c)}
+                      className={`size-8 rounded-full transition-all ${color === c ? 'scale-110 ring-2 ring-offset-2 ring-offset-app-bg ring-app-text shadow-md' : 'hover:scale-105 opacity-80 hover:opacity-100'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <div className="relative size-8 rounded-full bg-app-subtle flex items-center justify-center border border-dashed border-app-border cursor-pointer hover:bg-app-border/30 transition-colors">
+                    <input type="color" value={color} onChange={e => setColor(e.target.value)} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
+                    <span className="material-symbols-outlined text-xs text-app-muted">add</span>
+                  </div>
+                </div>
+              </div>
 
-          {/* Budget 50/30/20 (Expenses Only) */}
-          {formState.type === "expense" && (
-            <div>
-              <label className="text-[10px] font-bold text-app-muted uppercase mb-2 block pl-1">
-                Regla 50/30/20 (Opcional)
-              </label>
-              <div className="flex gap-2">
-                {([
-                  { id: "need" as BudgetType, label: "Necesidad", desc: "50%" },
-                  { id: "want" as BudgetType, label: "Deseo", desc: "30%" },
-                  { id: "savings" as BudgetType, label: "Ahorro", desc: "20%" },
-                ] as const).map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() =>
-                      setFormState({
-                        ...formState,
-                        budgetType:
-                          formState.budgetType === b.id ? undefined : b.id,
-                      })
-                    }
-                    className={`flex-1 py-2.5 px-2 text-xs font-bold rounded-xl border transition-all ${formState.budgetType === b.id
-                      ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300"
-                      : "bg-app-subtle border-transparent text-app-muted hover:border-app-border"
-                      }`}
-                  >
-                    <span className="block">{b.label}</span>
-                    <span className="block text-[10px] opacity-60">
-                      {b.desc}
-                    </span>
-                  </button>
-                ))}
+              {/* Icon Grid */}
+              <div>
+                <label className="text-[10px] font-bold text-app-text ml-1 mb-2 block uppercase opacity-70">Icono</label>
+                <IconSelector
+                  icons={VALID_ICONS}
+                  selectedIcon={icon}
+                  onSelect={setIcon}
+                  selectedColor={color}
+                  className="max-h-52 bg-app-subtle"
+                />
               </div>
             </div>
-          )}
 
-          {/* Submit Button */}
-          <div className="pt-4 pb-20 sm:pb-4">
-            <Button
-              type="submit"
-              isLoading={isSaving}
-              fullWidth
-              variant="primary"
-            >
-              {isEditMode ? "Guardar Cambios" : "Crear Categoría"}
-            </Button>
+            {/* 3. BUDGET RULES (Expenses Only) */}
+            {type === 'expense' && (
+              <div className="pt-4 border-t border-app-border/50">
+                <label className="text-[10px] uppercase font-bold text-app-text mb-3 block text-center opacity-70 tracking-wider">Regla 50 / 30 / 20</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'need', label: 'Necesidad', desc: '50%' },
+                    { id: 'want', label: 'Deseo', desc: '30%' },
+                    { id: 'savings', label: 'Ahorro', desc: '20%' }
+                  ].map((rule: any) => (
+                    <button
+                      type="button" key={rule.id}
+                      onClick={() => setBudgetType(budgetType === rule.id ? undefined : rule.id)}
+                      className={`
+                        flex flex-col items-center py-2.5 rounded-xl text-[10px] font-bold transition-all border
+                        ${budgetType === rule.id
+                          ? 'bg-app-primary border-transparent text-white shadow-lg shadow-app-primary/20'
+                          : 'bg-app-subtle text-app-muted border-app-border hover:border-app-muted'}
+                      `}
+                    >
+                      <span>{rule.label}</span>
+                      <span className="opacity-60 font-medium">{rule.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* FOOTER */}
+          <div className="pt-4 pb-10 mt-auto shrink-0 touch-none">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full py-3.5 bg-app-primary text-white text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl shadow-app-primary/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSaving && <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {isEditing ? 'Guardar Cambios' : 'Crear Categoría'}
+            </button>
+          </div>
+
         </form>
       </div>
-    </div>
+    </>
   );
 };

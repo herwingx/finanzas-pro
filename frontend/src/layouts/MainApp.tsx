@@ -154,6 +154,7 @@ const GlobalSheetsContainer = () => {
           <CategoryForm
             existingCategory={categoryToEdit}
             onClose={closeCategorySheet}
+            isSheetMode={true}
           />
         </SwipeableBottomSheet>
       )}

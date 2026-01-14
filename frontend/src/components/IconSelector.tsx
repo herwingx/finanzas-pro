@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { isValidIcon } from '../utils/icons';
 
 interface IconSelectorProps {
-  icons: string[];
+  icons: readonly string[];
   selectedIcon: string;
   selectedColor: string;
   onSelect: (icon: string) => void;

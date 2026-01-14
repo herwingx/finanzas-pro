@@ -6,6 +6,7 @@ import { SavingsGoal } from '../../types';
 // Components
 import { DatePicker } from '../DatePicker';
 import { IconSelector } from '../IconSelector';
+import { VALID_ICONS } from '../../utils/icons';
 
 interface GoalFormProps {
   existingGoal?: SavingsGoal | null;
@@ -13,8 +14,7 @@ interface GoalFormProps {
   isSheetMode?: boolean;
 }
 
-// Icons Set for Goals
-const GOAL_ICONS = ['savings', 'flight', 'directions_car', 'home', 'school', 'emergency', 'shopping_bag', 'celebration', 'laptop_mac', 'pets', 'diamond', 'rocket', 'fitness_center', 'stroller', 'watch'];
+// Colors Set for Goals
 const GOAL_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#F43F5E', '#8B5CF6', '#EC4899', '#6366F1'];
 
 export const GoalForm: React.FC<GoalFormProps> = ({ existingGoal, onClose, isSheetMode = false }) => {
@@ -88,7 +88,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({ existingGoal, onClose, isShe
             <div
               className="size-20 rounded-full flex items-center justify-center text-4xl mb-4 transition-all shadow-lg border-4 border-app-surface group cursor-pointer active:scale-95"
               style={{ backgroundColor: color, color: '#fff', boxShadow: `0 8px 20px -6px ${color}60` }}
-              onClick={() => { const icons = GOAL_ICONS; const nextIdx = (icons.indexOf(icon) + 1) % icons.length; setIcon(icons[nextIdx]); }}
+              onClick={() => { const icons = VALID_ICONS; const idx = icons.indexOf(icon as any); const nextIdx = (idx + 1) % icons.length; setIcon(icons[nextIdx]); }}
             >
               <span className="material-symbols-outlined select-none">{icon}</span>
             </div>
@@ -157,7 +157,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({ existingGoal, onClose, isShe
             <div className="pb-2">
               <label className="text-[10px] font-bold text-app-text ml-1 mb-1 block uppercase tracking-wide opacity-70">Icono</label>
               <IconSelector
-                icons={GOAL_ICONS}
+                icons={[...VALID_ICONS]}
                 selectedIcon={icon}
                 selectedColor={color}
                 onSelect={setIcon}

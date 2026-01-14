@@ -1,16 +1,29 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRecurringTransactions, useCategories, useDeleteRecurringTransaction, useAccounts } from '../hooks/useApi';
-import { SwipeableItem } from '../components/SwipeableItem';
-import { toastSuccess, toastError } from '../utils/toast';
+
+// Hooks & Context
+import { useGlobalSheets } from '../context/GlobalSheetContext';
+import {
+    useRecurringTransactions,
+    useCategories,
+    useDeleteRecurringTransaction,
+    useAccounts
+} from '../hooks/useApi';
+
+// Components
 import { PageHeader } from '../components/PageHeader';
+import { SwipeableItem } from '../components/SwipeableItem';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SkeletonRecurring } from '../components/Skeleton';
-import { formatDateUTC, isDateBeforeUTC } from '../utils/dateUtils';
-import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
-import { useGlobalSheets } from '../context/GlobalSheetContext';
 
-// Detail Sheet Component
+// Utils & Types
+import { toastSuccess, toastError } from '../utils/toast';
+import { formatDateUTC, isDateBeforeUTC } from '../utils/dateUtils';
+
+/* ==================================================================================
+   SUB-COMPONENT: DETAIL SHEET
+   ================================================================================== */
 const RecurringDetailSheet = ({
     item,
     category,
@@ -25,415 +38,292 @@ const RecurringDetailSheet = ({
 
     const nextDue = new Date(item.nextDueDate);
     const isOverdue = isDateBeforeUTC(nextDue, new Date());
+    const isIncome = item.type === 'income';
 
     return (
-        <SwipeableBottomSheet isOpen={!!item} onClose={onClose}>
-            {/* Header */}
-            <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-3">
+        <SwipeableBottomSheet isOpen={true} onClose={onClose}>
+            <div className="pt-2 pb-6 px-4">
+
+                {/* 1. HEADER & AMOUNT */}
+                <div className="flex flex-col items-center mb-8">
                     <div
-                        className="size-14 rounded-2xl flex items-center justify-center"
-                        style={{
-                            backgroundColor: `${category?.color || '#999'}20`,
-                            color: category?.color || '#999'
-                        }}
+                        className="size-20 rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-sm border border-black/5"
+                        style={{ backgroundColor: `${category?.color || '#999'}20`, color: category?.color || '#999' }}
                     >
-                        <span className="material-symbols-outlined text-[28px]">
-                            {category?.icon || 'refresh'}
-                        </span>
+                        <span className="material-symbols-outlined text-[32px]">{category?.icon || 'refresh'}</span>
                     </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-app-text">{item.description}</h3>
-                        <p className="text-xs text-app-muted capitalize">{category?.name || 'Sin categoría'}</p>
-                    </div>
-                </div>
-                <button onClick={onClose} className="p-2 hover:bg-app-subtle rounded-full transition-colors">
-                    <span className="material-symbols-outlined text-xl text-app-muted">close</span>
-                </button>
-            </div>
 
-            {/* Amount */}
-            <div className="text-center mb-6 py-4 bg-app-subtle rounded-2xl">
-                <p className="text-xs text-app-muted uppercase font-bold mb-1">Monto</p>
-                <p className={`text-3xl font-bold tabular-nums ${item.type === 'income' ? 'text-emerald-500' : 'text-app-text'}`}>
-                    {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
-                </p>
-            </div>
-
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-app-bg border border-app-border rounded-xl p-3">
-                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Frecuencia</p>
-                    <div className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm text-app-primary">schedule</span>
-                        <p className="text-sm font-semibold text-app-text capitalize">{getFrequencyLabel(item.frequency)}</p>
-                    </div>
-                </div>
-                <div className="bg-app-bg border border-app-border rounded-xl p-3">
-                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Cuenta</p>
-                    <div className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm text-indigo-500">account_balance</span>
-                        <p className="text-sm font-semibold text-app-text truncate">{account?.name || 'N/A'}</p>
-                    </div>
-                </div>
-                <div className={`col-span-2 rounded-xl p-3 border ${isOverdue ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' : 'bg-app-bg border-app-border'}`}>
-                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">
-                        {isOverdue ? 'Vencido desde' : 'Próximo pago'}
+                    <h2 className="text-xl font-bold text-app-text text-center px-4 leading-tight">{item.description}</h2>
+                    <p className={`text-3xl font-black font-numbers mt-2 tracking-tight ${isIncome ? 'text-emerald-500' : 'text-app-text'}`}>
+                        {isIncome ? '+' : '-'}{formatCurrency(item.amount)}
                     </p>
-                    <div className="flex items-center gap-1.5">
-                        <span className={`material-symbols-outlined text-sm ${isOverdue ? 'text-rose-500' : 'text-emerald-500'}`}>
-                            {isOverdue ? 'warning' : 'event'}
-                        </span>
-                        <p className={`text-sm font-semibold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-app-text'}`}>
-                            {formatDateUTC(nextDue, { style: 'long' })}
+                    <div className={`mt-2 px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-app-subtle text-app-muted'}`}>
+                        {getFrequencyLabel(item.frequency)}
+                    </div>
+                </div>
+
+                {/* 2. STATUS GRID */}
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                    {/* Status Box */}
+                    <div className={`p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-1 border ${isOverdue ? 'bg-rose-50 border-rose-200 dark:bg-rose-900/10 dark:border-rose-900' : 'bg-app-subtle border-app-border'}`}>
+                        <p className={`text-[10px] uppercase font-bold ${isOverdue ? 'text-rose-600' : 'text-app-muted'}`}>
+                            {isOverdue ? '⚠️ Vencido Desde' : '📅 Próximo Cobro'}
+                        </p>
+                        <p className={`font-bold text-sm ${isOverdue ? 'text-rose-700 dark:text-rose-400' : 'text-app-text'}`}>
+                            {formatDateUTC(nextDue, { month: 'short', day: 'numeric' })}
                         </p>
                     </div>
+
+                    {/* Account Box */}
+                    <div className="bg-app-subtle p-4 rounded-2xl flex flex-col items-center justify-center text-center gap-1 border border-app-border">
+                        <p className="text-[10px] uppercase font-bold text-app-muted">Cuenta Origen</p>
+                        <div className="flex items-center gap-1.5 font-bold text-sm text-app-text truncate max-w-full">
+                            <span className="material-symbols-outlined text-xs opacity-50">account_balance</span>
+                            {account?.name || 'N/A'}
+                        </div>
+                    </div>
                 </div>
-                {/* End Date - shown if exists */}
+
+                {/* 3. ALERT / END DATE */}
                 {item.endDate && (
-                    <div className="col-span-2 rounded-xl p-3 border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-                        <p className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-bold mb-1">Fecha Límite</p>
-                        <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-sm text-amber-500">event_busy</span>
-                            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                                {formatDateUTC(new Date(item.endDate), { style: 'long' })}
+                    <div className="mb-8 flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-800">
+                        <span className="material-symbols-outlined text-amber-500 mt-0.5">event_busy</span>
+                        <div>
+                            <p className="text-sm font-bold text-amber-900 dark:text-amber-100">Finaliza pronto</p>
+                            <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-0.5">
+                                La recurrencia termina el <strong>{formatDateUTC(new Date(item.endDate), { style: 'long' })}</strong>.
                             </p>
                         </div>
-                        <p className="text-[10px] text-amber-600/70 dark:text-amber-400/70 mt-1">
-                            No se proyectará después de esta fecha
-                        </p>
                     </div>
                 )}
-            </div>
 
-            {/* Type Badge */}
-            <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.type === 'income'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
-                    {item.type === 'income' ? '💰 Ingreso' : '💸 Gasto'}
-                </span>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                    🔄 Recurrente
-                </span>
-                {item.endDate && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                        ⏰ Con fecha límite
-                    </span>
-                )}
+                {/* 4. ACTIONS */}
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={() => { onClose(); onEdit(); }}
+                        className="h-14 rounded-2xl bg-app-surface border border-app-border text-sm font-bold flex items-center justify-center gap-2 hover:bg-app-subtle active:scale-[0.98] transition-all"
+                    >
+                        <span className="material-symbols-outlined">edit</span>
+                        Editar
+                    </button>
+                    <button
+                        onClick={() => { onClose(); onDelete(); }}
+                        className="h-14 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-900/10 dark:border-rose-900 dark:text-rose-400 text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                    >
+                        <span className="material-symbols-outlined">delete</span>
+                        Eliminar
+                    </button>
+                </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="hidden md:flex gap-3">
-                <button
-                    onClick={onEdit}
-                    className="flex-1 py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-lg">edit</span>
-                    Editar
-                </button>
-                <button
-                    onClick={onDelete}
-                    className="py-3.5 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold hover:opacity-80 transition-opacity flex items-center justify-center"
-                >
-                    <span className="material-symbols-outlined text-lg">delete</span>
-                </button>
-            </div>
-
         </SwipeableBottomSheet>
     );
 };
 
+/* ==================================================================================
+   MAIN COMPONENT
+   ================================================================================== */
 const Recurring: React.FC = () => {
-    // --- Routing ---
-    const navigate = useNavigate();
     const { openRecurringSheet } = useGlobalSheets();
 
-    // --- Data Queries ---
+    // Data Hooks
     const { data: recurring, isLoading } = useRecurringTransactions();
     const { data: categories } = useCategories();
     const { data: accounts } = useAccounts();
     const deleteMutation = useDeleteRecurringTransaction();
 
-    // --- Local State ---
-    const [deletingId, setDeletingId] = useState<string | null>(null);
+    // Local State
     const [selectedItem, setSelectedItem] = useState<any>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
 
-    // --- Helpers ---
+    // Helpers
     const getCategory = (id: string) => categories?.find(c => c.id === id);
     const getAccount = (id: string) => accounts?.find(a => a.id === id);
-
-    const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-        minimumFractionDigits: 0
-    }).format(val);
-
+    const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
     const getFrequencyLabel = (freq: string) => {
-        const labels: Record<string, string> = {
-            'daily': 'Diario', 'weekly': 'Semanal', 'biweekly': 'Cada 2 semanas',
-            'biweekly_15_30': 'Quincenal', 'monthly': 'Mensual', 'yearly': 'Anual'
+        const labels: any = {
+            'daily': 'Diario', 'weekly': 'Semanal', 'biweekly': 'Cada 2 sem',
+            'monthly': 'Mensual', 'yearly': 'Anual'
         };
         return labels[freq?.toLowerCase()] || freq;
     };
 
-    // Sort and filter recurring transactions
-    const sortedRecurring = useMemo(() => {
-        if (!recurring) return [];
+    // Derived List
+    const { list: sortedList, incomeCount, expenseCount } = useMemo(() => {
+        if (!recurring) return { list: [], incomeCount: 0, expenseCount: 0 };
 
-        // First filter by type
-        let filtered = [...recurring];
-        if (filterType === 'income') {
-            filtered = filtered.filter(tx => tx.type === 'income');
-        } else if (filterType === 'expense') {
-            filtered = filtered.filter(tx => tx.type === 'expense');
-        }
+        const inc = recurring.filter(t => t.type === 'income').length;
+        const exp = recurring.filter(t => t.type === 'expense').length;
 
-        // Then sort: overdue first, then by next due date (soonest first)
-        return filtered.sort((a, b) => {
-            const dateA = new Date(a.nextDueDate);
-            const dateB = new Date(b.nextDueDate);
-            const now = new Date();
+        let filtered = recurring;
+        if (filterType !== 'all') filtered = recurring.filter(t => t.type === filterType);
 
-            const isOverdueA = isDateBeforeUTC(dateA, now);
-            const isOverdueB = isDateBeforeUTC(dateB, now);
+        // Sort: Overdue -> Soonest -> Later
+        const sorted = [...filtered].sort((a, b) => {
+            const dateA = new Date(a.nextDueDate).getTime();
+            const dateB = new Date(b.nextDueDate).getTime();
+            const now = Date.now();
 
-            // Overdue items first
-            if (isOverdueA && !isOverdueB) return -1;
-            if (!isOverdueA && isOverdueB) return 1;
+            // Prioritize overdue items
+            if (dateA < now && dateB > now) return -1;
+            if (dateA > now && dateB < now) return 1;
 
-            // Then by date (soonest first)
-            return dateA.getTime() - dateB.getTime();
+            return dateA - dateB;
         });
+
+        return { list: sorted, incomeCount: inc, expenseCount: exp };
     }, [recurring, filterType]);
 
-    // Count by type for filter badges
-    const incomeCount = recurring?.filter(tx => tx.type === 'income').length || 0;
-    const expenseCount = recurring?.filter(tx => tx.type === 'expense').length || 0;
 
-    const handleDelete = async () => {
+    /* Handlers */
+    const handleDeleteConfirm = async () => {
         if (!deletingId) return;
         try {
             await deleteMutation.mutateAsync(deletingId);
-            toastSuccess('Suscripción eliminada');
+            toastSuccess('Recurrencia eliminada');
             setDeletingId(null);
-            setSelectedItem(null);
-        } catch (error: any) {
-            toastError(error.message || "Error al eliminar");
-        }
+        } catch (e) { toastError('Error al eliminar'); }
     };
 
-    const handleEdit = (id: string) => {
-        setSelectedItem(null);
-        const itemToEdit = recurring?.find(t => t.id === id);
-        if (itemToEdit) {
-            openRecurringSheet(itemToEdit);
-        }
-    };
-
-    const handleItemClick = (tx: any) => {
-        setSelectedItem(tx);
-    };
-
-    // Show full-page skeleton while loading
-    if (isLoading) return <SkeletonRecurring />;
+    if (isLoading) return (
+        <div className="min-h-dvh bg-app-bg">
+            <PageHeader title="Gastos Fijos" />
+            <div className="p-4"><SkeletonRecurring /></div>
+        </div>
+    );
 
     return (
-        <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
-            <PageHeader title="Gastos Fijos" showBackButton={true} />
+        <div className="min-h-dvh bg-app-bg pb-safe text-app-text font-sans">
+            <PageHeader title="Suscripciones y Fijos" showBackButton />
 
-            <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            <div className="max-w-3xl mx-auto px-4 py-4 space-y-6 animate-fade-in pb-20">
 
-                {/* Section Header with Add Button */}
-                <div className="flex justify-between items-center px-1 mb-4 md:mb-6">
-                    <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Suscripciones</h2>
-                    <button
-                        onClick={() => openRecurringSheet()}
-                        className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                        <span className="hidden sm:inline">Nuevo</span>
-                    </button>
-                </div>
-
-                {/* Intro Card */}
-                <div className="bento-card p-5 bg-linear-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
-                    <div className="flex gap-4">
-                        <div className="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
-                            <span className="material-symbols-outlined">event_repeat</span>
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-sm text-app-text">Control de Suscripciones</h3>
-                            <p className="text-xs text-app-muted mt-1 leading-relaxed">
-                                Toca cualquier item para ver detalles. Desliza para editar o eliminar.
-                            </p>
+                {/* 1. TOP ACTIONS ROW */}
+                <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                        {/* Custom Tab Filter Pill */}
+                        <div className="flex bg-app-subtle p-1 rounded-xl shadow-inner">
+                            {[
+                                { id: 'all', icon: 'list', count: recurring?.length },
+                                { id: 'expense', icon: 'remove', count: expenseCount },
+                                { id: 'income', icon: 'add', count: incomeCount }
+                            ].map((f: any) => (
+                                <button
+                                    key={f.id}
+                                    onClick={() => setFilterType(f.id)}
+                                    className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all ${filterType === f.id
+                                            ? 'bg-app-surface shadow-sm text-app-text'
+                                            : 'text-app-muted hover:text-app-text'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined text-sm">{f.icon}</span>
+                                    {f.count > 0 && <span>{f.count}</span>}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                </div>
 
-                {/* Filter Tabs */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
                     <button
-                        onClick={() => setFilterType('all')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${filterType === 'all'
-                            ? 'bg-app-primary text-white shadow-sm'
-                            : 'bg-app-subtle text-app-muted hover:text-app-text'
-                            }`}
+                        onClick={() => openRecurringSheet()}
+                        className="size-10 bg-app-text text-app-bg rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
                     >
-                        <span className="material-symbols-outlined text-sm">list</span>
-                        Todos
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterType === 'all' ? 'bg-white/20' : 'bg-app-border'
-                            }`}>
-                            {recurring?.length || 0}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setFilterType('income')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${filterType === 'income'
-                            ? 'bg-emerald-500 text-white shadow-sm'
-                            : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
-                            }`}
-                    >
-                        <span className="material-symbols-outlined text-sm">trending_up</span>
-                        Ingresos
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterType === 'income' ? 'bg-white/20' : 'bg-emerald-100 dark:bg-emerald-800'
-                            }`}>
-                            {incomeCount}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setFilterType('expense')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${filterType === 'expense'
-                            ? 'bg-rose-500 text-white shadow-sm'
-                            : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30'
-                            }`}
-                    >
-                        <span className="material-symbols-outlined text-sm">trending_down</span>
-                        Gastos
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filterType === 'expense' ? 'bg-white/20' : 'bg-rose-100 dark:bg-rose-800'
-                            }`}>
-                            {expenseCount}
-                        </span>
+                        <span className="material-symbols-outlined">add</span>
                     </button>
                 </div>
 
-                <div className="space-y-4">
-                    {sortedRecurring.length === 0 ? (
-                        <div className="py-12 flex flex-col items-center text-center opacity-50 border-2 border-dashed border-app-border rounded-3xl">
-                            <span className="material-symbols-outlined text-4xl mb-3 text-app-muted">event_busy</span>
-                            <p className="text-sm font-medium">Sin recurrentes</p>
-                            <button
-                                onClick={() => openRecurringSheet()}
-                                className="mt-4 btn btn-secondary text-xs px-4 py-2"
+                {/* 2. LIST */}
+                <div className="space-y-3">
+                    {sortedList.length > 0 ? sortedList.map(item => {
+                        const category = getCategory(item.categoryId);
+                        const nextDue = new Date(item.nextDueDate);
+                        const isOverdue = isDateBeforeUTC(nextDue, new Date());
+                        const isIncome = item.type === 'income';
+
+                        return (
+                            <SwipeableItem
+                                key={item.id}
+                                leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                                rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
+                                onSwipeRight={() => { setSelectedItem(null); setTimeout(() => openRecurringSheet(item), 50); }}
+                                onSwipeLeft={() => setDeletingId(item.id)}
+                                className="rounded-3xl"
                             >
-                                Crear Primero
-                            </button>
-                        </div>
-                    ) : (
-                        sortedRecurring.map(tx => {
-                            const category = getCategory(tx.categoryId);
-                            const account = getAccount(tx.accountId);
-                            const nextDue = new Date(tx.nextDueDate);
-                            const isOverdue = isDateBeforeUTC(nextDue, new Date());
-
-                            return (
-                                <SwipeableItem
-                                    key={tx.id}
-                                    onSwipeLeft={() => setDeletingId(tx.id)}
-                                    rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
-                                    onSwipeRight={() => handleEdit(tx.id)}
-                                    leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                                    className="rounded-3xl"
+                                <div
+                                    onClick={() => setSelectedItem(item)}
+                                    className={`
+                                        bento-card p-4 relative overflow-hidden bg-app-surface cursor-pointer active:scale-[0.99] transition-all hover:border-app-border-strong
+                                        ${isOverdue ? 'border-l-4 border-l-rose-500' : ''}
+                                    `}
                                 >
-                                    <div
-                                        onClick={() => handleItemClick(tx)}
-                                        className={`
-                                            bento-card p-4 md:p-5 flex items-center gap-4 cursor-pointer active:scale-[0.99] transition-all bg-app-surface
-                                            ${isOverdue ? 'border-rose-400 dark:border-rose-500 bg-rose-50/10' : 'hover:border-app-border-strong'}
-                                        `}>
-                                        <div
-                                            className="size-11 rounded-xl flex items-center justify-center shrink-0 border border-transparent shadow-sm"
-                                            style={{
-                                                backgroundColor: `${category?.color || '#999'}15`,
-                                                color: category?.color || '#999',
-                                                borderColor: isOverdue ? '#f43f5e' : 'transparent'
-                                            }}
-                                        >
-                                            <span className="material-symbols-outlined text-[24px]">
-                                                {isOverdue ? 'warning' : category?.icon || 'refresh'}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-1.5">
-                                                <h4 className="font-bold text-sm text-app-text truncate">{tx.description}</h4>
-                                                {tx.endDate && (
-                                                    <span className="material-symbols-outlined text-[14px] text-amber-500" title="Tiene fecha límite">
-                                                        schedule
+                                    <div className="flex justify-between items-start">
+                                        {/* Icon & Main Info */}
+                                        <div className="flex items-start gap-3.5">
+                                            <div
+                                                className="size-11 shrink-0 rounded-2xl flex items-center justify-center border border-black/5 shadow-sm"
+                                                style={{ backgroundColor: `${category?.color}20`, color: category?.color }}
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">{category?.icon || 'event'}</span>
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h3 className="text-sm font-bold text-app-text truncate max-w-[150px] md:max-w-xs">{item.description}</h3>
+                                                <p className="text-[11px] text-app-muted flex items-center gap-1.5 mt-0.5">
+                                                    <span className="capitalize">{getFrequencyLabel(item.frequency)}</span>
+                                                    <span className="size-1 rounded-full bg-app-border" />
+                                                    <span className={`font-bold ${isOverdue ? 'text-rose-500' : ''}`}>
+                                                        {formatDateUTC(nextDue, { day: 'numeric', month: 'short' })}
                                                     </span>
-                                                )}
+                                                </p>
                                             </div>
-
-                                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-app-muted font-medium">
-                                                <span className="capitalize">{getFrequencyLabel(tx.frequency)}</span>
-                                                <span>•</span>
-                                                <span className="truncate max-w-[100px]">{account?.name}</span>
-                                            </div>
-
-                                            {isOverdue && (
-                                                <p className="text-[10px] text-rose-500 font-bold mt-1.5">VENCIDO: {formatDateUTC(nextDue, { style: 'short' })}</p>
-                                            )}
-                                            {!isOverdue && (
-                                                <p className="text-[10px] text-app-muted/80 mt-1">Próximo: {formatDateUTC(nextDue, { style: 'short' })}</p>
-                                            )}
                                         </div>
 
-                                        <div className="text-right flex items-center gap-2">
-                                            <p className={`font-bold text-[15px] ${tx.type === 'income' ? 'text-emerald-500' : 'text-app-text'}`}>
-                                                ${tx.amount.toLocaleString('es-MX', { minimumFractionDigits: 0 })}
+                                        {/* Amount */}
+                                        <div className="text-right">
+                                            <p className={`font-bold font-numbers ${isIncome ? 'text-emerald-500' : 'text-app-text'}`}>
+                                                {formatCurrency(item.amount)}
                                             </p>
-                                            <span className="material-symbols-outlined text-app-muted text-sm">chevron_right</span>
+                                            {isOverdue && (
+                                                <span className="inline-block mt-1 text-[9px] font-bold text-white bg-rose-500 px-1.5 py-0.5 rounded">VENCIDO</span>
+                                            )}
                                         </div>
                                     </div>
-                                </SwipeableItem>
-                            )
-                        })
+                                </div>
+                            </SwipeableItem>
+                        );
+                    }) : (
+                        <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
+                            <span className="material-symbols-outlined text-4xl mb-2 text-app-muted">calendar_off</span>
+                            <p className="text-sm font-medium text-app-muted">Sin recurrencias registradas.</p>
+                        </div>
                     )}
                 </div>
 
-                {/* Spacer for FAB */}
-                <div className="h-16" />
+                {/* 3. DETAILS MODAL */}
+                {selectedItem && (
+                    <RecurringDetailSheet
+                        item={selectedItem}
+                        category={getCategory(selectedItem.categoryId)}
+                        account={getAccount(selectedItem.accountId)}
+                        onClose={() => setSelectedItem(null)}
+                        onEdit={() => { setSelectedItem(null); openRecurringSheet(selectedItem); }}
+                        onDelete={() => { setSelectedItem(null); setDeletingId(selectedItem.id); }}
+                        formatCurrency={formatCurrency}
+                        getFrequencyLabel={getFrequencyLabel}
+                    />
+                )}
+
+                {/* 4. CONFIRM DELETE */}
+                {deletingId && (
+                    <DeleteConfirmationSheet
+                        isOpen={true}
+                        onClose={() => setDeletingId(null)}
+                        onConfirm={handleDeleteConfirm}
+                        itemName="esta recurrencia"
+                        warningMessage="Detener cobro recurrente"
+                        isDeleting={deleteMutation.isPending}
+                    />
+                )}
+
             </div>
-
-            {/* Detail Sheet */}
-            {selectedItem && (
-                <RecurringDetailSheet
-                    item={selectedItem}
-                    category={getCategory(selectedItem.categoryId)}
-                    account={getAccount(selectedItem.accountId)}
-                    onClose={() => setSelectedItem(null)}
-                    onEdit={() => handleEdit(selectedItem.id)}
-                    onDelete={() => {
-                        setSelectedItem(null);
-                        setDeletingId(selectedItem.id);
-                    }}
-                    formatCurrency={formatCurrency}
-                    getFrequencyLabel={getFrequencyLabel}
-                />
-            )}
-
-            {deletingId && (
-                <DeleteConfirmationSheet
-                    isOpen={!!deletingId}
-                    onClose={() => setDeletingId(null)}
-                    onConfirm={handleDelete}
-                    itemName={recurring?.find(r => r.id === deletingId)?.description || "esta suscripción"}
-                    warningMessage="Detener pago recurrente"
-                    warningDetails={['Esto no borrará el historial pasado, solo los cobros futuros.']}
-                    isDeleting={deleteMutation.isPending}
-                />
-            )}
         </div>
     );
 };

@@ -405,8 +405,11 @@ const GoalsPage: React.FC = () => {
         title="Mis Metas"
         showBackButton
         rightAction={
-          <button onClick={() => openGoalSheet()} className="text-app-primary hover:bg-app-primary/10 size-9 rounded-full flex items-center justify-center transition-colors">
-            <span className="material-symbols-outlined">add_circle</span>
+          <button
+            onClick={() => openGoalSheet()}
+            className="size-10 bg-app-text text-app-bg rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined">add</span>
           </button>
         }
       />

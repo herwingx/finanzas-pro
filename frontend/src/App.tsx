@@ -19,92 +19,94 @@ const App: React.FC = () => {
         Estilos premium aplicados via classNames 
       */}
       <Toaster
-        position="top-center" // 'bottom-center' también es bueno en móvil para alcance fácil
-        richColors={false}    // Lo ponemos en false para usar nuestros colores custom semánticos
-        expand={true}         // Permite ver múltiples notificaciones apiladas (efecto tarjeta)
-        gap={8}               // Espacio entre toasts
-        closeButton={false}   // En móvil es mejor hacer swipe para descartar
-        visibleToasts={3}     // Limita el ruido visual
-
+        position="top-center"
+        richColors={false}
+        expand={true}
+        gap={8}
+        closeButton={false}
+        visibleToasts={3}
         toastOptions={{
-          // Duration default
-          duration: 3500,
-
+          duration: 4000, // Un poco más de tiempo para leer
           classNames: {
             /* 
                BASE CARD STYLE
-               - Rounded-3xl para coincidir con tus Bento Cards.
-               - Backdrop-blur fuerte para el efecto glass.
-               - Shadow-float custom para profundidad.
             */
             toast: `
         group toast 
-        bg-app-surface/95 dark:bg-[#121212]/95
+        bg-app-surface/95 dark:bg-[#18181b]
         backdrop-blur-2xl 
         border border-black/5 dark:border-white/10
         shadow-[0_8px_30px_rgb(0,0,0,0.12)] 
         rounded-[24px] 
         p-4 
-        font-sans
+        font-sans 
         items-start
       `,
 
             /* 
-               TYPOGRAPHY
-               - Alineación ajustada y pesos modernos.
+               TYPOGRAPHY REFACTOR
+               Eliminé los colores hardcodeados aquí para que hereden 
+               el alto contraste de las variantes de abajo.
             */
-            title: 'text-[14px] font-bold text-app-text leading-tight mb-0.5',
-            description: 'text-[12px] font-medium text-app-muted leading-snug',
+            title: 'text-[14px] font-bold mb-0.5 !leading-snug',
+            description: 'text-[13px] font-medium !opacity-90 leading-snug',
 
-            /* 
-               BUTTONS
-               - Botones de acción integrados y táctiles.
-            */
             actionButton: `
-        bg-app-primary text-white 
+        bg-current/10 hover:bg-current/20 
+        !text-current 
         text-xs font-bold px-4 py-2 
         rounded-xl active:scale-95 transition-transform 
-        shadow-lg shadow-app-primary/20
       `,
             cancelButton: `
-        bg-app-subtle text-app-muted 
-        text-xs font-bold px-3 py-2 
-        rounded-xl hover:text-app-text transition-colors
+        bg-app-subtle hover:bg-app-border
+        text-app-text 
+        text-xs font-medium px-3 py-2 
+        rounded-xl transition-colors
       `,
 
             /* 
-               STATE VARIANTS (Glass Tints)
-               En lugar de bordes duros, usamos un tinte muy sutil en el fondo 
-               y coloreamos el texto/icono.
+               HIGH CONTRAST VARIANTS
+               Light: Fondo Pastel + Borde Sutil + Texto Muy Oscuro
+               Dark:  Fondo Oscuro Tintado + Borde Sutil + Texto Casi Blanco
             */
             success: `
-        !bg-emerald-50/90 dark:!bg-emerald-950/20 
-        !border-emerald-100 dark:!border-emerald-900/50 
-        !text-emerald-700 dark:!text-emerald-200
-        [&_[data-icon]]:!text-emerald-500
+        /* Light Mode */
+        !bg-emerald-50 !border-emerald-200 !text-emerald-950
+        /* Dark Mode: Fondo casi negro con tinte verde, Texto Blanco Verdoso */
+        dark:!bg-emerald-950/30 dark:!border-emerald-800/50 dark:!text-emerald-50
+        /* Icon Color */
+        [&_[data-icon]]:!text-emerald-600 dark:[&_[data-icon]]:!text-emerald-400
       `,
+
             error: `
-        !bg-rose-50/90 dark:!bg-rose-950/20 
-        !border-rose-100 dark:!border-rose-900/50 
-        !text-rose-700 dark:!text-rose-200
-        [&_[data-icon]]:!text-rose-500
+        /* Light Mode */
+        !bg-rose-50 !border-rose-200 !text-rose-950
+        /* Dark Mode */
+        dark:!bg-rose-950/30 dark:!border-rose-800/50 dark:!text-rose-50
+        /* Icon */
+        [&_[data-icon]]:!text-rose-600 dark:[&_[data-icon]]:!text-rose-400
       `,
+
             warning: `
-        !bg-amber-50/90 dark:!bg-amber-950/20 
-        !border-amber-100 dark:!border-amber-900/50 
-        !text-amber-700 dark:!text-amber-200
-        [&_[data-icon]]:!text-amber-500
+        /* Light Mode */
+        !bg-amber-50 !border-amber-200 !text-amber-950
+        /* Dark Mode */
+        dark:!bg-amber-950/30 dark:!border-amber-800/50 dark:!text-amber-50
+        /* Icon */
+        [&_[data-icon]]:!text-amber-600 dark:[&_[data-icon]]:!text-amber-400
       `,
+
             info: `
-        !bg-blue-50/90 dark:!bg-blue-950/20 
-        !border-blue-100 dark:!border-blue-900/50 
-        !text-blue-700 dark:!text-blue-200
-        [&_[data-icon]]:!text-blue-500
+        /* Light Mode */
+        !bg-blue-50 !border-blue-200 !text-blue-950
+        /* Dark Mode */
+        dark:!bg-blue-950/30 dark:!border-blue-800/50 dark:!text-blue-50
+        /* Icon */
+        [&_[data-icon]]:!text-blue-600 dark:[&_[data-icon]]:!text-blue-400
       `,
           }
         }}
       />
-
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

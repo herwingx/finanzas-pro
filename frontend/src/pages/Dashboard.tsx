@@ -28,11 +28,11 @@ const BentoCard: React.FC<{ children: React.ReactNode; title?: string; action?: 
     </div>
   );
 
-const StatWidget: React.FC<{ label: string; value: number; type: 'income' | 'expense'; format: (n: number) => string }> =
-  ({ label, value, type, format }) => {
+const StatWidget: React.FC<{ label: string; value: number; type: 'income' | 'expense'; format: (n: number) => string; className?: string }> =
+  ({ label, value, type, format, className = '' }) => {
     const isIncome = type === 'income';
     return (
-      <div className="bento-card p-4 flex flex-col justify-center gap-1 hover:bg-app-subtle transition-colors group">
+      <div className={`bento-card p-4 flex flex-col justify-center gap-1 hover:bg-app-subtle transition-colors group ${className}`}>
         <div className="flex items-center gap-2 text-app-muted mb-1">
           <div className={`size-6 rounded-md flex items-center justify-center ${isIncome ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
             <span className="material-symbols-outlined text-[16px]">{isIncome ? 'arrow_downward' : 'arrow_upward'}</span>
@@ -143,8 +143,20 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* 2. Widgets de Estadísticas */}
-        <StatWidget label="Ingresos" value={stats.monthStats.income} type="income" format={stats.formatCurrency} />
-        <StatWidget label="Gastos" value={stats.monthStats.expense} type="expense" format={stats.formatCurrency} />
+        <StatWidget
+          label="Ingresos"
+          value={stats.monthStats.income}
+          type="income"
+          format={stats.formatCurrency}
+          className="col-span-1 md:col-span-1 lg:col-span-2"
+        />
+        <StatWidget
+          label="Gastos"
+          value={stats.monthStats.expense}
+          type="expense"
+          format={stats.formatCurrency}
+          className="col-span-1 md:col-span-1 lg:col-span-2"
+        />
 
         {/* Financial Planning Widget - Ancho completo */}
         <div className="col-span-1 md:col-span-2 lg:col-span-4 xl:col-span-4">

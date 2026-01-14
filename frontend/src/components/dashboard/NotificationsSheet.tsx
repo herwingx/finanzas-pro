@@ -15,13 +15,12 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ isOpen, 
   const { mutate: markAllRead } = useMarkAllNotificationsRead();
   const { mutate: addTransaction } = useAddTransaction();
 
-  // Lógica para procesar el pago directamente desde la alerta
+  // Action Logic
   const handlePaymentAction = (n: any) => {
     if (n.type === 'PAYMENT_DUE') {
       const { amount, description, categoryId, accountId } = n.data || {};
 
       if (amount && accountId) {
-        // "Quick Pay": Registra la transacción automáticamente
         addTransaction({
           amount: Number(amount),
           description: description || n.title.replace('Vence Hoy', '').trim(),
@@ -32,12 +31,12 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ isOpen, 
         }, {
           onSuccess: () => {
             toastSuccess('Pago registrado correctamente');
-            dismiss(n.id); // Elimina la alerta al pagar
+            dismiss(n.id);
           },
-          onError: () => toastError('Error al registrar el pago')
+          onError: () => toastError('Error al registrar pago automático')
         });
       } else {
-        toastInfo('Faltan datos para el autopago. Por favor registra manual.');
+        toastInfo('Faltan datos para el pago automático.');
       }
     } else {
       dismiss(n.id);
@@ -48,81 +47,84 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ isOpen, 
 
   return (
     <SwipeableBottomSheet isOpen={isOpen} onClose={onClose} title="Alertas e Insights">
-      <div className="pb-24">
+      <div className="pb-10 pt-2 min-h-[50vh]">
 
-        {/* Header Action */}
-        {hasUnread && (
-          <div className="flex justify-end mb-4">
+        {/* Bulk Action Header */}
+        <div className="flex justify-between items-center mb-6 px-1">
+          <span className="text-xs font-bold text-app-muted uppercase tracking-wider">{notifications?.length || 0} Nuevas</span>
+          {hasUnread && (
             <button
               onClick={() => markAllRead()}
-              className="text-xs font-bold text-app-primary uppercase tracking-wide hover:underline"
+              className="text-xs font-bold text-app-primary hover:bg-app-subtle px-2 py-1 rounded-lg transition-colors"
             >
-              Marcar todo como leído
+              Limpiar Todo
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <AnimatePresence mode="popLayout">
-            {notifications?.map((n: any) => (
-              <motion.div
-                key={n.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, x: -100 }}
-                className={`
-                  relative overflow-hidden p-4 rounded-2xl border bg-app-surface
-                  ${n.type === 'PAYMENT_DUE' ? 'border-app-warning/50' : 'border-app-border'}
-                  shadow-sm
-                `}
-              >
-                <div className="flex gap-3">
-                  {/* Icon based on type */}
-                  <div className={`
-                        size-10 rounded-full flex items-center justify-center shrink-0
-                        ${n.type === 'PAYMENT_DUE' ? 'bg-amber-500/10 text-amber-600' : 'bg-app-subtle text-app-muted'}
-                    `}>
-                    <span className="material-symbols-outlined text-[20px]">
-                      {n.type === 'PAYMENT_DUE' ? 'receipt_long' : 'notifications'}
-                    </span>
-                  </div>
+            {notifications?.map((n: any) => {
+              const isDue = n.type === 'PAYMENT_DUE';
 
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-app-text leading-tight mb-1 truncate">{n.title}</h4>
-                    <p className="text-xs text-app-muted leading-relaxed mb-3 wrap-break">{n.body}</p>
+              return (
+                <motion.div
+                  key={n.id}
+                  layout
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className={`
+                      relative p-4 rounded-3xl border bg-app-surface
+                      ${isDue ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/10' : 'border-app-border'}
+                    `}
+                >
+                  <div className="flex gap-4 items-start">
+                    {/* Icon Badge */}
+                    <div className={`
+                            size-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm
+                            ${isDue ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-app-subtle text-app-muted'}
+                        `}>
+                      <span className="material-symbols-outlined text-[20px]">{isDue ? 'receipt_long' : 'notifications'}</span>
+                    </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 flex-wrap">
-                      {n.type === 'PAYMENT_DUE' && (
+                    <div className="flex-1 min-w-0">
+                      <h4 className={`text-sm font-bold leading-tight mb-1 truncate ${isDue ? 'text-amber-900 dark:text-amber-100' : 'text-app-text'}`}>
+                        {n.title}
+                      </h4>
+                      <p className="text-xs text-app-muted leading-relaxed mb-4">{n.body}</p>
+
+                      <div className="flex gap-2">
+                        {isDue && (
+                          <button
+                            onClick={() => handlePaymentAction(n)}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                          >
+                            Pagar Ahora
+                          </button>
+                        )}
                         <button
-                          onClick={() => handlePaymentAction(n)}
-                          className="px-3 py-1.5 bg-app-primary text-white text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all"
+                          onClick={() => dismiss(n.id)}
+                          className="px-4 py-2 bg-white dark:bg-black/20 border border-black/5 text-xs font-bold text-app-text rounded-xl hover:bg-black/5 active:scale-95 transition-all"
                         >
-                          Pagar Ahora
+                          {isDue ? 'Descartar' : 'Entendido'}
                         </button>
-                      )}
-                      <button
-                        onClick={() => dismiss(n.id)}
-                        className="px-3 py-1.5 bg-app-subtle text-app-text text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
-                      >
-                        {n.type === 'PAYMENT_DUE' ? 'Posponer' : 'Entendido'}
-                      </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
 
           {/* Empty State */}
-          {(!notifications || notifications.length === 0) && (
-            <div className="flex flex-col items-center justify-center py-12 text-app-muted">
-              <div className="size-16 rounded-full bg-app-subtle flex items-center justify-center mb-3">
-                <span className="material-symbols-outlined text-3xl opacity-30">check_circle</span>
+          {!hasUnread && (
+            <div className="flex flex-col items-center justify-center py-20 opacity-60">
+              <div className="size-20 rounded-full bg-app-subtle flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-4xl text-app-muted opacity-50">done_all</span>
               </div>
-              <p className="font-medium text-sm">Estás al día</p>
-              <p className="text-xs opacity-60">No tienes alertas pendientes.</p>
+              <p className="text-sm font-bold text-app-text">Sin Notificaciones</p>
+              <p className="text-xs text-app-muted mt-1 max-w-[200px] text-center">Te avisaremos sobre pagos pendientes y logros financieros.</p>
             </div>
           )}
         </div>

@@ -552,7 +552,6 @@ export const FinancialPlanningWidget: React.FC = () => {
           <div className="flex justify-between items-center px-1">
             <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider">Gastos Fijos Pendientes</h3>
             <Link to="/recurring/new" className="text-app-primary hover:text-app-primary-dark">
-              <span className="material-symbols-outlined text-[20px]">add_circle</span>
             </Link>
           </div>
 

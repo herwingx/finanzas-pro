@@ -534,8 +534,44 @@ export const FinancialPlanningWidget: React.FC = () => {
                 onToggleExpand={() => setExpandedCard(expandedCard === key ? null : key)}
                 formatCurrency={formatCurrency}
                 formatDate={formatDate}
-                onPayAll={() => {/* handle full pay */ }} // Simplificado
-                onPayIndividual={(i: any) => {/* handle item */ }}
+                onPayAll={() => {
+                  const group = groupedCards[key];
+                  const sourceId = selectedSourceAccounts[key];
+                  if (!sourceId) return toast.error('Selecciona una cuenta de origen');
+
+                  const promise = payFullStatement({
+                    accountId: group.accountId,
+                    sourceAccountId: sourceId,
+                    date: group.dueDate
+                  });
+
+                  toast.promise(promise, {
+                    loading: 'Procesando pago total...',
+                    success: 'Pago de tarjeta registrado',
+                    error: (err) => `Error: ${err.message || 'No se pudo procesar'}`
+                  });
+                }}
+                onPayIndividual={(item: any) => {
+                  const sourceId = selectedSourceAccounts[key];
+                  if (!sourceId) return toast.error('Selecciona una cuenta de origen');
+
+                  if (item.isMsi) {
+                    const promise = payMsiInstallment({
+                      installmentId: item.id,
+                      sourceAccountId: sourceId,
+                      date: item.dueDate
+                    });
+                    toast.promise(promise, {
+                      loading: 'Pagando mensualidad...',
+                      success: 'Mensualidad pagada',
+                      error: 'Error al pagar'
+                    });
+                  } else {
+                    // Regular expense in card (fallback to payRecurring if acts as such, or generic pay)
+                    // Assuming for now it's treated like a recurring transaction or similar if it's in this list
+                    executePayAction(item.id, item.amount, item.description || 'Cargo', 'pay');
+                  }
+                }}
                 isLongPeriod={isLongPeriod}
                 sourceAccounts={sourceAccounts}
                 selectedSourceAccount={selectedSourceAccounts[key] || ''}

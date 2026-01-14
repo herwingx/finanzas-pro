@@ -22,9 +22,9 @@ const HistoryHeader: React.FC<{
   totalAmount?: number;
 }> = ({ filter, setFilter, totalAmount }) => {
   return (
-    <div className="sticky top-0 z-30 bg-app-bg/95 backdrop-blur-xl border-b border-app-border transition-all">
-      <div className="pt-safe pb-3 px-4 md:px-6">
-        <div className="flex items-center justify-between mb-4 mt-2">
+    <div className="sticky top-0 z-30 bg-app-bg/95 backdrop-blur-xl border-b border-app-border">
+      <div className="flex flex-col gap-4 pt-safe pb-4 px-4 md:px-6">
+        <div className="flex items-center justify-between mt-2">
           <h1 className="text-2xl font-bold text-app-text tracking-tight">Historial</h1>
           {totalAmount !== undefined && (
             <span className="text-sm font-bold font-numbers text-app-muted bg-app-subtle px-2 py-1 rounded-md">
@@ -200,7 +200,7 @@ const History: React.FC = () => {
           <div className="space-y-6">
             {Object.entries(filteredData.groups).map(([dateLabel, groupTxs]) => (
               <div key={dateLabel} className="mb-10 md:mb-14 last:mb-0">
-                <div className="sticky top-[125px] md:top-[145px] z-20 py-1.5 px-3 mb-4 md:mb-6 rounded-lg bg-app-surface/95 backdrop-blur border border-app-border w-fit shadow-sm">
+                <div className="py-1.5 px-3 mb-4 md:mb-6 rounded-lg bg-app-surface/95 backdrop-blur border border-app-border w-fit shadow-sm">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-app-text/60">
                     {dateLabel}
                   </span>
@@ -298,6 +298,7 @@ const History: React.FC = () => {
         transaction={selectedTx}
         category={selectedTx ? getCategoryInfo(selectedTx.categoryId) : undefined}
         account={selectedTx ? accountMap.get(selectedTx.accountId) : undefined}
+        destinationAccount={selectedTx?.destinationAccountId ? accountMap.get(selectedTx.destinationAccountId) : undefined}
         onEdit={(tx) => { setSelectedTx(null); handleEdit(tx); }}
         onDelete={(tx) => { setSelectedTx(null); handleDeleteClick(tx); }}
         formatCurrency={formatCurrency}

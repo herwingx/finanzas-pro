@@ -42,7 +42,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
 
   return (
     <SwipeableBottomSheet isOpen={isOpen} onClose={onClose}>
-      <div className="pb-safe-offset-4 px-4 pt-2">
+      <div className="pb-safe-offset-8 px-4 pt-2">
 
         {/* 1. Header Profile */}
         <div className="flex flex-col items-center mb-6">
@@ -140,7 +140,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
         </div>
 
         {/* 4. Action Footer */}
-        <div className="hidden md:grid grid-cols-2 gap-3 pt-2 border-t border-app-border/50">
+        <div className="hidden md:grid grid-cols-2 gap-3 pt-2 border-t border-app-border/50 pb-6">
           <button
             onClick={() => onEdit(transaction)}
             className="h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center gap-2 text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-95 transition-all"

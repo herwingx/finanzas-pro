@@ -46,7 +46,6 @@ export const DesktopSidebar = () => {
           </div>
           <div>
             <span className="block text-sm font-black text-app-text tracking-tight leading-none">FINANZAS PRO</span>
-            <span className="text-[10px] text-app-muted font-mono tracking-wide">WORKSPACE</span>
           </div>
         </div>
       </div>

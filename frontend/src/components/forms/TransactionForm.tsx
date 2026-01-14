@@ -175,11 +175,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       {/* 1. HEADER LOGIC (Conditional Sheet vs Page) */}
       {isSheetMode ? (
         <div className="flex justify-between items-center mb-6 pt-2">
-          <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2">Cancelar</button>
+          <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2 md:hidden">Cancelar</button>
           <h2 className="text-lg font-bold text-app-text">{pageTitle}</h2>
-          {isEditing ? (
-            <button type="button" onClick={handleDelete} className="text-sm font-bold text-rose-500 hover:text-rose-600 px-2">Borrar</button>
-          ) : <div className="w-12" />}
+          <div className="w-12" />
         </div>
       ) : (
         <PageHeader

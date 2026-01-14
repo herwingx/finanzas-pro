@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SwipeableBottomSheet } from './SwipeableBottomSheet';
 
 /* ==================================================================================
    TYPES
@@ -91,46 +92,38 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
     }
   }, [isOpen, defaultRevertState]);
 
-  if (!isOpen) return null;
-
   const styles = getStyles(warningLevel);
   const canSubmit = requireConfirmation ? (confirmationText === 'ELIMINAR' && acknowledge) : true;
 
   const handleConfirm = () => onConfirm({ revertBalance });
+  const handleClose = () => {
+    if (!isDeleting) onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in"
-        onClick={!isDeleting ? onClose : undefined}
-      />
-
-      {/* Modal Content */}
-      <div className="relative w-full max-w-md bg-app-surface border border-app-border rounded-3xl shadow-2xl animate-scale-in overflow-hidden">
+    <SwipeableBottomSheet isOpen={isOpen} onClose={handleClose}>
+      <div className="pb-safe-offset-4">
 
         {/* Header */}
-        <div className="p-6 pb-2 flex gap-4">
-          <div className={`size-14 rounded-full flex items-center justify-center shrink-0 ${styles.overlayIcon}`}>
-            <span className="material-symbols-outlined text-[32px]">{styles.icon}</span>
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className={`size-16 rounded-3xl flex items-center justify-center shrink-0 mb-4 ${styles.overlayIcon}`}>
+            <span className="material-symbols-outlined text-[36px]">{styles.icon}</span>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-app-text leading-tight">
-              {warningLevel === 'critical' ? 'Acción Irreversible' : 'Confirmar Eliminación'}
-            </h3>
-            <p className="text-sm text-app-muted mt-1 leading-snug">
-              Vas a eliminar permanentemente: <br />
-              <span className="font-semibold text-app-text">"{itemName}"</span>
-            </p>
-          </div>
+          <h3 className="text-xl font-bold text-app-text leading-tight px-4">
+            {warningLevel === 'critical' ? 'Acción Irreversible' : 'Confirmar Eliminación'}
+          </h3>
+          <p className="text-sm text-app-muted mt-2 leading-relaxed max-w-[80%] mx-auto">
+            Vas a eliminar permanentemente: <br />
+            <span className="font-semibold text-app-text text-base">"{itemName}"</span>
+          </p>
         </div>
 
         {/* Body */}
-        <div className="p-6 pt-2 space-y-5">
+        <div className="space-y-5 px-1">
 
           {/* 1. Dynamic Warning Banner */}
           {warningMessage && (
-            <div className={`p-4 rounded-xl border flex gap-3 ${styles.banner}`}>
+            <div className={`p-4 rounded-2xl border flex gap-3 ${styles.banner}`}>
               <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5">info</span>
               <div className="text-xs">
                 <p className="font-bold mb-1">{warningMessage}</p>
@@ -145,8 +138,8 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
 
           {/* 2. Revert Toggle Option */}
           {showRevertOption && (
-            <label className="flex gap-3 p-3 rounded-2xl border border-app-border bg-app-subtle hover:border-app-primary/50 cursor-pointer transition-colors group">
-              <div className="relative flex items-center">
+            <label className="flex gap-3 p-3 rounded-2xl border border-app-border bg-app-subtle/50 hover:bg-app-subtle hover:border-app-border-strong cursor-pointer transition-all group active:scale-[0.99]">
+              <div className="relative flex items-center pt-1">
                 <input
                   type="checkbox"
                   checked={revertBalance}
@@ -177,13 +170,16 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
 
           {/* 4. Critical Gate (Type "ELIMINAR") */}
           {requireConfirmation && (
-            <div className="space-y-3 pt-2">
-              <label className="flex gap-3 items-start select-none cursor-pointer">
-                <input type="checkbox" checked={acknowledge} onChange={e => setAcknowledge(e.target.checked)} className="mt-1 size-4 accent-rose-500" />
-                <span className="text-xs text-app-text font-medium leading-tight">Entiendo que esta acción no se puede deshacer y asumo la responsabilidad.</span>
-              </label>
+            <div className="space-y-4 pt-4 border-t border-app-border/50">
+              <div className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-xl">
+                <label className="flex gap-3 items-start select-none cursor-pointer">
+                  <input type="checkbox" checked={acknowledge} onChange={e => setAcknowledge(e.target.checked)} className="mt-1 size-4 accent-rose-500 shrink-0" />
+                  <span className="text-xs text-rose-800 dark:text-rose-200 font-medium leading-tight">Entiendo que esta acción no se puede deshacer y asumo la responsabilidad.</span>
+                </label>
+              </div>
+
               <div>
-                <label className="text-[10px] uppercase font-bold text-rose-500 mb-1.5 block">
+                <label className="text-[10px] uppercase font-bold text-rose-500 mb-2 block tracking-wider">
                   Escribe "ELIMINAR" para confirmar
                 </label>
                 <input
@@ -191,7 +187,7 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
                   value={confirmationText}
                   onChange={e => setConfirmationText(e.target.value.toUpperCase())}
                   placeholder="ELIMINAR"
-                  className="w-full bg-app-subtle border-2 border-rose-500/20 focus:border-rose-500 rounded-xl px-4 py-3 font-bold text-sm outline-none transition-all placeholder:text-app-muted/30 text-rose-600 dark:text-rose-400"
+                  className="w-full bg-app-surface border-2 border-app-border focus:border-rose-500 rounded-xl px-4 py-3 font-bold text-sm outline-none transition-all placeholder:text-app-muted/30 text-rose-600 dark:text-rose-400 text-center tracking-widest"
                 />
               </div>
             </div>
@@ -200,11 +196,11 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-app-subtle/50 border-t border-app-border flex justify-end gap-3">
+        <div className="mt-8 pt-4 border-t border-app-border/50 grid grid-cols-2 gap-3 pb-6 md:pb-8">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isDeleting}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-app-muted hover:text-app-text hover:bg-app-border/50 transition-colors disabled:opacity-50"
+            className="h-12 rounded-xl bg-app-subtle text-app-muted font-bold text-sm hover:bg-app-border/50 hover:text-app-text transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -213,16 +209,16 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
             onClick={handleConfirm}
             disabled={!canSubmit || isDeleting}
             className={`
-                        px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2
-                        ${!canSubmit || isDeleting ? 'opacity-50 cursor-not-allowed bg-zinc-500 text-white' : styles.confirmBtn}
-                    `}
+              h-12 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
+              ${(!canSubmit || isDeleting) ? 'opacity-50 cursor-not-allowed bg-zinc-200 dark:bg-zinc-800 text-zinc-400' : styles.confirmBtn}
+            `}
           >
             {isDeleting && <span className="material-symbols-outlined text-lg animate-spin">sync</span>}
-            {isDeleting ? 'Procesando...' : (requireConfirmation || warningLevel === 'critical' ? 'Eliminar Definitivamente' : 'Sí, eliminar')}
+            {isDeleting ? 'Eliminando...' : 'Eliminar'}
           </button>
         </div>
 
       </div>
-    </div>
+    </SwipeableBottomSheet>
   );
 };

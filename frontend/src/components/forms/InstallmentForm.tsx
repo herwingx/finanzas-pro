@@ -87,7 +87,7 @@ export const InstallmentForm: React.FC<InstallmentFormProps> = ({
   return (
     <>
       <div className="flex justify-between items-center mb-6 pt-2">
-        <button type="button" onClick={onCancel} className="text-sm font-medium text-app-muted hover:text-app-text px-2">Cancelar</button>
+        <button type="button" onClick={onCancel} className="text-sm font-medium text-app-muted hover:text-app-text px-2 md:hidden">Cancelar</button>
         <h2 className="text-lg font-bold text-app-text">{title}</h2>
         <div className="w-12" />
       </div>

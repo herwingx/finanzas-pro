@@ -125,7 +125,7 @@ export const LoanForm: React.FC<LoanFormProps> = ({ existingLoan, onClose, isShe
       {/* 1. HEADER */}
       {isSheetMode ? (
         <div className="flex justify-between items-center mb-6 pt-2">
-          <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2">Cancelar</button>
+          <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2 md:hidden">Cancelar</button>
           <h2 className="text-lg font-bold text-app-text">{pageTitle}</h2>
           <div className="w-10" />
         </div>

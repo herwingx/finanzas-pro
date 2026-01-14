@@ -131,24 +131,14 @@ export const AccountForm: React.FC<AccountFormProps> = ({ existingAccount, onClo
         <button
           type="button"
           onClick={onClose}
-          className="text-sm font-medium text-app-muted hover:text-app-text px-2"
+          className="text-sm font-medium text-app-muted hover:text-app-text px-2 md:hidden"
         >
           Cancelar
         </button>
         <h2 className="text-lg font-bold text-app-text">
           {isEditMode ? 'Editar Cuenta' : 'Nueva Cuenta'}
         </h2>
-        {isEditMode ? (
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="text-sm font-bold text-rose-500 hover:text-rose-600 px-2"
-          >
-            Borrar
-          </button>
-        ) : (
-          <div className="w-12" />
-        )}
+        <div className="w-12" />
       </div>
 
       {/* 2. FORM BODY (Scrollable) */}

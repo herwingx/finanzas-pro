@@ -91,11 +91,9 @@ export const InvestmentForm: React.FC<{
     <>
       {/* Universal Sheet-Style Header (Requested by User) */}
       <div className="flex justify-between items-center mb-6 pt-2">
-        <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2">Cancelar</button>
+        <button type="button" onClick={onClose} className="text-sm font-medium text-app-muted hover:text-app-text px-2 md:hidden">Cancelar</button>
         <h2 className="text-lg font-bold text-app-text">{pageTitle}</h2>
-        {existingInvestment && onDeleteRequest ? (
-          <button type="button" onClick={onDeleteRequest} className="text-sm font-bold text-rose-500 hover:text-rose-600 px-2">Borrar</button>
-        ) : <div className="w-12" />}
+        <div className="w-12" />
       </div>
 
       <div className={`${isSheetMode ? '' : 'px-4 pt-4 max-w-lg mx-auto'} pb-safe flex flex-col h-full`}>

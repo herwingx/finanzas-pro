@@ -10,12 +10,14 @@ import { TransactionType, TransactionFormInitialData } from '../types';
    CONSTANTS
    ================================================================================== */
 const QUICK_ACTIONS = [
-  { id: 'exp', label: 'Gasto', icon: 'remove', color: 'bg-rose-50 text-rose-500 border-rose-200', type: 'expense' },
-  { id: 'inc', label: 'Ingreso', icon: 'add', color: 'bg-emerald-50 text-emerald-500 border-emerald-200', type: 'income' },
-  { id: 'trf', label: 'Transf.', icon: 'sync_alt', color: 'bg-blue-50 text-blue-500 border-blue-200', type: 'transfer' },
-  { id: 'fix', label: 'Recurrente', icon: 'event_repeat', color: 'bg-purple-50 text-purple-500 border-purple-200', action: 'recurring' },
-  { id: 'msi', label: 'A Plazos', icon: 'credit_card', color: 'bg-indigo-50 text-indigo-500 border-indigo-200', action: 'installments' },
-  { id: 'loan', label: 'Deuda', icon: 'handshake', color: 'bg-amber-50 text-amber-500 border-amber-200', action: 'loan' },
+  { id: 'expense', label: 'Gasto', icon: 'remove', color: 'bg-rose-500 text-white', type: 'expense' },
+  { id: 'income', label: 'Ingreso', icon: 'add', color: 'bg-emerald-500 text-white', type: 'income' },
+  { id: 'transfer', label: 'Transf.', icon: 'sync_alt', color: 'bg-blue-500 text-white', type: 'transfer' },
+  { id: 'recurring', label: 'Recurrente', icon: 'event_repeat', color: 'bg-purple-500 text-white', action: 'recurring' },
+  { id: 'installments', label: 'Plazos', icon: 'credit_card', color: 'bg-indigo-500 text-white', action: 'installments' },
+  { id: 'loan', label: 'Préstamo', icon: 'handshake', color: 'bg-amber-500 text-white', action: 'loan' },
+  { id: 'goal', label: 'Nueva Meta', icon: 'savings', color: 'bg-teal-500 text-white', action: 'goal' },
+  { id: 'invest', label: 'Inversión', icon: 'trending_up', color: 'bg-cyan-600 text-white', action: 'invest' },
 ];
 
 const MAIN_NAV = ['/', '/history', '/accounts', '/more'];
@@ -27,12 +29,15 @@ const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   // Global Context Actions
   const {
     openTransactionSheet,
     openRecurringSheet,
     openInstallmentSheet,
-    openLoanSheet
+    openLoanSheet,
+    openGoalSheet,
+    openInvestmentSheet
   } = useGlobalSheets();
 
   // Haptic Feedback Helper
@@ -47,6 +52,8 @@ const BottomNav: React.FC = () => {
       if (item.action === 'recurring') openRecurringSheet();
       else if (item.action === 'installments') openInstallmentSheet();
       else if (item.action === 'loan') openLoanSheet();
+      else if (item.action === 'goal') openGoalSheet();
+      else if (item.action === 'invest') openInvestmentSheet();
       else openTransactionSheet(null, { type: item.type as TransactionType });
     }, 100);
   };
@@ -63,7 +70,7 @@ const BottomNav: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMenuOpen(false)}
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] touch-none"
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] touch-none lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -72,30 +79,30 @@ const BottomNav: React.FC = () => {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            className="fixed bottom-[84px] left-4 right-4 z-50 max-w-sm mx-auto"
+            className="fixed bottom-[84px] left-4 right-4 z-50 max-w-sm mx-auto lg:hidden"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
           >
             <div className="bg-app-surface/95 backdrop-blur-xl rounded-[28px] p-5 shadow-2xl border border-app-border">
-              <div className="flex justify-between items-center mb-4 px-2">
-                <span className="text-xs font-bold text-app-muted uppercase tracking-wider">Nueva Acción</span>
+              <div className="flex justify-between items-center mb-5 px-2">
+                <span className="text-xs font-bold text-app-muted uppercase tracking-wider">Nueva Transacción</span>
                 <button onClick={() => setIsMenuOpen(false)} className="bg-app-subtle size-6 rounded-full flex items-center justify-center">
                   <span className="material-symbols-outlined text-xs">close</span>
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 {QUICK_ACTIONS.map(action => (
                   <button
                     key={action.id}
                     onClick={() => handleAction(action)}
                     className="flex flex-col items-center gap-2 group active:scale-95 transition-transform"
                   >
-                    <div className={`size-12 rounded-2xl flex items-center justify-center border ${action.color} dark:bg-opacity-10 dark:border-white/10 shadow-sm`}>
-                      <span className="material-symbols-outlined text-[24px]">{action.icon}</span>
+                    <div className={`size-14 rounded-2xl flex items-center justify-center shadow-lg ${action.color}`}>
+                      <span className="material-symbols-outlined text-[26px]">{action.icon}</span>
                     </div>
-                    <span className="text-[10px] font-medium text-app-text">{action.label}</span>
+                    <span className="text-[10px] font-bold text-app-text">{action.label}</span>
                   </button>
                 ))}
               </div>
@@ -105,7 +112,7 @@ const BottomNav: React.FC = () => {
       </AnimatePresence>
 
       {/* --- TAB BAR --- */}
-      <nav className="fixed bottom-0 w-full z-50 bg-app-surface/90 backdrop-blur-md border-t border-app-border pb-safe">
+      <nav className="fixed bottom-0 w-full z-50 bg-app-surface/90 backdrop-blur-md border-t border-app-border pb-safe lg:hidden">
         <div className="flex justify-around items-center h-[60px] px-2 max-w-md mx-auto relative">
 
           {/* Home */}

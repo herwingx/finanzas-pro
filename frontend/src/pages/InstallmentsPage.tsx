@@ -217,8 +217,11 @@ const InstallmentsPage: React.FC = () => {
                 title="Compras a Plazos"
                 showBackButton
                 rightAction={
-                    <button onClick={() => openInstallmentSheet()} className="text-app-primary hover:bg-app-primary/10 size-9 flex items-center justify-center rounded-full transition-all">
-                        <span className="material-symbols-outlined text-[20px]">add_circle</span>
+                    <button
+                        onClick={() => openInstallmentSheet()}
+                        className="bg-app-text text-app-bg size-7 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform hover:shadow-xl hover:scale-105"
+                    >
+                        <span className="material-symbols-outlined text-[18px] font-bold">add</span>
                     </button>
                 }
             />

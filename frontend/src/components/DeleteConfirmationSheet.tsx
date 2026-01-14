@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 
+/* ==================================================================================
+   TYPES
+   ================================================================================== */
 export type WarningLevel = 'critical' | 'warning' | 'normal';
 
 export interface ImpactDetail {
   account?: string;
-  amount?: number;
   balanceChange?: number;
-  msiPlan?: string;
-  msiProgress?: { current: number; total: number };
 }
 
-interface DeleteConfirmOptions {
+export interface DeleteConfirmOptions {
   revertBalance: boolean;
 }
 
@@ -19,18 +19,50 @@ interface DeleteConfirmationSheetProps {
   onClose: () => void;
   onConfirm: (options?: DeleteConfirmOptions) => void;
   itemName: string;
+
+  // UX Configuration
   warningLevel?: WarningLevel;
   warningMessage?: string;
   warningDetails?: string[];
+  requireConfirmation?: boolean; // Forces user to type "ELIMINAR"
   impactPreview?: ImpactDetail;
-  requireConfirmation?: boolean; // Requiere escribir "ELIMINAR"
+
+  // Data Logic Options
   isDeleting?: boolean;
-  // New Revert Option Props
   showRevertOption?: boolean;
   revertOptionLabel?: string;
   defaultRevertState?: boolean;
 }
 
+/* ==================================================================================
+   STYLES HELPER
+   ================================================================================== */
+const getStyles = (level: WarningLevel) => {
+  switch (level) {
+    case 'critical': return {
+      overlayIcon: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
+      icon: 'dangerous',
+      confirmBtn: 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20 text-white',
+      banner: 'bg-rose-50 border-rose-100 text-rose-800 dark:bg-rose-900/10 dark:border-rose-900/50 dark:text-rose-200'
+    };
+    case 'warning': return {
+      overlayIcon: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+      icon: 'warning',
+      confirmBtn: 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20 text-white', // Still red button for delete actions
+      banner: 'bg-amber-50 border-amber-100 text-amber-800 dark:bg-amber-900/10 dark:border-amber-900/50 dark:text-amber-200'
+    };
+    default: return {
+      overlayIcon: 'bg-app-subtle text-app-muted',
+      icon: 'delete',
+      confirmBtn: 'bg-app-primary hover:opacity-90 text-white shadow-app-primary/20',
+      banner: 'bg-app-subtle border-app-border text-app-text'
+    };
+  }
+};
+
+/* ==================================================================================
+   COMPONENT
+   ================================================================================== */
 export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = ({
   isOpen,
   onClose,
@@ -43,218 +75,150 @@ export const DeleteConfirmationSheet: React.FC<DeleteConfirmationSheetProps> = (
   requireConfirmation = false,
   isDeleting = false,
   showRevertOption = false,
-  revertOptionLabel = "Revertir impacto en saldo de cuentas",
+  revertOptionLabel = "Revertir impacto en saldos",
   defaultRevertState = true,
 }) => {
   const [confirmationText, setConfirmationText] = useState('');
-  const [acknowledgeWarning, setAcknowledgeWarning] = useState(false);
+  const [acknowledge, setAcknowledge] = useState(false);
   const [revertBalance, setRevertBalance] = useState(defaultRevertState);
 
-  // Reset state on open
+  // Reset state when opening
   useEffect(() => {
     if (isOpen) {
       setConfirmationText('');
-      setAcknowledgeWarning(false);
+      setAcknowledge(false);
       setRevertBalance(defaultRevertState);
     }
   }, [isOpen, defaultRevertState]);
 
-  // Handle ESC key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isDeleting) onClose();
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose, isDeleting]);
-
   if (!isOpen) return null;
 
-  const getVariantStyles = () => {
-    switch (warningLevel) {
-      case 'critical':
-        return {
-          headerBg: 'bg-rose-100 dark:bg-rose-900/30',
-          headerIconColor: 'text-rose-600 dark:text-rose-400',
-          iconName: 'dangerous',
-          bannerBg: 'bg-rose-50 dark:bg-rose-900/10',
-          bannerBorder: 'border-rose-100 dark:border-rose-900/30',
-          bannerText: 'text-rose-700 dark:text-rose-300'
-        };
-      case 'warning':
-        return {
-          headerBg: 'bg-amber-100 dark:bg-amber-900/30',
-          headerIconColor: 'text-amber-600 dark:text-amber-400',
-          iconName: 'warning',
-          bannerBg: 'bg-amber-50 dark:bg-amber-900/10',
-          bannerBorder: 'border-amber-100 dark:border-amber-900/30',
-          bannerText: 'text-amber-700 dark:text-amber-300'
-        };
-      default:
-        return {
-          headerBg: 'bg-zinc-100 dark:bg-zinc-800',
-          headerIconColor: 'text-zinc-600 dark:text-zinc-400',
-          iconName: 'delete', // Default icon
-          bannerBg: 'bg-app-subtle',
-          bannerBorder: 'border-app-border',
-          bannerText: 'text-app-text'
-        };
-    }
-  };
+  const styles = getStyles(warningLevel);
+  const canSubmit = requireConfirmation ? (confirmationText === 'ELIMINAR' && acknowledge) : true;
 
-  const styles = getVariantStyles();
-  const canConfirm = requireConfirmation
-    ? confirmationText === 'ELIMINAR' && acknowledgeWarning
-    : true;
-
-  const handleConfirm = () => {
-    onConfirm({ revertBalance });
-  };
+  const handleConfirm = () => onConfirm({ revertBalance });
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 flex items-center justify-center p-4 transition-opacity animate-in fade-in duration-200"
-      onClick={!isDeleting ? onClose : undefined}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
       <div
-        className="w-full max-w-md bg-app-surface border border-app-border rounded-3xl shadow-2xl overflow-hidden transform transition-all animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
-        onClick={e => e.stopPropagation()}
-      >
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in"
+        onClick={!isDeleting ? onClose : undefined}
+      />
 
-        {/* Header Section */}
-        <div className="p-6 pb-2">
-          <div className="flex gap-4">
-            <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${styles.headerBg}`}>
-              <span className={`material-symbols-outlined text-[28px] ${styles.headerIconColor}`}>
-                {styles.iconName}
-              </span>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-app-text tracking-tight">
-                {warningLevel === 'critical' ? '¿Estás absolutamente seguro?' : 'Confirmar eliminación'}
-              </h2>
-              <p className="text-sm text-app-muted mt-1 leading-snug">
-                Estás a punto de eliminar <span className="font-semibold text-app-text">"{itemName}"</span>
-              </p>
-            </div>
+      {/* Modal Content */}
+      <div className="relative w-full max-w-md bg-app-surface border border-app-border rounded-3xl shadow-2xl animate-scale-in overflow-hidden">
+
+        {/* Header */}
+        <div className="p-6 pb-2 flex gap-4">
+          <div className={`size-14 rounded-full flex items-center justify-center shrink-0 ${styles.overlayIcon}`}>
+            <span className="material-symbols-outlined text-[32px]">{styles.icon}</span>
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-app-text leading-tight">
+              {warningLevel === 'critical' ? 'Acción Irreversible' : 'Confirmar Eliminación'}
+            </h3>
+            <p className="text-sm text-app-muted mt-1 leading-snug">
+              Vas a eliminar permanentemente: <br />
+              <span className="font-semibold text-app-text">"{itemName}"</span>
+            </p>
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 pt-2 space-y-4">
+        {/* Body */}
+        <div className="p-6 pt-2 space-y-5">
 
-          {/* Dynamic Warning Banner */}
+          {/* 1. Dynamic Warning Banner */}
           {warningMessage && (
-            <div className={`p-4 rounded-2xl border ${styles.bannerBorder} ${styles.bannerBg}`}>
-              <div className="flex gap-2.5">
-                <span className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${styles.bannerText}`}>info</span>
-                <div>
-                  <p className={`text-sm font-bold ${styles.bannerText}`}>{warningMessage}</p>
-                  {warningDetails.length > 0 && (
-                    <ul className={`mt-2 space-y-1.5 text-xs opacity-90 ${styles.bannerText}`}>
-                      {warningDetails.map((d, i) => (
-                        <li key={i} className="flex gap-2">
-                          <span className="opacity-50">•</span> {d}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+            <div className={`p-4 rounded-xl border flex gap-3 ${styles.banner}`}>
+              <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5">info</span>
+              <div className="text-xs">
+                <p className="font-bold mb-1">{warningMessage}</p>
+                {warningDetails.length > 0 && (
+                  <ul className="list-disc list-inside space-y-0.5 opacity-90">
+                    {warningDetails.map((detail, idx) => <li key={idx}>{detail}</li>)}
+                  </ul>
+                )}
               </div>
             </div>
           )}
 
-          {/* Revert Option Toggle */}
+          {/* 2. Revert Toggle Option */}
           {showRevertOption && (
-            <label className="flex items-start gap-3 p-3 rounded-xl bg-app-subtle border border-app-border hover:bg-app-subtle/80 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={revertBalance}
-                onChange={e => setRevertBalance(e.target.checked)}
-                className="mt-0.5 w-4 h-4 text-app-primary border-gray-300 rounded focus:ring-app-primary"
-              />
-              <div>
-                <span className="text-sm font-bold text-app-text block">{revertOptionLabel}</span>
-                <span className="text-xs text-app-muted leading-tight block mt-0.5">
-                  {revertBalance
-                    ? "El dinero pendiente regresará al saldo de tu cuenta."
-                    : "Solo se borrará el registro. El saldo de tu cuenta NO cambiará."}
+            <label className="flex gap-3 p-3 rounded-2xl border border-app-border bg-app-subtle hover:border-app-primary/50 cursor-pointer transition-colors group">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  checked={revertBalance}
+                  onChange={e => setRevertBalance(e.target.checked)}
+                  className="peer size-5 accent-app-primary rounded cursor-pointer"
+                />
+              </div>
+              <div className="flex-1">
+                <span className="block text-sm font-bold text-app-text group-hover:text-app-primary transition-colors">
+                  {revertOptionLabel}
+                </span>
+                <span className="block text-xs text-app-muted mt-0.5 leading-snug">
+                  {revertBalance ? "El dinero regresará a la cuenta original." : "Solo se borra el historial. El saldo no cambia."}
                 </span>
               </div>
             </label>
           )}
 
-          {/* Data Impact Summary (Mini Scorecard) */}
-          {impactPreview && (
-            <div className="bg-app-subtle/50 border border-app-border rounded-2xl p-4 text-sm">
-              <p className="text-xs font-bold text-app-muted uppercase tracking-wide mb-3 ml-1">Resumen del impacto</p>
-              <div className="space-y-2">
-                {impactPreview.account && (
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-app-text">Cuenta afectada</span>
-                    <span className="font-medium text-app-text bg-app-surface px-2 py-0.5 rounded border border-app-border">{impactPreview.account}</span>
-                  </div>
-                )}
-                {impactPreview.balanceChange !== undefined && (
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-app-text">Ajuste de saldo</span>
-                    <span className={`font-bold tabular-nums ${impactPreview.balanceChange > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {impactPreview.balanceChange > 0 ? '+' : ''}${Math.abs(impactPreview.balanceChange).toFixed(2)}
-                      {!revertBalance && showRevertOption && <span className="ml-2 text-xs font-normal text-app-muted line-through opacity-50">(Ignorado)</span>}
-                    </span>
-                  </div>
-                )}
-              </div>
+          {/* 3. Impact Preview */}
+          {impactPreview && impactPreview.balanceChange !== undefined && (
+            <div className="bg-app-subtle/30 border border-app-border rounded-xl p-3 flex justify-between items-center text-xs">
+              <span className="text-app-muted font-bold uppercase tracking-wider">Impacto Estimado</span>
+              <span className={`font-mono font-bold ${revertBalance ? (impactPreview.balanceChange > 0 ? 'text-emerald-500' : 'text-rose-500') : 'text-app-muted line-through opacity-50'}`}>
+                {impactPreview.balanceChange > 0 ? '+' : ''}${Math.abs(impactPreview.balanceChange).toFixed(2)}
+              </span>
             </div>
           )}
 
-          {/* Critical Protection Gates */}
+          {/* 4. Critical Gate (Type "ELIMINAR") */}
           {requireConfirmation && (
-            <div className="space-y-4 pt-2">
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-app-subtle border border-app-border cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={acknowledgeWarning}
-                  onChange={e => setAcknowledgeWarning(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 text-app-primary border-gray-300 rounded focus:ring-app-primary"
-                />
-                <span className="text-xs text-app-muted leading-tight">Entiendo que esta acción es irreversible y afectará la integridad de mis datos.</span>
+            <div className="space-y-3 pt-2">
+              <label className="flex gap-3 items-start select-none cursor-pointer">
+                <input type="checkbox" checked={acknowledge} onChange={e => setAcknowledge(e.target.checked)} className="mt-1 size-4 accent-rose-500" />
+                <span className="text-xs text-app-text font-medium leading-tight">Entiendo que esta acción no se puede deshacer y asumo la responsabilidad.</span>
               </label>
-
               <div>
-                <label className="block text-xs font-bold text-app-text uppercase tracking-wide mb-1.5 ml-1">Escribe <span className="text-rose-500">ELIMINAR</span> para confirmar</label>
+                <label className="text-[10px] uppercase font-bold text-rose-500 mb-1.5 block">
+                  Escribe "ELIMINAR" para confirmar
+                </label>
                 <input
                   type="text"
                   value={confirmationText}
                   onChange={e => setConfirmationText(e.target.value.toUpperCase())}
-                  className="w-full px-4 py-3 bg-app-surface border border-app-border focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 rounded-xl outline-none font-bold text-app-text placeholder-app-muted/30 transition-all"
                   placeholder="ELIMINAR"
-                  autoComplete="off"
+                  className="w-full bg-app-subtle border-2 border-rose-500/20 focus:border-rose-500 rounded-xl px-4 py-3 font-bold text-sm outline-none transition-all placeholder:text-app-muted/30 text-rose-600 dark:text-rose-400"
                 />
               </div>
             </div>
           )}
+
         </div>
 
-        {/* Action Footer */}
-        <div className="p-4 bg-app-subtle/50 border-t border-app-border flex gap-3 justify-end">
+        {/* Footer */}
+        <div className="p-4 bg-app-subtle/50 border-t border-app-border flex justify-end gap-3">
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-app-text hover:bg-app-border/50 active:scale-95 transition-all"
+            className="px-5 py-2.5 rounded-xl text-sm font-bold text-app-muted hover:text-app-text hover:bg-app-border/50 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
+
           <button
             onClick={handleConfirm}
-            disabled={!canConfirm || isDeleting}
+            disabled={!canSubmit || isDeleting}
             className={`
-                 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg active:scale-95 transition-all flex items-center gap-2
-                 ${!canConfirm || isDeleting ? 'opacity-50 cursor-not-allowed bg-zinc-500' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'}
-              `}
+                        px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2
+                        ${!canSubmit || isDeleting ? 'opacity-50 cursor-not-allowed bg-zinc-500 text-white' : styles.confirmBtn}
+                    `}
           >
-            {isDeleting && <span className="material-symbols-outlined animate-spin text-lg">sync</span>}
-            {isDeleting ? 'Procesando...' : 'Eliminar Permanentemente'}
+            {isDeleting && <span className="material-symbols-outlined text-lg animate-spin">sync</span>}
+            {isDeleting ? 'Procesando...' : (requireConfirmation || warningLevel === 'critical' ? 'Eliminar Definitivamente' : 'Sí, eliminar')}
           </button>
         </div>
 

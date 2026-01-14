@@ -3,7 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useInvestments, useDeleteInvestment } from '../hooks/useApi';
 import { Investment } from '../types';
 import { PageHeader } from '../components/PageHeader';
-import { toastSuccess } from '../utils/toast';
+import { SwipeableItem } from '../components/SwipeableItem';
+import { toastSuccess, toastError } from '../utils/toast';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
@@ -148,11 +149,11 @@ const InvestmentsPage: React.FC = () => {
           <h3 className="font-bold text-lg text-app-text px-1">Mis Activos</h3>
 
           {isLoading ? (
-            <div className="text-center py-8 text-app-muted">Cargando portafolio...</div>
+            <div className="p-8 text-center text-app-muted">Cargando portafolio...</div>
           ) : investments?.length === 0 ? (
-            <div className="text-center py-12 bg-app-surface rounded-2xl border-dashed border-2 border-app-border/50">
-              <span className="material-symbols-outlined text-4xl text-app-muted mb-2">savings</span>
-              <p className="text-app-muted">No tienes inversiones registradas.</p>
+            <div className="text-center py-12 bg-app-surface border-2 border-dashed border-app-border rounded-3xl">
+              <span className="material-symbols-outlined text-4xl text-app-muted mb-2">show_chart</span>
+              <p className="text-app-muted text-sm">No tienes inversiones registradas.</p>
               <button onClick={openNew} className="mt-4 text-app-primary font-bold text-sm hover:underline">Comenzar a invertir</button>
             </div>
           ) : (
@@ -162,29 +163,40 @@ const InvestmentsPage: React.FC = () => {
               const isProfitable = gain >= 0;
 
               return (
-                <div key={inv.id}
-                  onClick={() => openEdit(inv)}
-                  className="group bg-app-surface border border-app-border rounded-2xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer relative overflow-hidden">
-
-                  <div className="flex items-center gap-4">
-                    <div className={`p - 3 rounded - xl ${isProfitable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'} `}>
-                      <span className="material-symbols-outlined text-xl">
-                        {inv.type === 'CRYPTO' ? 'currency_bitcoin' : inv.type === 'REAL_ESTATE' ? 'home_work' : 'trending_up'}
-                      </span>
+                <SwipeableItem
+                  key={inv.id}
+                  leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                  onSwipeRight={() => openEdit(inv)}
+                  rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Borrar' }}
+                  onSwipeLeft={() => setDeleteId(inv.id)}
+                  className="rounded-3xl"
+                >
+                  <div
+                    onClick={() => openEdit(inv)}
+                    className="bento-card p-4 md:p-5 flex justify-between items-center hover:border-app-border-strong transition-all active:scale-[0.99] cursor-pointer bg-app-surface"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`size-11 rounded-xl flex items-center justify-center ${isProfitable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                        <span className="material-symbols-outlined text-[24px]">
+                          {inv.type === 'CRYPTO' ? 'currency_bitcoin' : inv.type === 'REAL_ESTATE' ? 'home_work' : 'trending_up'}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-app-text text-sm">{inv.name}</h4>
+                        <p className="text-xs text-app-muted font-medium">{inv.quantity} {inv.ticker || 'unidades'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-app-text text-sm">{inv.name}</h4>
-                      <p className="text-xs text-app-muted font-medium">{inv.quantity} {inv.ticker || 'unidades'}</p>
+
+                    <div className="text-right">
+                      <p className="font-bold text-app-text text-base">
+                        ${val.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className={`text-xs font-bold ${isProfitable ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {isProfitable ? '+' : ''}{gain.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
                     </div>
                   </div>
-
-                  <div className="text-right">
-                    <p className="font-bold text-app-text text-base">${val.toLocaleString()}</p>
-                    <p className={`text - xs font - bold ${isProfitable ? 'text-emerald-500' : 'text-rose-500'} `}>
-                      {isProfitable ? '+' : ''}{gain.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
+                </SwipeableItem>
               );
             })
           )}

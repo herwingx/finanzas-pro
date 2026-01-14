@@ -250,15 +250,16 @@ const LoansPage: React.FC = () => {
               return (
                 <SwipeableItem
                   key={loan.id}
-                  // Swipe RIGHT -> muestra leftAction (Editar)
                   leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                   onSwipeRight={() => handleEdit(loan)}
-                  // Swipe LEFT -> muestra rightAction (Eliminar)
                   rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
                   onSwipeLeft={() => setLoanToDelete(loan)}
-                  className="mb-3 rounded-3xl"
+                  className="rounded-3xl"
                 >
-                  <div onClick={() => setSelectedLoan(loan)} className="bg-app-surface p-4 rounded-3xl border border-app-border hover:bg-app-subtle/50 transition-colors flex items-center gap-4 cursor-pointer">
+                  <div
+                    onClick={() => setSelectedLoan(loan)}
+                    className="bento-card p-4 flex items-center gap-4 hover:border-app-border-strong cursor-pointer active:scale-[0.99] transition-all bg-app-surface"
+                  >
                     <div className={`size-12 rounded-full flex items-center justify-center text-xl shrink-0 ${isPaid ? 'bg-emerald-100 text-emerald-600' :
                       isLent ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/20' : 'bg-rose-100 text-rose-600 dark:bg-rose-900/20'
                       }`}>

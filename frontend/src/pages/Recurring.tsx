@@ -344,18 +344,18 @@ const Recurring: React.FC = () => {
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
                                     onSwipeRight={() => handleEdit(tx.id)}
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                                    className="mb-3 rounded-3xl"
+                                    className="rounded-3xl"
                                 >
                                     <div
                                         onClick={() => handleItemClick(tx)}
                                         className={`
-                                            bg-app-surface border p-4 rounded-3xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform
-                                            ${isOverdue ? 'border-rose-200 dark:border-rose-900/50 bg-rose-50/30' : 'border-app-border hover:border-app-primary/30'}
+                                            bento-card p-4 md:p-5 flex items-center gap-4 cursor-pointer active:scale-[0.99] transition-all bg-app-surface
+                                            ${isOverdue ? 'border-rose-400 dark:border-rose-500 bg-rose-50/10' : 'hover:border-app-border-strong'}
                                         `}>
                                         <div
-                                            className="size-12 rounded-2xl flex items-center justify-center shrink-0 border border-transparent"
+                                            className="size-11 rounded-xl flex items-center justify-center shrink-0 border border-transparent shadow-sm"
                                             style={{
-                                                backgroundColor: `${category?.color || '#999'}20`,
+                                                backgroundColor: `${category?.color || '#999'}15`,
                                                 color: category?.color || '#999',
                                                 borderColor: isOverdue ? '#f43f5e' : 'transparent'
                                             }}

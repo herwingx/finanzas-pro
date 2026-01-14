@@ -187,7 +187,7 @@ const Profile: React.FC = () => {
         {/* 2. CONFIGURACIÓN GENERAL (Card Style) */}
         <div className="space-y-3">
           <h3 className="px-1 text-xs font-bold text-app-muted uppercase tracking-wider">Región y Formatos</h3>
-          <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm divide-y divide-app-subtle">
+          <div className="bg-app-surface border border-app-border rounded-3xl overflow-hidden shadow-sm divide-y divide-app-subtle">
 
             {/* Moneda */}
             <div className="p-4 flex items-center justify-between">
@@ -250,7 +250,7 @@ const Profile: React.FC = () => {
             <span className="material-symbols-outlined text-app-muted text-sm opacity-50" title="Configura tus ingresos base para el análisis automático">info</span>
           </div>
 
-          <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-sm p-4 space-y-4">
+          <div className="bg-app-surface border border-app-border rounded-3xl overflow-hidden shadow-sm p-4 space-y-4">
 
             {/* Income Row */}
             <div className="flex items-center justify-between">

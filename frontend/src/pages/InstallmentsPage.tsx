@@ -272,15 +272,15 @@ const InstallmentsPage: React.FC = () => {
                                     leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(purchase)}
                                     rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
-                                    className="mb-3 rounded-3xl"
+                                    className="rounded-3xl"
                                 >
                                     <div
                                         onClick={() => setSelectedItem(purchase)}
-                                        className="group bg-app-surface border border-app-border rounded-3xl p-4 md:p-5 hover:border-app-border/80 transition-all active:scale-[0.99] cursor-pointer"
+                                        className="bento-card p-4 md:p-5 hover:border-app-border-strong transition-all active:scale-[0.99] cursor-pointer bg-app-surface"
                                     >
                                         <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-start gap-3">
-                                                <div className="mt-1 size-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500">
+                                            <div className="flex items-start gap-3.5">
+                                                <div className="mt-1 size-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500">
                                                     <span className="material-symbols-outlined text-[18px]">credit_score</span>
                                                 </div>
                                                 <div>

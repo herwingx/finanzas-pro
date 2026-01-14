@@ -1,291 +1,311 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+
+// Hooks & Context
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { useCategories, useDeleteCategory } from '../hooks/useApi';
-import { Category } from '../types';
-import { toastSuccess, toastError } from '../utils/toast';
+
+// Components
 import { PageHeader } from '../components/PageHeader';
 import { SkeletonTransactionList } from '../components/Skeleton';
 import { SwipeableItem } from '../components/SwipeableItem';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { CategorySelector } from '../components/CategorySelector';
 import { Button } from '../components/Button';
-import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
-import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
-import { getValidIcon } from '../utils/icons';
-import { useGlobalSheets } from '../context/GlobalSheetContext';
 
-// ============== CATEGORY DETAIL SHEET ==============
-const CategoryDetailSheet = ({
-    category,
-    onClose,
-    onEdit,
-    onDelete
-}: {
-    category: Category | null;
-    onClose: () => void;
-    onEdit: () => void;
-    onDelete: () => void;
-}) => {
+// Utils
+import { toastSuccess, toastError } from '../utils/toast';
+import { getValidIcon } from '../utils/icons';
+import { Category } from '../types';
+
+/* ==================================================================================
+   SUB-COMPONENT: DETAIL SHEET (Quick View)
+   ================================================================================== */
+const CategoryDetailSheet = ({ category, onClose, onEdit, onDelete }: any) => {
     if (!category) return null;
 
-    const budgetLabels: Record<string, string> = {
-        need: 'Necesidad (50%)',
-        NEEDS: 'Necesidad (50%)',
-        want: 'Deseo (30%)',
-        WANTS: 'Deseo (30%)',
-        savings: 'Ahorro (20%)',
-        SAVINGS: 'Ahorro (20%)'
-    };
+    const typeMap = {
+        'need': { label: 'Necesidad (50%)', color: 'bg-emerald-500', text: 'text-emerald-600' },
+        'want': { label: 'Deseo (30%)', color: 'bg-purple-500', text: 'text-purple-600' },
+        'savings': { label: 'Ahorro (20%)', color: 'bg-amber-500', text: 'text-amber-600' },
+    } as any;
+
+    // Normalize budget type keys
+    const rawKey = category.budgetType?.toLowerCase();
+    const budgetInfo = typeMap[rawKey] || { label: 'Sin Clasificar', color: 'bg-gray-400', text: 'text-app-muted' };
 
     return (
         <SwipeableBottomSheet isOpen={!!category} onClose={onClose}>
-            <div className="text-center mb-6">
-                <div
-                    className="size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm"
-                    style={{ backgroundColor: `${category.color}20`, color: category.color }}
-                >
-                    <span className="material-symbols-outlined">{getValidIcon(category.icon)}</span>
-                </div>
-                <h2 className="text-xl font-bold text-app-text">{category.name}</h2>
-                <p className="text-sm text-app-muted capitalize">{category.type === 'expense' ? 'Gasto' : 'Ingreso'}</p>
-            </div>
+            <div className="pt-2 pb-6 px-4">
 
-            {/* Info Card */}
-            <div className="bg-app-subtle rounded-2xl p-5 mb-6 border border-app-border/50">
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Tipo</p>
-                        <p className="text-sm font-semibold text-app-text capitalize">
-                            {category.type === 'expense' ? 'Gasto' : 'Ingreso'}
-                        </p>
+                {/* 1. Header Hero */}
+                <div className="flex flex-col items-center mb-8">
+                    <div
+                        className="size-20 rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-sm border border-black/5"
+                        style={{ backgroundColor: `${category.color}20`, color: category.color }}
+                    >
+                        <span className="material-symbols-outlined text-[40px]">{getValidIcon(category.icon)}</span>
                     </div>
-                    <div>
-                        <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Regla 50/30/20</p>
-                        <p className="text-sm font-semibold text-app-text">
-                            {category.budgetType ? budgetLabels[category.budgetType] || category.budgetType : 'Sin asignar'}
-                        </p>
-                    </div>
+                    <h2 className="text-2xl font-bold text-app-text tracking-tight text-center leading-tight mb-1">{category.name}</h2>
+                    <span className="px-3 py-0.5 bg-app-subtle border border-app-border rounded-full text-[10px] uppercase font-bold tracking-wider text-app-muted">
+                        {category.type === 'expense' ? 'Gasto' : 'Ingreso'}
+                    </span>
                 </div>
-            </div>
 
-            {/* Actions */}
-            <div className="hidden md:flex gap-3">
-                <button
-                    onClick={onEdit}
-                    className="flex-1 py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-lg">edit</span>
-                    Editar
-                </button>
-                <button
-                    onClick={onDelete}
-                    className="py-3.5 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold hover:opacity-80 transition-opacity flex items-center justify-center"
-                >
-                    <span className="material-symbols-outlined text-lg">delete</span>
-                </button>
+                {/* 2. Rule Info */}
+                {category.type === 'expense' && (
+                    <div className="bento-card bg-app-subtle/50 p-4 flex items-center gap-4 mb-6 border-app-border/50">
+                        <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${budgetInfo.text} bg-white dark:bg-black`}>
+                            <div className={`size-3 rounded-full ${budgetInfo.color}`} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase font-bold text-app-muted tracking-wide mb-0.5">Regla de Presupuesto</p>
+                            <p className="text-base font-bold text-app-text">{budgetInfo.label}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. Actions Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={() => { onClose(); onEdit(); }}
+                        className="h-12 flex items-center justify-center gap-2 rounded-xl bg-app-surface border border-app-border text-sm font-bold text-app-text hover:bg-app-subtle active:scale-[0.98] transition-all"
+                    >
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                        Editar
+                    </button>
+                    <button
+                        onClick={() => { onClose(); onDelete(); }}
+                        className="h-12 flex items-center justify-center gap-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/10 dark:hover:bg-rose-900/20 text-sm font-bold text-rose-600 dark:text-rose-400 active:scale-[0.98] transition-all"
+                    >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                        Eliminar
+                    </button>
+                </div>
             </div>
         </SwipeableBottomSheet>
     );
 };
 
+/* ==================================================================================
+   MAIN COMPONENT
+   ================================================================================== */
+
 const Categories: React.FC = () => {
     const [searchParams] = useSearchParams();
-    const { data: categories, isLoading } = useCategories();
-    const deleteMutation = useDeleteCategory();
     const { openCategorySheet } = useGlobalSheets();
 
-    // Reassignment Modal State
-    const [reassignData, setReassignData] = useState<{ categoryToDelete: Category } | null>(null);
-    const [reassignTargetId, setReassignTargetId] = useState<string>('');
-    const [deleteConfirmation, setDeleteConfirmation] = useState<Category | null>(null);
+    // Query & Mutation
+    const { data: categories, isLoading } = useCategories();
+    const deleteMutation = useDeleteCategory();
+
+    // Local UI State
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<Category | null>(null); // For Confirmation Sheet
 
-    // Deep link handler
-    useEffect(() => {
-        if (searchParams.get('action') === 'new') {
-            openCategorySheet();
-        }
-    }, [searchParams, openCategorySheet]);
+    // Reassignment State
+    const [reassignSource, setReassignSource] = useState<Category | null>(null); // If failed deletion
+    const [reassignTargetId, setReassignTargetId] = useState('');
 
-    // Derived Data
-    const expenses = useMemo(() => categories?.filter(c => c.type === 'expense') || [], [categories]);
-    const incomes = useMemo(() => categories?.filter(c => c.type === 'income') || [], [categories]);
-    const reassignList = useMemo(() =>
-        categories?.filter(c => (reassignData || deleteConfirmation) && c.type === (reassignData?.categoryToDelete.type || deleteConfirmation?.type) && c.id !== (reassignData?.categoryToDelete.id || deleteConfirmation?.id)) || []
-        , [categories, reassignData, deleteConfirmation]);
+    // Derived Lists
+    const { expenses, incomes } = useMemo(() => ({
+        expenses: categories?.filter(c => c.type === 'expense') || [],
+        incomes: categories?.filter(c => c.type === 'income') || []
+    }), [categories]);
+
+    // Derived List for Reassign (Excluding source)
+    const reassignList = useMemo(() => {
+        if (!reassignSource) return [];
+        return categories?.filter(c => c.type === reassignSource.type && c.id !== reassignSource.id) || [];
+    }, [categories, reassignSource]);
+
 
     // Handlers
-    const handleEdit = (cat: Category) => {
-        openCategorySheet(cat);
-    };
+    useEffect(() => {
+        if (searchParams.get('action') === 'new') openCategorySheet();
+    }, [searchParams, openCategorySheet]);
 
-    const handleDeleteClick = (category: Category) => {
-        setDeleteConfirmation(category);
-    };
+    const handleEdit = (cat: Category) => openCategorySheet(cat);
 
-    const confirmDelete = async () => {
-        if (!deleteConfirmation) return;
+    // Step 1: Request Deletion
+    const handleDeleteClick = (cat: Category) => setDeleteTarget(cat);
+
+    // Step 2: Confirm Deletion -> Try API
+    const executeDelete = async () => {
+        if (!deleteTarget) return;
+        const target = deleteTarget;
+
+        // Optimistic UI closure
+        setDeleteTarget(null);
+
         try {
-            await deleteMutation.mutateAsync({ id: deleteConfirmation.id });
+            await deleteMutation.mutateAsync({ id: target.id });
             toastSuccess('Categoría eliminada');
-            setDeleteConfirmation(null);
-        } catch (error: any) {
-            setDeleteConfirmation(null);
-            if (error.message === 'in-use') {
-                setReassignData({ categoryToDelete: deleteConfirmation });
+        } catch (e: any) {
+            // Step 3: Handle Constraint Error (Need Reassign)
+            if (e.message === 'in-use' || e.message.includes('foreign key')) {
+                setReassignSource(target); // Trigger Reassign Modal
             } else {
-                toastError(error.message);
+                toastError('No se pudo eliminar');
             }
         }
     };
 
-    const handleReassignConfirm = async () => {
-        if (!reassignData || !reassignTargetId) return;
+    // Step 4: Execute Reassignment & Deletion
+    const executeReassign = async () => {
+        if (!reassignSource || !reassignTargetId) return;
+
         try {
-            await deleteMutation.mutateAsync({ id: reassignData.categoryToDelete.id, newCategoryId: reassignTargetId });
-            toastSuccess('Categoría eliminada y reasignada');
-            setReassignData(null);
+            await deleteMutation.mutateAsync({
+                id: reassignSource.id,
+                newCategoryId: reassignTargetId
+            });
+            toastSuccess('Reasignado y eliminado correctamente');
+            setReassignSource(null);
             setReassignTargetId('');
-        } catch (e: any) { toastError(e.message); }
+        } catch (e) {
+            toastError('Error al reasignar');
+        }
     };
 
-    // Render Category List with Swipe
-    const renderList = (title: string, list: Category[]) => (
-        <div className="mb-6 md:mb-8">
-            <h3 className="text-xs font-bold text-app-muted uppercase mb-4 md:mb-6 ml-2 tracking-wide flex items-center gap-2">
-                {title} <span className="bg-app-subtle px-1.5 rounded text-[10px]">{list.length}</span>
+
+    const renderGroup = (title: string, list: Category[]) => (
+        <div className="mb-8 md:mb-12">
+            <h3 className="px-1 mb-4 md:mb-6 text-xs font-bold text-app-muted uppercase tracking-wider flex items-center gap-2">
+                {title}
+                <span className="bg-app-subtle px-1.5 py-0.5 rounded text-[10px] text-app-text">{list.length}</span>
             </h3>
 
-            <div className="space-y-2">
-                {list.map(cat => (
+            <div className="space-y-3">
+                {list.length > 0 ? list.map(cat => (
                     <SwipeableItem
                         key={cat.id}
-                        onSwipeRight={() => handleEdit(cat)}
                         leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                        onSwipeRight={() => handleEdit(cat)}
+                        rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Borrar' }}
                         onSwipeLeft={() => handleDeleteClick(cat)}
-                        rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
                         className="rounded-3xl"
                     >
                         <div
                             onClick={() => setSelectedCategory(cat)}
-                            className="bg-app-surface border border-app-border rounded-3xl p-3.5 flex items-center gap-3.5 cursor-pointer hover:border-app-primary/30 active:scale-[0.98] transition-all">
+                            className="bento-card p-4 flex items-center gap-3.5 hover:border-app-border-strong cursor-pointer active:scale-[0.99] transition-all bg-app-surface"
+                        >
                             <div
-                                className="size-11 rounded-xl flex items-center justify-center shrink-0"
-                                style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
+                                className="size-10 rounded-xl flex items-center justify-center text-lg shadow-sm border border-black/5"
+                                style={{ backgroundColor: `${cat.color}20`, color: cat.color }}
                             >
-                                <span className="material-symbols-outlined text-[22px]">{getValidIcon(cat.icon)}</span>
+                                <span className="material-symbols-outlined text-[20px]">{getValidIcon(cat.icon)}</span>
                             </div>
+
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-app-text truncate">{cat.name}</p>
-                                {cat.budgetType && (
-                                    <p className="text-[10px] text-app-muted uppercase tracking-wide">
-                                        {cat.budgetType === 'need' ? 'Necesidad' : cat.budgetType === 'want' ? 'Deseo' : 'Ahorro'}
-                                    </p>
-                                )}
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    {/* Small Dot Color */}
+                                    <div className="size-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                    {cat.budgetType && (
+                                        <p className="text-[10px] font-medium text-app-muted uppercase tracking-wide">
+                                            {cat.budgetType === 'need' ? 'Necesidad' : cat.budgetType === 'want' ? 'Deseo' : 'Ahorro'}
+                                        </p>
+                                    )}
+                                    {!cat.budgetType && <p className="text-[10px] text-app-muted italic">General</p>}
+                                </div>
                             </div>
+
+                            <span className="material-symbols-outlined text-app-border text-lg -mr-1">chevron_right</span>
                         </div>
                     </SwipeableItem>
-                ))}
-
-                {list.length === 0 && (
-                    <div className="bg-app-surface border border-app-border rounded-2xl p-6 text-center text-xs text-app-muted">
-                        No hay categorías de este tipo.
+                )) : (
+                    <div className="p-8 border-2 border-dashed border-app-border rounded-2xl flex flex-col items-center justify-center text-center opacity-60">
+                        <span className="material-symbols-outlined text-3xl mb-2 text-app-muted">folder_off</span>
+                        <p className="text-xs text-app-muted">Sin categorías.</p>
                     </div>
                 )}
             </div>
         </div>
     );
 
+
     return (
-        <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
-            <PageHeader title="Categorías" showBackButton />
+        <div className="min-h-dvh bg-app-bg text-app-text pb-safe font-sans">
 
-            <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-
-                {/* Section Header with Add Button */}
-                <div className="flex justify-between items-center px-1">
-                    <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Gestionar Categorías</h2>
-                    <button
-                        onClick={() => openCategorySheet()}
-                        className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                        <span className="hidden sm:inline">Nueva</span>
+            {/* 1. Header (Floating on Desktop, Sticky on Mobile) */}
+            <PageHeader
+                title="Categorías"
+                showBackButton
+                rightAction={
+                    <button onClick={() => openCategorySheet()} className="flex items-center justify-center size-8 bg-app-text text-app-bg rounded-full hover:scale-105 active:scale-95 transition-all shadow-md">
+                        <span className="material-symbols-outlined text-[20px]">add</span>
                     </button>
-                </div>
+                }
+            />
 
-                {isLoading ? <SkeletonTransactionList count={8} /> : (
+            {/* 2. Content */}
+            <div className="max-w-xl mx-auto px-4 py-4 animate-fade-in pb-20">
+                {isLoading ? <SkeletonTransactionList count={6} /> : (
                     <>
-                        {renderList('Gastos', expenses)}
-                        {renderList('Ingresos', incomes)}
+                        {renderGroup('Gastos & Egresos', expenses)}
+                        {renderGroup('Ingresos & Entradas', incomes)}
                     </>
                 )}
 
-                {/* Tip */}
-                <div className="mt-6 p-4 bg-app-subtle/50 rounded-2xl border border-app-border flex items-start gap-3">
-                    <span className="material-symbols-outlined text-app-muted text-xl shrink-0">swipe</span>
-                    <p className="text-xs text-app-muted leading-relaxed">
-                        <strong className="text-app-text">Tip:</strong> Desliza a la derecha para editar o a la izquierda para eliminar una categoría.
-                    </p>
-                </div>
+                {/* Empty Tip */}
+                {!isLoading && expenses.length + incomes.length === 0 && (
+                    <div className="mt-8 text-center p-6">
+                        <p className="font-bold text-lg mb-2">¡Comienza!</p>
+                        <p className="text-sm text-app-muted mb-4">No tienes categorías. Crea la primera para organizar tus finanzas.</p>
+                        <button onClick={() => openCategorySheet()} className="btn btn-primary px-6 py-2 rounded-xl text-sm font-bold">
+                            Crear Categoría
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* Delete Confirmation */}
-            {deleteConfirmation && (
-                <DeleteConfirmationSheet
-                    isOpen={!!deleteConfirmation}
-                    onClose={() => setDeleteConfirmation(null)}
-                    onConfirm={confirmDelete}
-                    itemName={deleteConfirmation.name}
-                    warningMessage="¿Eliminar categoría?"
-                    warningDetails={['Se te pedirá reasignar las transacciones si existen movimientos asociados.']}
-                    isDeleting={deleteMutation.isPending}
-                />
-            )}
+            {/* 3. Reassign Modal (System Native Look) */}
+            {reassignSource && (
+                <div className="fixed inset-0 z-60 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="w-full max-w-sm bg-app-surface rounded-3xl p-6 shadow-2xl animate-scale-in relative border border-app-border">
 
-            {/* Reassign Modal */}
-            {reassignData && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-                    <div className="w-full max-w-sm bg-app-surface rounded-3xl p-6 shadow-2xl animate-scale-in border border-app-border">
-                        <div className="text-center mb-5">
-                            <div className="size-12 bg-amber-50 dark:bg-amber-900/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <span className="material-symbols-outlined text-2xl">warning</span>
+                        {/* Modal Header */}
+                        <div className="text-center mb-6">
+                            <div className="size-14 mx-auto mb-4 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-2xl flex items-center justify-center shadow-inner">
+                                <span className="material-symbols-outlined text-3xl">move_down</span>
                             </div>
-                            <h3 className="text-lg font-bold text-app-text">Categoría en Uso</h3>
-                            <p className="text-sm text-app-muted mt-1 leading-snug">
-                                <span className="font-semibold text-app-text">"{reassignData.categoryToDelete.name}"</span> tiene movimientos asociados. Elige dónde moverlos para continuar.
+                            <h3 className="text-lg font-bold text-app-text">Mover Movimientos</h3>
+                            <p className="text-sm text-app-muted mt-2 leading-relaxed">
+                                <strong className="text-app-text">{reassignSource.name}</strong> contiene historial financiero. Elige un nuevo destino antes de borrarla.
                             </p>
                         </div>
 
+                        {/* Selector Area */}
                         <div className="space-y-4">
-                            <div>
-                                <label className="text-[10px] uppercase font-bold text-app-muted block mb-2 text-center">
-                                    Nueva categoría destino
-                                </label>
-                                <div className="max-h-48 overflow-y-auto border border-app-border rounded-xl custom-scrollbar p-2">
-                                    <CategorySelector
-                                        categories={reassignList}
-                                        selectedId={reassignTargetId}
-                                        onSelect={setReassignTargetId}
-                                    />
-                                </div>
+                            <div className="bg-app-subtle p-2 rounded-2xl border border-app-border max-h-[220px] overflow-y-auto custom-scrollbar">
+                                <CategorySelector
+                                    categories={reassignList}
+                                    selectedId={reassignTargetId}
+                                    onSelect={setReassignTargetId}
+                                />
+                                {reassignList.length === 0 && (
+                                    <p className="text-center text-xs text-app-muted py-4">No hay otras categorías disponibles.</p>
+                                )}
                             </div>
 
-                            <div className="flex gap-2 pt-2">
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-2">
                                 <Button
                                     variant="secondary"
-                                    onClick={() => { setReassignData(null); setReassignTargetId(''); }}
-                                    fullWidth
+                                    onClick={() => { setReassignSource(null); setReassignTargetId(''); }}
+                                    className="flex-1 rounded-xl h-11 text-xs font-bold"
                                 >
                                     Cancelar
                                 </Button>
                                 <Button
-                                    variant="danger"
+                                    variant="primary"
                                     disabled={!reassignTargetId || deleteMutation.isPending}
-                                    onClick={handleReassignConfirm}
-                                    isLoading={deleteMutation.isPending}
-                                    fullWidth
+                                    onClick={executeReassign}
+                                    className="flex-1 rounded-xl h-11 text-xs font-bold"
                                 >
-                                    Confirmar
+                                    Confirmar Mover
                                 </Button>
                             </div>
                         </div>
@@ -293,23 +313,33 @@ const Categories: React.FC = () => {
                 </div>
             )}
 
-            {/* Category Detail Sheet */}
+            {/* 4. Delete Confirm Sheet */}
+            {deleteTarget && (
+                <DeleteConfirmationSheet
+                    isOpen={!!deleteTarget}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={executeDelete}
+                    itemName={deleteTarget.name}
+                    isDeleting={deleteMutation.isPending}
+                    warningMessage={`¿Eliminar ${deleteTarget.name}?`}
+                    warningDetails={["Esta acción es permanente para la categoría.", "Si hay datos, te pediremos reasignarlos."]}
+                />
+            )}
+
+            {/* 5. Detail View Sheet */}
             <CategoryDetailSheet
                 category={selectedCategory}
                 onClose={() => setSelectedCategory(null)}
                 onEdit={() => {
-                    if (selectedCategory) {
-                        handleEdit(selectedCategory);
-                        setSelectedCategory(null);
-                    }
+                    handleEdit(selectedCategory!);
+                    setSelectedCategory(null);
                 }}
                 onDelete={() => {
-                    if (selectedCategory) {
-                        handleDeleteClick(selectedCategory);
-                        setSelectedCategory(null);
-                    }
+                    handleDeleteClick(selectedCategory!);
+                    setSelectedCategory(null);
                 }}
             />
+
         </div>
     );
 };

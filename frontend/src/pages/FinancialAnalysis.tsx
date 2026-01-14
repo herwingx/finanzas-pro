@@ -413,7 +413,7 @@ const FinancialAnalysis: React.FC = () => {
                 </button>
               )}
             </div>
-            <div className="bg-app-surface border border-app-border rounded-2xl divide-y divide-app-subtle overflow-hidden">
+            <div className="bg-app-surface border border-app-border rounded-3xl divide-y divide-app-subtle overflow-hidden">
               {upcomingPayments.expenses.length === 0 && (
                 <p className="p-6 text-center text-xs text-app-muted">Sin gastos fijos.</p>
               )}
@@ -446,7 +446,7 @@ const FinancialAnalysis: React.FC = () => {
                 </button>
               )}
             </div>
-            <div className="bg-app-surface border border-app-border rounded-2xl divide-y divide-app-subtle overflow-hidden">
+            <div className="bg-app-surface border border-app-border rounded-3xl divide-y divide-app-subtle overflow-hidden">
               {upcomingPayments.msi.length === 0 && (
                 <p className="p-6 text-center text-xs text-app-muted">Sin pagos a plazos activos.</p>
               )}

@@ -203,7 +203,7 @@ const History: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="bg-app-surface border border-app-border rounded-3xl overflow-hidden divide-y divide-app-border shadow-sm">
+                <div className="space-y-3">
                   {groupTxs.map(tx => {
                     const cat = getCategoryInfo(tx.categoryId);
                     const accName = getAccountName(tx.accountId);
@@ -217,8 +217,6 @@ const History: React.FC = () => {
 
                     // Visual color classes
                     let amountColor = isExpense ? 'text-app-text' : isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-500';
-                    let bgIcon = isTransfer ? 'bg-blue-500/10' : '';
-                    let colorIcon = isTransfer ? 'text-blue-500' : cat.color;
 
                     // Dynamic Style for Icon
                     const iconStyle = isTransfer ? {} : {
@@ -230,17 +228,18 @@ const History: React.FC = () => {
                       <SwipeableItem
                         key={tx.id}
                         leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                        rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }} // Tailwind Red 500
+                        rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
                         onSwipeRight={() => handleEdit(tx)}
                         onSwipeLeft={() => handleDeleteClick(tx)}
+                        className="rounded-3xl"
                       >
                         <div
                           onClick={() => setSelectedTx(tx)}
-                          className="flex items-center gap-3 p-4 hover:bg-app-subtle/40 active:bg-app-subtle transition-colors cursor-default"
+                          className="bento-card p-4 flex items-center gap-3.5 hover:border-app-border-strong cursor-pointer active:scale-[0.99] transition-all bg-app-surface"
                         >
                           {/* Icon */}
                           <div
-                            className={`size-10 shrink-0 rounded-xl flex items-center justify-center ${isTransfer ? 'bg-app-subtle' : ''}`}
+                            className={`size-10 shrink-0 rounded-xl flex items-center justify-center ${isTransfer ? 'bg-app-subtle text-blue-500' : ''}`}
                             style={iconStyle}
                           >
                             <span className="material-symbols-outlined text-[20px]">{displayIcon}</span>

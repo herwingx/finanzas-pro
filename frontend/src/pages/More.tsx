@@ -148,7 +148,7 @@ const More: React.FC = () => {
                 {section.title}
               </h3>
 
-              <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden divide-y divide-app-border shadow-sm">
+              <div className="bg-app-surface border border-app-border rounded-3xl overflow-hidden divide-y divide-app-border shadow-sm">
                 {section.items.map(item => (
                   <MenuRow key={item.path} {...item} />
                 ))}
@@ -161,7 +161,7 @@ const More: React.FC = () => {
         <div className="pt-2 pb-6">
           <button
             onClick={handleLogout}
-            className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl border border-app-border bg-app-surface text-rose-500 font-bold text-sm hover:bg-rose-50 dark:hover:bg-rose-900/10 hover:border-rose-200 transition-all active:scale-[0.98]"
+            className="w-full h-12 flex items-center justify-center gap-2 rounded-3xl border border-app-border bg-app-surface text-rose-500 font-bold text-sm hover:bg-rose-50 dark:hover:bg-rose-900/10 hover:border-rose-200 transition-all active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
             Cerrar Sesión

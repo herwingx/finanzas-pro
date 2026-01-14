@@ -4,50 +4,69 @@ import { PageHeader } from '../components/PageHeader';
 import { useGoals, useAddGoal, useUpdateGoal, useDeleteGoal, useAddGoalContribution, useWithdrawFromGoal, useAccounts, useProfile } from '../hooks/useApi';
 import { toastSuccess, toastError } from '../utils/toast';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { SwipeableItem } from '../components/SwipeableItem';
 import { SavingsGoal } from '../types';
 import { useGlobalSheets } from '../context/GlobalSheetContext';
 
-const GoalCard = ({ goal, onSelect }: { goal: SavingsGoal, onSelect: () => void }) => {
+const GoalCard = ({
+  goal,
+  onSelect,
+  onEdit,
+  onDelete
+}: {
+  goal: SavingsGoal,
+  onSelect: () => void,
+  onEdit: () => void,
+  onDelete: () => void
+}) => {
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
   const progress = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
 
   return (
-    <div
-      onClick={onSelect}
-      className="bg-app-surface border border-app-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform cursor-pointer"
+    <SwipeableItem
+      leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+      onSwipeRight={onEdit}
+      rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Borrar' }}
+      onSwipeLeft={onDelete}
+      className="rounded-3xl"
     >
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-full flex items-center justify-center bg-app-subtle text-app-primary" style={{ backgroundColor: `${goal.color || '#10B981'}20`, color: goal.color || '#10B981' }}>
-            <span className="material-symbols-outlined">{goal.icon || 'savings'}</span>
+      <div
+        onClick={onSelect}
+        className="bento-card p-4 md:p-5 shadow-sm active:scale-[0.99] transition-all cursor-pointer bg-app-surface"
+      >
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3.5">
+            <div className="size-11 rounded-xl flex items-center justify-center bg-app-subtle text-app-primary" style={{ backgroundColor: `${goal.color || '#10B981'}20`, color: goal.color || '#10B981' }}>
+              <span className="material-symbols-outlined text-[24px]">{goal.icon || 'savings'}</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-app-text text-sm">{goal.name}</h3>
+              <p className="text-xs text-app-muted font-medium">
+                {goal.deadline ? `Meta: ${new Date(goal.deadline).toLocaleDateString()}` : 'Sin fecha límite'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-app-text text-sm">{goal.name}</h3>
-            <p className="text-xs text-app-muted">
-              {goal.deadline ? `Meta: ${new Date(goal.deadline).toLocaleDateString()}` : 'Sin fecha límite'}
-            </p>
+          <div className="text-right">
+            <p className="font-bold text-app-text">{formatCurrency(goal.currentAmount)}</p>
+            <p className="text-[10px] text-app-muted font-medium">de {formatCurrency(goal.targetAmount)}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="font-bold text-app-text">{formatCurrency(goal.currentAmount)}</p>
-          <p className="text-[10px] text-app-muted">de {formatCurrency(goal.targetAmount)}</p>
-        </div>
-      </div>
 
-      <div className="w-full h-2 bg-app-subtle rounded-full overflow-hidden">
-        <div
-          className="h-full transition-all duration-500 rounded-full"
-          style={{
-            width: `${progress}%`,
-            backgroundColor: goal.color || '#10B981'
-          }}
-        />
+        <div className="w-full h-2 bg-app-subtle rounded-full overflow-hidden">
+          <div
+            className="h-full transition-all duration-700 rounded-full"
+            style={{
+              width: `${progress}%`,
+              backgroundColor: goal.color || '#10B981'
+            }}
+          />
+        </div>
+        <div className="flex justify-between mt-1.5 text-[10px] items-center">
+          <span className="font-bold" style={{ color: goal.color || '#10B981' }}>{progress.toFixed(1)}% completado</span>
+          <span className="text-app-muted font-medium">{formatCurrency(goal.targetAmount - goal.currentAmount)} restantes</span>
+        </div>
       </div>
-      <div className="flex justify-between mt-1 text-[10px] items-center">
-        <span className="font-bold" style={{ color: goal.color || '#10B981' }}>{progress.toFixed(1)}%</span>
-        <span className="text-app-muted">{formatCurrency(goal.targetAmount - goal.currentAmount)} restantes</span>
-      </div>
-    </div>
+    </SwipeableItem>
   );
 };
 
@@ -243,15 +262,26 @@ const GoalsPage = () => {
   const { data: goals, isLoading } = useGoals();
   const { data: profile } = useProfile();
   const { openGoalSheet } = useGlobalSheets();
+  const deleteGoalMutation = useDeleteGoal();
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (searchParams.get('action') === 'new') {
       openGoalSheet();
     }
   }, [searchParams, openGoalSheet]);
+
+  const handleDelete = async (goal: SavingsGoal) => {
+    if (window.confirm(`¿Eliminar la meta "${goal.name}"?`)) {
+      try {
+        await deleteGoalMutation.mutateAsync(goal.id);
+        toastSuccess('Meta eliminada');
+      } catch (e) {
+        toastError('Error al eliminar');
+      }
+    }
+  };
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'USD' }).format(val);
 
@@ -265,26 +295,35 @@ const GoalsPage = () => {
 
       <div className="max-w-3xl mx-auto px-4 pt-4">
         {/* Summary Card */}
-        <div className="bg-linear-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white shadow-lg shadow-emerald-500/20 mb-6">
-          <p className="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Ahorro Total</p>
-          <h2 className="text-3xl font-black tracking-tight">{formatCurrency(totalSaved)}</h2>
-          <p className="text-emerald-100 text-sm mt-1 opacity-80">{goals?.length || 0} metas activas</p>
+        <div className="bg-linear-to-br from-emerald-500 to-teal-600 rounded-3xl p-6 text-white shadow-xl shadow-emerald-500/10 mb-8">
+          <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-widest mb-1 opacity-80">Ahorro Total</p>
+          <h2 className="text-4xl font-black tracking-tight">{formatCurrency(totalSaved)}</h2>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="material-symbols-outlined text-sm text-emerald-100">savings</span>
+            <p className="text-emerald-100 text-sm font-medium opacity-90">{goals?.length || 0} metas activas</p>
+          </div>
         </div>
 
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-bold text-app-text">Mis Metas</h3>
+        <div className="flex justify-between items-center mb-4 md:mb-6 px-1">
+          <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider">Mis Metas</h3>
           <button
             onClick={() => openGoalSheet()}
-            className="text-app-primary text-xs font-bold flex items-center gap-1 hover:bg-app-primary/10 px-2 py-1 rounded-lg transition-colors"
+            className="text-app-primary text-xs font-bold flex items-center gap-1.5 hover:bg-app-primary/10 px-3 py-1.5 rounded-xl transition-all"
           >
-            <span className="material-symbols-outlined text-sm">add</span>
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
             Nueva Meta
           </button>
         </div>
 
         <div className="space-y-3">
           {goals?.map(goal => (
-            <GoalCard key={goal.id} goal={goal} onSelect={() => setSelectedGoal(goal)} />
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+              onSelect={() => setSelectedGoal(goal)}
+              onEdit={() => openGoalSheet(goal)}
+              onDelete={() => handleDelete(goal)}
+            />
           ))}
           {(!goals || goals.length === 0) && (
             <div className="text-center py-12 border-2 border-dashed border-app-border rounded-xl">

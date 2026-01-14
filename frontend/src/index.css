@@ -123,11 +123,11 @@
    BASE & RESET
    ========================================= */
 
+/* Base Reset */
 html,
 body {
   @apply bg-app-bg text-app-text antialiased;
   -webkit-tap-highlight-color: transparent;
-  /* PWA Touch Clean */
 }
 
 /* iOS Safe Areas & Scroll Fixes */
@@ -239,4 +239,38 @@ button {
 button:active {
   transform: scale(0.96);
   transition: transform 0.1s;
+}
+
+/* =========================================
+   CUSTOM SCROLLBAR (Minimal & Integrated)
+   ========================================= */
+html::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 99px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  background-clip: content-box;
+}
+
+html,
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
 }

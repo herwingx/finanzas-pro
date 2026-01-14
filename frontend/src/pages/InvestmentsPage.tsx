@@ -10,7 +10,7 @@ import { useInvestments, useDeleteInvestment } from '../hooks/useApi';
 import { PageHeader } from '../components/PageHeader';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
-import { SkeletonAccountList } from '../components/Skeleton';
+import { SkeletonInvestmentsPage } from '../components/Skeleton';
 
 // Utils & Types
 import { toastSuccess, toastError } from '../utils/toast';
@@ -87,7 +87,7 @@ const InvestmentsPage: React.FC = () => {
   if (isLoading) return (
     <div className="min-h-dvh bg-app-bg">
       <PageHeader title="Inversiones" showBackButton />
-      <div className="p-4"><SkeletonAccountList /></div>
+      <div className="p-4"><SkeletonInvestmentsPage /></div>
     </div>
   );
 

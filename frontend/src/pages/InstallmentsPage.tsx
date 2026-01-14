@@ -9,7 +9,7 @@ import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } fro
 import { PageHeader } from '../components/PageHeader';
 import { SwipeableItem } from '../components/SwipeableItem';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
-import { SkeletonAccountList } from '../components/Skeleton';
+import { SkeletonInstallmentList } from '../components/Skeleton';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 
 // Utils
@@ -207,7 +207,7 @@ const InstallmentsPage: React.FC = () => {
     if (isLoading) return (
         <div className="min-h-dvh bg-app-bg">
             <PageHeader title="Mis Planes" showBackButton />
-            <div className="p-4"><SkeletonAccountList /></div>
+            <div className="p-4"><SkeletonInstallmentList /></div>
         </div>
     );
 

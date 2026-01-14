@@ -393,7 +393,7 @@ const GoalsPage: React.FC = () => {
   if (isLoading) return (
     <div className="min-h-dvh bg-app-bg pb-20">
       <PageHeader title="Metas" />
-      <div className="p-4"><SkeletonFinancialAnalysis /></div> {/* Fallback to existing skeleton */}
+      <div className="p-4"><SkeletonFinancialAnalysis /></div>
     </div>
   );
 

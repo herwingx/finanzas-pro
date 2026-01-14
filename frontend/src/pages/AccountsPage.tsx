@@ -7,7 +7,7 @@ import { useAccounts, useProfile, useDeleteAccount, useInvestments, useLoans, us
 
 // Components
 import { SwipeableItem } from '../components/SwipeableItem';
-import { SkeletonAccountList } from '../components/Skeleton';
+import { SkeletonAccountsPage } from '../components/Skeleton';
 import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 
 // Utils & Types
@@ -234,7 +234,7 @@ const AccountsPage: React.FC = () => {
             <div className="bg-app-bg animate-pulse">
                 <SimpleHeader title="Cuentas" />
                 <div className="px-4 py-6">
-                    <SkeletonAccountList />
+                    <SkeletonAccountsPage />
                 </div>
             </div>
         );

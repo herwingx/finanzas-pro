@@ -302,9 +302,9 @@ const AccountsPage: React.FC = () => {
                                         setSelectedAccount(null);
                                         setTimeout(() => openAccountSheet(account), 50);
                                     }}
-                                    leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                                    leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
                                     onSwipeLeft={() => handleDelete(account)}
-                                    rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Eliminar' }}
+                                    rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Eliminar' }}
                                     className="rounded-3xl"
                                 >
                                     <div

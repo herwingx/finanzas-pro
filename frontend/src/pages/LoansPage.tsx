@@ -78,8 +78,8 @@ const LoanDetailSheet: React.FC<LoanDetailSheetProps> = ({ loan, onClose, onMark
         <div className="text-center mb-8 relative">
           <div
             className={`size-24 rounded-full mx-auto flex items-center justify-center text-4xl mb-4 shadow-xl border-4 border-app-bg ${isPaid ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20' :
-                isLent ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/20' :
-                  'bg-rose-100 text-rose-600 dark:bg-rose-900/20'
+              isLent ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/20' :
+                'bg-rose-100 text-rose-600 dark:bg-rose-900/20'
               }`}
           >
             <span className="material-symbols-outlined text-[42px]">
@@ -296,9 +296,9 @@ const LoansPage: React.FC = () => {
               return (
                 <SwipeableItem
                   key={loan.id}
-                  leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                  leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
                   onSwipeRight={() => { setSelectedLoan(null); setTimeout(() => openLoanSheet(loan), 50); }}
-                  rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
+                  rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
                   onSwipeLeft={() => handleDeleteRequest(loan)}
                   className="rounded-3xl"
                 >

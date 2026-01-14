@@ -212,8 +212,8 @@ const Recurring: React.FC = () => {
                                     key={f.id}
                                     onClick={() => setFilterType(f.id)}
                                     className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all ${filterType === f.id
-                                            ? 'bg-app-surface shadow-sm text-app-text'
-                                            : 'text-app-muted hover:text-app-text'
+                                        ? 'bg-app-surface shadow-sm text-app-text'
+                                        : 'text-app-muted hover:text-app-text'
                                         }`}
                                 >
                                     <span className="material-symbols-outlined text-sm">{f.icon}</span>
@@ -242,8 +242,8 @@ const Recurring: React.FC = () => {
                         return (
                             <SwipeableItem
                                 key={item.id}
-                                leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                                rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
+                                leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
+                                rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
                                 onSwipeRight={() => { setSelectedItem(null); setTimeout(() => openRecurringSheet(item), 50); }}
                                 onSwipeLeft={() => setDeletingId(item.id)}
                                 className="rounded-3xl"

@@ -96,9 +96,9 @@ const TrashPage: React.FC = () => {
               return (
                 <SwipeableItem
                   key={tx.id}
-                  leftAction={{ icon: 'restore_from_trash', color: 'var(--brand-primary)', label: 'Restaurar' }}
+                  leftAction={{ icon: 'restore_from_trash', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Restaurar' }}
                   onSwipeRight={() => handleRestore(tx)}
-                  rightAction={{ icon: 'delete_forever', color: '#EF4444', label: 'Eliminar' }}
+                  rightAction={{ icon: 'delete_forever', color: 'text-white', bgColor: 'bg-rose-500', label: 'Eliminar' }}
                   onSwipeLeft={() => handleDeletePermanent(tx)}
                   className="rounded-2xl"
                 >

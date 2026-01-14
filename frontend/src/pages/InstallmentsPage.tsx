@@ -253,8 +253,8 @@ const InstallmentsPage: React.FC = () => {
                         return (
                             <SwipeableItem
                                 key={item.id}
-                                leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                                rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Borrar' }}
+                                leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
+                                rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
                                 onSwipeRight={() => { setSelectedItem(null); openInstallmentSheet(item); }}
                                 onSwipeLeft={() => handleDelete(item)}
                                 className="rounded-3xl"

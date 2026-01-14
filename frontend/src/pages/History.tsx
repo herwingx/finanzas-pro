@@ -227,8 +227,8 @@ const History: React.FC = () => {
                     return (
                       <SwipeableItem
                         key={tx.id}
-                        leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                        rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
+                        leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
+                        rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
                         onSwipeRight={() => handleEdit(tx)}
                         onSwipeLeft={() => handleDeleteClick(tx)}
                         className="rounded-3xl"

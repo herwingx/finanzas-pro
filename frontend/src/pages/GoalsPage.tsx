@@ -52,9 +52,9 @@ const GoalCard = ({
 
   return (
     <SwipeableItem
-      leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+      leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
       onSwipeRight={onEdit}
-      rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Borrar' }}
+      rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
       onSwipeLeft={onDelete}
       className="mb-4 rounded-3xl"
     >

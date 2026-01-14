@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { SwipeableSheet } from '../SwipeableSheet'; // Asegúrate de que este path sea correcto
+import { SwipeableBottomSheet } from '../SwipeableBottomSheet';
 import { useNotifications, useDismissNotification, useMarkAllNotificationsRead, useAddTransaction } from '../../hooks/useApi';
 import { toastSuccess, toastError, toastInfo } from '../../utils/toast';
 
@@ -47,7 +47,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ isOpen, 
   const hasUnread = (notifications?.length || 0) > 0;
 
   return (
-    <SwipeableSheet isOpen={isOpen} onClose={onClose} title="Alertas e Insights">
+    <SwipeableBottomSheet isOpen={isOpen} onClose={onClose} title="Alertas e Insights">
       <div className="pb-24">
 
         {/* Header Action */}
@@ -127,6 +127,6 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ isOpen, 
           )}
         </div>
       </div>
-    </SwipeableSheet>
+    </SwipeableBottomSheet>
   );
 };

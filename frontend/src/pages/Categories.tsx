@@ -181,9 +181,9 @@ const Categories: React.FC = () => {
                 {list.length > 0 ? list.map(cat => (
                     <SwipeableItem
                         key={cat.id}
-                        leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
+                        leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
                         onSwipeRight={() => handleEdit(cat)}
-                        rightAction={{ icon: 'delete', color: '#F43F5E', label: 'Borrar' }}
+                        rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
                         onSwipeLeft={() => handleDeleteClick(cat)}
                         className="rounded-3xl"
                     >

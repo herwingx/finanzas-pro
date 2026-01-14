@@ -1,6 +1,6 @@
 import React from 'react';
 import { Transaction, Category, Account } from '../types';
-import { SwipeableSheet } from './SwipeableSheet';
+import { SwipeableBottomSheet } from './SwipeableBottomSheet';
 
 interface TransactionDetailSheetProps {
   transaction: Transaction | null;
@@ -51,7 +51,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
   };
 
   return (
-    <SwipeableSheet isOpen={isOpen} onClose={onClose}>
+    <SwipeableBottomSheet isOpen={isOpen} onClose={onClose}>
       {/* Header (Visual only, no logic) */}
       <div className="pb-4 border-b border-app-border -mx-6 px-6 -mt-2">
         <div className="flex items-start justify-between gap-4">
@@ -186,7 +186,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
           <span className="material-symbols-outlined text-lg">delete</span>
         </button>
       </div>
-    </SwipeableSheet>
+    </SwipeableBottomSheet>
   );
 };
 

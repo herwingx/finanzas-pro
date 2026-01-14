@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTransactions, useCategories, useDeleteTransaction, useAccounts, useRestoreTransaction, useInstallmentPurchases } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { toast } from 'sonner';
 
@@ -70,6 +71,8 @@ const HistoryHeader: React.FC<{
 const History: React.FC = () => {
   const navigate = useNavigate();
   const { openTransactionSheet } = useGlobalSheets();
+  const isMobile = useIsMobile();
+
 
   // Queries
   const { data: transactions, isLoading: isLoadingTx } = useTransactions();
@@ -233,6 +236,7 @@ const History: React.FC = () => {
                         onSwipeRight={() => handleEdit(tx)}
                         onSwipeLeft={() => handleDeleteClick(tx)}
                         className="rounded-3xl"
+                        disabled={!isMobile}
                       >
                         <div
                           onClick={() => setSelectedTx(tx)}

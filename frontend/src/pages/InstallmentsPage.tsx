@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 // Hooks & Context
 import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Components
 import { PageHeader } from '../components/PageHeader';
@@ -133,10 +134,10 @@ const MSIDetailSheet = ({
                 </div>
 
                 {/* 4. ACTIONS FOOTER */}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-app-border">
+                <div className="hidden md:grid grid-cols-2 gap-3 pt-2 border-t border-app-border">
                     <button
                         onClick={() => { onClose(); onEdit(); }}
-                        className="h-12 flex items-center justify-center gap-2 text-sm font-bold text-app-text bg-app-subtle rounded-xl hover:bg-app-border active:scale-[0.98] transition-all"
+                        className="h-12 flex items-center justify-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-[0.98] transition-all"
                     >
                         <span className="material-symbols-outlined text-lg">edit</span>
                         Editar
@@ -164,6 +165,7 @@ const InstallmentsPage: React.FC = () => {
     const { data: profile } = useProfile();
     const { openInstallmentSheet } = useGlobalSheets();
     const deleteMutation = useDeleteInstallmentPurchase();
+    const isMobile = useIsMobile();
 
     // 2. State
     const [selectedItem, setSelectedItem] = useState<InstallmentPurchase | null>(null);
@@ -219,9 +221,9 @@ const InstallmentsPage: React.FC = () => {
                 rightAction={
                     <button
                         onClick={() => openInstallmentSheet()}
-                        className="bg-app-text text-app-bg size-7 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform hover:shadow-xl hover:scale-105"
+                        className="bg-app-text text-app-bg size-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform hover:shadow-xl hover:scale-105"
                     >
-                        <span className="material-symbols-outlined text-[18px] font-bold">add</span>
+                        <span className="material-symbols-outlined text-[22px] font-bold">add</span>
                     </button>
                 }
             />
@@ -258,6 +260,7 @@ const InstallmentsPage: React.FC = () => {
                                 onSwipeRight={() => { setSelectedItem(null); openInstallmentSheet(item); }}
                                 onSwipeLeft={() => handleDelete(item)}
                                 className="rounded-3xl"
+                                disabled={!isMobile}
                             >
                                 <div
                                     onClick={() => setSelectedItem(item)}

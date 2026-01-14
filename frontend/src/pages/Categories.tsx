@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 // Hooks & Context
 import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { useCategories, useDeleteCategory } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Components
 import { PageHeader } from '../components/PageHeader';
@@ -67,10 +68,10 @@ const CategoryDetailSheet = ({ category, onClose, onEdit, onDelete }: any) => {
                 )}
 
                 {/* 3. Actions Grid */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="hidden md:grid grid-cols-2 gap-3">
                     <button
                         onClick={() => { onClose(); onEdit(); }}
-                        className="h-12 flex items-center justify-center gap-2 rounded-xl bg-app-surface border border-app-border text-sm font-bold text-app-text hover:bg-app-subtle active:scale-[0.98] transition-all"
+                        className="h-12 flex items-center justify-center gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-[0.98] transition-all"
                     >
                         <span className="material-symbols-outlined text-lg">edit</span>
                         Editar
@@ -95,6 +96,8 @@ const CategoryDetailSheet = ({ category, onClose, onEdit, onDelete }: any) => {
 const Categories: React.FC = () => {
     const [searchParams] = useSearchParams();
     const { openCategorySheet } = useGlobalSheets();
+    const isMobile = useIsMobile();
+
 
     // Query & Mutation
     const { data: categories, isLoading } = useCategories();
@@ -186,6 +189,7 @@ const Categories: React.FC = () => {
                         rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
                         onSwipeLeft={() => handleDeleteClick(cat)}
                         className="rounded-3xl"
+                        disabled={!isMobile}
                     >
                         <div
                             onClick={() => setSelectedCategory(cat)}
@@ -234,8 +238,8 @@ const Categories: React.FC = () => {
                 title="Categorías"
                 showBackButton
                 rightAction={
-                    <button onClick={() => openCategorySheet()} className="flex items-center justify-center size-8 bg-app-text text-app-bg rounded-full hover:scale-105 active:scale-95 transition-all shadow-md">
-                        <span className="material-symbols-outlined text-[20px]">add</span>
+                    <button onClick={() => openCategorySheet()} className="flex items-center justify-center size-10 bg-app-text text-app-bg rounded-full hover:scale-105 active:scale-95 transition-all shadow-md">
+                        <span className="material-symbols-outlined text-[22px]">add</span>
                     </button>
                 }
             />

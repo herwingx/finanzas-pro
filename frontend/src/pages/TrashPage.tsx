@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 
 // Hooks & Types
 import { useDeletedTransactions, useRestoreTransaction, usePermanentDeleteTransaction, useCategories, useAccounts } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { Transaction } from '../types';
 
 // Components
@@ -22,6 +23,7 @@ const TrashPage: React.FC = () => {
   // Mutation
   const restoreTx = useRestoreTransaction();
   const permDeleteTx = usePermanentDeleteTransaction();
+  const isMobile = useIsMobile();
 
   /* Logic & Memos */
   const categoryMap = useMemo(() => new Map(categories?.map(c => [c.id, c])), [categories]);
@@ -101,6 +103,7 @@ const TrashPage: React.FC = () => {
                   rightAction={{ icon: 'delete_forever', color: 'text-white', bgColor: 'bg-rose-500', label: 'Eliminar' }}
                   onSwipeLeft={() => handleDeletePermanent(tx)}
                   className="rounded-2xl"
+                  disabled={!isMobile}
                 >
                   <div className="bento-card p-4 flex items-center gap-4 bg-app-surface/60 opacity-85 hover:opacity-100 hover:border-app-border-strong transition-all grayscale-30 hover:grayscale-0">
                     <div className="size-10 rounded-xl bg-app-subtle border border-app-border flex items-center justify-center text-app-muted">

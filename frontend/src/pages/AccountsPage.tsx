@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 // Hooks & Context
 import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { useAccounts, useProfile, useDeleteAccount, useInvestments, useLoans, useGoals } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Components
 import { SwipeableItem } from '../components/SwipeableItem';
@@ -113,8 +114,8 @@ const AccountDetailSheet = ({
                 </div>
 
                 {/* Actions Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                    <button onClick={onEdit} className="h-12 rounded-xl bg-app-surface border border-app-border hover:bg-app-subtle active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm font-bold text-app-text">
+                <div className="hidden md:grid grid-cols-2 gap-3">
+                    <button onClick={onEdit} className="h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm font-bold">
                         <span className="material-symbols-outlined text-[18px]">settings</span>
                         Configurar
                     </button>
@@ -136,6 +137,7 @@ const AccountsPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const { openAccountSheet } = useGlobalSheets();
     const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+    const isMobile = useIsMobile();
 
     // Queries & Mutations
     const { data: accounts, isLoading: isLoadingAcc, isError } = useAccounts();
@@ -247,9 +249,8 @@ const AccountsPage: React.FC = () => {
             <SimpleHeader
                 title="Cartera"
                 action={
-                    <button onClick={() => openAccountSheet()} className="bg-app-text text-app-bg hover:bg-app-text/90 size-8 md:w-auto md:px-3 rounded-full md:rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md">
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        <span className="hidden md:inline text-xs font-bold">Nueva</span>
+                    <button onClick={() => openAccountSheet()} className="bg-app-text text-app-bg rounded-full size-10 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all">
+                        <span className="material-symbols-outlined text-[22px]">add</span>
                     </button>
                 }
             />
@@ -306,6 +307,7 @@ const AccountsPage: React.FC = () => {
                                     onSwipeLeft={() => handleDelete(account)}
                                     rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Eliminar' }}
                                     className="rounded-3xl"
+                                    disabled={!isMobile}
                                 >
                                     <div
                                         onClick={() => setSelectedAccount(account)}

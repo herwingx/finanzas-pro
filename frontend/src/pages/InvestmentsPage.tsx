@@ -5,10 +5,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 // Hooks & Context
 import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { useInvestments, useDeleteInvestment } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Components
 import { PageHeader } from '../components/PageHeader';
 import { SwipeableItem } from '../components/SwipeableItem';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SkeletonInvestmentsPage } from '../components/Skeleton';
 
@@ -31,6 +33,114 @@ enum InvestmentTypeLabel {
 }
 
 /* ==================================================================================
+   SUB-COMPONENT: DETAIL SHEET
+   ================================================================================== */
+const InvestmentDetailSheet = ({
+  investment,
+  onClose,
+  onEdit,
+  onDelete
+}: {
+  investment: Investment;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => {
+  const currentPrice = investment.currentPrice || investment.avgBuyPrice;
+  const totalValue = currentPrice * investment.quantity;
+  const totalCost = investment.avgBuyPrice * investment.quantity;
+  const gain = totalValue - totalCost;
+  const gainPercent = totalCost > 0 ? (gain / totalCost) * 100 : 0;
+  const isProfitable = gain >= 0;
+
+  const formatCurrency = (val: number) => val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+
+  return (
+    <SwipeableBottomSheet isOpen={true} onClose={onClose}>
+      <div className="pt-2 pb-6 px-4 animate-fade-in">
+
+        {/* 1. HERO HEADER */}
+        <div className="flex flex-col items-center mb-8 text-center">
+          <div className={`size-20 rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-md ${isProfitable ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
+            <span className="material-symbols-outlined text-[36px]">
+              {investment.type === 'CRYPTO' ? 'currency_bitcoin' : investment.type === 'REAL_ESTATE' ? 'home_work' : investment.type === 'STOCK' ? 'show_chart' : 'trending_up'}
+            </span>
+          </div>
+
+          <h2 className="text-xl font-bold text-app-text px-4 leading-tight mb-1">{investment.name}</h2>
+          {investment.ticker && (
+            <p className="text-xs text-app-muted font-bold tracking-widest bg-app-subtle px-2 py-0.5 rounded-md uppercase">
+              {investment.ticker}
+            </p>
+          )}
+        </div>
+
+        {/* 2. MAIN STATS */}
+        <div className="bento-card bg-app-subtle p-5 mb-6 border border-app-border/60">
+          <div className="flex justify-between items-end mb-4 border-b border-app-border/40 pb-4">
+            <span className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Valor Actual</span>
+            <span className="text-3xl font-black font-numbers tracking-tight text-app-text">
+              {formatCurrency(totalValue)}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <div className="text-left">
+              <span className="text-[10px] uppercase font-bold text-app-muted block mb-0.5">Retorno Total</span>
+              <p className={`text-base font-bold font-numbers ${isProfitable ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {isProfitable ? '+' : ''}{formatCurrency(gain)}
+              </p>
+            </div>
+            <div className={`px-3 py-1 rounded-xl text-xs font-bold ${isProfitable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+              {isProfitable ? '▲' : '▼'} {gainPercent.toFixed(2)}%
+            </div>
+          </div>
+        </div>
+
+        {/* 3. DETAILS GRID */}
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          <div className="bg-app-surface border border-app-border p-3 rounded-xl">
+            <p className="text-[10px] uppercase font-bold text-app-muted mb-0.5">Cantidad</p>
+            <p className="font-bold text-app-text">{investment.quantity} Unidades</p>
+          </div>
+          <div className="bg-app-surface border border-app-border p-3 rounded-xl">
+            <p className="text-[10px] uppercase font-bold text-app-muted mb-0.5">Precio Promedio</p>
+            <p className="font-bold text-app-text">{formatCurrency(investment.avgBuyPrice)}</p>
+          </div>
+          <div className="bg-app-surface border border-app-border p-3 rounded-xl">
+            <p className="text-[10px] uppercase font-bold text-app-muted mb-0.5">Costo Total</p>
+            <p className="font-bold text-app-text">{formatCurrency(totalCost)}</p>
+          </div>
+          <div className="bg-app-surface border border-app-border p-3 rounded-xl">
+            <p className="text-[10px] uppercase font-bold text-app-muted mb-0.5">Precio Actual</p>
+            <p className="font-bold text-app-text">{formatCurrency(currentPrice)}</p>
+          </div>
+        </div>
+
+        {/* 4. ACTIONS FOOTER */}
+        <div className="hidden md:grid grid-cols-2 gap-3 pt-2 border-t border-app-border/50">
+          <button
+            onClick={() => { onClose(); onEdit(); }}
+            className="h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center gap-2 text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-95 transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+            Editar
+          </button>
+          <button
+            onClick={() => { onClose(); onDelete(); }}
+            className="h-12 rounded-xl bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 flex items-center justify-center gap-2 text-sm font-bold hover:bg-rose-100 dark:hover:bg-rose-900/20 active:scale-95 transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">delete</span>
+            Eliminar
+          </button>
+        </div>
+
+      </div>
+    </SwipeableBottomSheet>
+  );
+};
+
+/* ==================================================================================
    MAIN COMPONENT
    ================================================================================== */
 const InvestmentsPage: React.FC = () => {
@@ -38,6 +148,7 @@ const InvestmentsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { openInvestmentSheet } = useGlobalSheets();
+  const isMobile = useIsMobile();
 
   // Data Queries
   const { data: investments, isLoading } = useInvestments();
@@ -45,6 +156,7 @@ const InvestmentsPage: React.FC = () => {
 
   // Local UI State
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
 
   // Trigger New Item Sheet
   useEffect(() => {
@@ -97,8 +209,8 @@ const InvestmentsPage: React.FC = () => {
         title="Portafolio"
         showBackButton={true}
         rightAction={
-          <button onClick={openNew} className="bg-app-text text-app-bg rounded-full size-9 flex items-center justify-center shadow-lg transition-transform active:scale-95">
-            <span className="material-symbols-outlined text-[20px]">add</span>
+          <button onClick={openNew} className="bg-app-text text-app-bg rounded-full size-10 flex items-center justify-center shadow-lg transition-transform active:scale-95">
+            <span className="material-symbols-outlined text-[22px]">add</span>
           </button>
         }
       />
@@ -210,9 +322,10 @@ const InvestmentsPage: React.FC = () => {
                   rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
                   onSwipeLeft={() => setDeleteId(inv.id)}
                   className="rounded-3xl"
+                  disabled={!isMobile}
                 >
                   <div
-                    onClick={() => openEdit(inv)}
+                    onClick={() => setSelectedInvestment(inv)}
                     className="bento-card p-4 md:p-5 flex justify-between items-center hover:border-app-border-strong cursor-pointer active:scale-[0.99] transition-all bg-app-surface group"
                   >
                     <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
@@ -262,6 +375,16 @@ const InvestmentsPage: React.FC = () => {
         warningMessage="Eliminar activo"
         warningDetails={["Esta acción no se puede deshacer.", "El valor se restará de tu patrimonio."]}
       />
+
+      {/* DETAIL SHEET */}
+      {selectedInvestment && (
+        <InvestmentDetailSheet
+          investment={selectedInvestment}
+          onClose={() => setSelectedInvestment(null)}
+          onEdit={() => { setSelectedInvestment(null); openEdit(selectedInvestment); }}
+          onDelete={() => { setSelectedInvestment(null); setDeleteId(selectedInvestment.id); }}
+        />
+      )}
     </div>
   );
 };

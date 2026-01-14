@@ -11,6 +11,7 @@ import {
   useAccounts,
   useProfile
 } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Components
 import { PageHeader } from '../components/PageHeader';
@@ -30,13 +31,15 @@ const GoalCard = ({
   onSelect,
   onEdit,
   onDelete,
-  formatCurrency
+  formatCurrency,
+  isMobile
 }: {
   goal: SavingsGoal;
   onSelect: () => void;
   onEdit: () => void;
   onDelete: () => void;
   formatCurrency: (val: number) => string;
+  isMobile: boolean;
 }) => {
   // Calculo Seguro
   const current = goal.currentAmount ?? 0;
@@ -57,6 +60,7 @@ const GoalCard = ({
       rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
       onSwipeLeft={onDelete}
       className="mb-4 rounded-3xl"
+      disabled={!isMobile}
     >
       <div
         onClick={onSelect}
@@ -264,9 +268,15 @@ const GoalDetailSheet = ({ goal, onClose }: { goal: SavingsGoal, onClose: () => 
             </div>
 
             {/* Footer Options */}
-            <div className="grid grid-cols-2 gap-3 border-t border-app-border pt-4">
-              <button onClick={() => { onClose(); openGoalSheet(goal); }} className="text-xs font-bold text-app-primary py-3 hover:underline">Editar Detalles</button>
-              <button onClick={handleDelete} className="text-xs font-bold text-rose-500 py-3 hover:underline">Eliminar Meta</button>
+            <div className="hidden md:grid grid-cols-2 gap-3 border-t border-app-border pt-4">
+              <button onClick={() => { onClose(); openGoalSheet(goal); }} className="h-12 bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 font-bold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-95 transition-all">
+                <span className="material-symbols-outlined text-lg">edit</span>
+                Editar
+              </button>
+              <button onClick={handleDelete} className="h-12 bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 font-bold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-rose-100 dark:hover:bg-rose-900/20 active:scale-95 transition-all">
+                <span className="material-symbols-outlined text-lg">delete</span>
+                Borrar
+              </button>
             </div>
           </div>
         )}
@@ -348,6 +358,7 @@ const GoalsPage: React.FC = () => {
   const { openGoalSheet } = useGlobalSheets();
   const deleteMutation = useDeleteGoal();
   const [searchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   // Local State
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
@@ -409,7 +420,7 @@ const GoalsPage: React.FC = () => {
             onClick={() => openGoalSheet()}
             className="size-10 bg-app-text text-app-bg rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
           >
-            <span className="material-symbols-outlined">add</span>
+            <span className="material-symbols-outlined text-[22px]">add</span>
           </button>
         }
       />
@@ -450,6 +461,7 @@ const GoalsPage: React.FC = () => {
                   onEdit={() => openGoalSheet(goal)}
                   onDelete={() => handleSwipeDelete(goal)}
                   formatCurrency={formatCurrency}
+                  isMobile={isMobile}
                 />
               ))
             ) : (

@@ -6,107 +6,71 @@ interface InfoTooltipProps {
   iconSize?: string;
 }
 
-/**
- * InfoTooltip - Componente de tooltip informativo que funciona en móvil y desktop.
- * En desktop muestra tooltip nativo con hover.
- * En móvil muestra un popover al hacer tap.
- */
 export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   content,
   className = '',
   iconSize = '14px'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLSpanElement>(null);
 
-  // Cerrar al hacer clic fuera
+  // Auto-close on outside click (Mobile UX)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (
-        tooltipRef.current &&
-        !tooltipRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
-
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('touchstart', handleOutsideClick);
     }
-
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
     };
-  }, [isOpen]);
-
-  // Cerrar con Escape
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen]);
 
   return (
-    <span className={`relative inline-flex items-center ${isOpen ? 'z-[9999]' : ''}`}>
+    <span className="relative inline-flex items-center group" ref={containerRef}>
+
+      {/* TRIGGER */}
       <button
-        ref={buttonRef}
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          e.preventDefault(); // Prevent focus scroll jump
           setIsOpen(!isOpen);
         }}
-        className={`material-symbols-outlined cursor-help text-app-muted/50 hover:text-app-muted active:text-app-text transition-colors focus:outline-none ${className}`}
+        className={`material-symbols-outlined cursor-help text-app-muted/60 hover:text-app-primary active:scale-95 transition-all ${className}`}
         style={{ fontSize: iconSize }}
-        aria-label="Información"
-        title={content}
+        aria-label="Info"
       >
         info
       </button>
 
-      {isOpen && (
-        <>
-          {/* Backdrop sutil en móvil */}
-          <div
-            className="fixed inset-0 z-[9998] md:hidden"
-            onClick={() => setIsOpen(false)}
-          />
+      {/* TOOLTIP BODY */}
+      {/* Show if open OR group-hover (Desktop only logic via Tailwind group-hover) */}
+      <div
+        className={`
+            absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] z-9999
+            bg-app-surface/95 backdrop-blur-xl border border-app-border
+            rounded-xl shadow-float p-3
+            text-center
+            transition-all duration-200 origin-bottom
+            ${isOpen
+            ? 'opacity-100 scale-100 visible'
+            : 'opacity-0 scale-95 invisible group-hover:opacity-100 group-hover:scale-100 group-hover:visible hover:transition-delay-700'
+          }
+        `}
+      >
+        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[6px] size-3 bg-app-surface border-r border-b border-app-border rotate-45 transform" />
 
-          {/* Popover */}
-          <div
-            ref={tooltipRef}
-            className="absolute z-[9999] left-1/2 -translate-x-1/2 top-full mt-2 
-              w-[200px] max-w-[calc(100vw-32px)]
-              bg-white dark:bg-zinc-800 
-              border border-app-border 
-              rounded-xl shadow-lg
-              p-3
-              animate-in fade-in slide-in-from-top-1 duration-150"
-          >
-            {/* Flecha */}
-            <div
-              className="absolute -top-[6px] left-1/2 -translate-x-1/2 
-                size-3 rotate-45 
-                bg-white dark:bg-zinc-800 
-                border-l border-t border-app-border"
-            />
+        <p className="text-[11px] leading-snug font-medium text-app-text relative z-10">
+          {content}
+        </p>
+      </div>
 
-            <p className="text-xs text-app-text font-medium relative z-10">
-              {content}
-            </p>
-          </div>
-        </>
-      )}
     </span>
   );
 };

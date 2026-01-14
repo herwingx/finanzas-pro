@@ -22,6 +22,7 @@ interface SwipeableItemProps {
 
   className?: string;
   threshold?: number; // Cuánto arrastrar para activar (px)
+  disabled?: boolean;
 }
 
 export const SwipeableItem: React.FC<SwipeableItemProps> = ({
@@ -31,7 +32,8 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   onSwipeRight,
   onSwipeLeft,
   className = '',
-  threshold = 80
+  threshold = 80,
+  disabled = false
 }) => {
   const x = useMotionValue(0);
 
@@ -106,7 +108,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
 
       {/* FOREGROUND CONTENT (Card) - Z-index 10 (delante) */}
       <motion.div
-        drag="x"
+        drag={disabled ? false : "x"}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.2}
         onDragEnd={handleDragEnd}

@@ -7,6 +7,7 @@ import { getLoans, getLoanSummary, markLoanAsPaid, deleteLoan } from '../service
 
 // Hooks & Context
 import { useGlobalSheets } from '../context/GlobalSheetContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Components
 import { PageHeader } from '../components/PageHeader';
@@ -156,10 +157,10 @@ const LoanDetailSheet: React.FC<LoanDetailSheetProps> = ({ loan, onClose, onMark
             </Button>
           )}
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="hidden md:grid grid-cols-2 gap-3 pt-1">
             <button
               onClick={() => { onClose(); onEdit(); }}
-              className="h-12 rounded-xl bg-app-surface border border-app-border text-sm font-bold text-app-text hover:bg-app-subtle flex items-center justify-center gap-2 active:scale-95 transition-all"
+              className="h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">edit</span>
               Editar
@@ -185,6 +186,7 @@ const LoanDetailSheet: React.FC<LoanDetailSheetProps> = ({ loan, onClose, onMark
 const LoansPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { openLoanSheet } = useGlobalSheets();
+  const isMobile = useIsMobile();
 
   // State
   const [filter, setFilter] = useState<'all' | 'lent' | 'borrowed' | 'paid'>('all');
@@ -223,6 +225,7 @@ const LoansPage: React.FC = () => {
         rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
         onSwipeLeft={() => handleDeleteRequest(loan)}
         className="rounded-3xl"
+        disabled={!isMobile}
       >
         <div
           onClick={() => setSelectedLoan(loan)}
@@ -310,8 +313,8 @@ const LoansPage: React.FC = () => {
         title="Gestor de Deudas"
         showBackButton
         rightAction={
-          <button onClick={() => openLoanSheet()} className="bg-app-text text-app-bg rounded-full size-9 flex items-center justify-center shadow-lg transition-transform active:scale-95">
-            <span className="material-symbols-outlined text-[20px]">add</span>
+          <button onClick={() => openLoanSheet()} className="bg-app-text text-app-bg size-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform hover:shadow-xl hover:scale-105">
+            <span className="material-symbols-outlined text-[22px] font-bold">add</span>
           </button>
         }
       />

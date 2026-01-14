@@ -9,6 +9,7 @@ import {
     useDeleteRecurringTransaction,
     useAccounts
 } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Components
 import { PageHeader } from '../components/PageHeader';
@@ -98,10 +99,10 @@ const RecurringDetailSheet = ({
                 )}
 
                 {/* 4. ACTIONS */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="hidden md:grid grid-cols-2 gap-3">
                     <button
                         onClick={() => { onClose(); onEdit(); }}
-                        className="h-14 rounded-2xl bg-app-surface border border-app-border text-sm font-bold flex items-center justify-center gap-2 hover:bg-app-subtle active:scale-[0.98] transition-all"
+                        className="h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800 text-sm font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-[0.98] transition-all"
                     >
                         <span className="material-symbols-outlined">edit</span>
                         Editar
@@ -124,6 +125,7 @@ const RecurringDetailSheet = ({
    ================================================================================== */
 const Recurring: React.FC = () => {
     const { openRecurringSheet } = useGlobalSheets();
+    const isMobile = useIsMobile();
 
     // Data Hooks
     const { data: recurring, isLoading } = useRecurringTransactions();
@@ -227,7 +229,7 @@ const Recurring: React.FC = () => {
                         onClick={() => openRecurringSheet()}
                         className="size-10 bg-app-text text-app-bg rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
                     >
-                        <span className="material-symbols-outlined">add</span>
+                        <span className="material-symbols-outlined text-[22px]">add</span>
                     </button>
                 </div>
 
@@ -247,6 +249,7 @@ const Recurring: React.FC = () => {
                                 onSwipeRight={() => { setSelectedItem(null); setTimeout(() => openRecurringSheet(item), 50); }}
                                 onSwipeLeft={() => setDeletingId(item.id)}
                                 className="rounded-3xl"
+                                disabled={!isMobile}
                             >
                                 <div
                                     onClick={() => setSelectedItem(item)}

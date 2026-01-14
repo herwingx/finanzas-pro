@@ -1,6 +1,7 @@
 import React from 'react';
 import { Transaction, Category, Account } from '../types';
 import { SwipeableBottomSheet } from './SwipeableBottomSheet';
+import { formatDateUTC } from '../utils/dateUtils'; // Ensure correct path or use helper below if utils not available
 
 interface TransactionDetailSheetProps {
   transaction: Transaction | null;
@@ -27,183 +28,135 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({
 }) => {
   if (!transaction) return null;
 
-  const isExpense = transaction.type === 'expense';
-  const isIncome = transaction.type === 'income';
+  // Configuration map for styles
   const isTransfer = transaction.type === 'transfer';
+  const typeStyle = {
+    expense: { color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20', icon: 'remove', label: 'Gasto' },
+    income: { color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: 'add', label: 'Ingreso' },
+    transfer: { color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', icon: 'sync_alt', label: 'Transferencia' }
+  }[transaction.type];
 
-  const typeConfig = {
-    expense: { label: 'Gasto', color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20', icon: 'arrow_upward' },
-    income: { label: 'Ingreso', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: 'arrow_downward' },
-    transfer: { label: 'Transferencia', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', icon: 'swap_horiz' },
-  };
-
-  const config = typeConfig[transaction.type];
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('es-MX', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC'
-    });
-  };
+  // Visuals
+  const displayIcon = isTransfer ? typeStyle.icon : category?.icon || 'payments';
+  const displayColor = isTransfer ? undefined : category?.color; // If category, use category color, else type color default handled via class or style injection below
 
   return (
     <SwipeableBottomSheet isOpen={isOpen} onClose={onClose}>
-      {/* Header (Visual only, no logic) */}
-      <div className="pb-4 border-b border-app-border -mx-6 px-6 -mt-2">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0 flex-1">
-            <div
-              className={`size-14 rounded-2xl flex items-center justify-center shrink-0 ${config.bg}`}
-              style={{
-                backgroundColor: !isTransfer && category?.color ? `${category.color}15` : undefined,
-                color: !isTransfer && category?.color ? category.color : undefined,
-              }}
-            >
-              <span className={`material-symbols-outlined text-2xl ${isTransfer ? config.color : ''}`}>
-                {isTransfer ? 'swap_horiz' : category?.icon || 'payments'}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-app-text truncate">
-                {transaction.description || 'Sin descripción'}
-              </h2>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
-                  {config.label}
-                </span>
-                {category && !isTransfer && (
-                  <span className="text-xs text-app-muted">{category.name}</span>
-                )}
+      <div className="pb-safe-offset-4 px-4 pt-2">
+
+        {/* 1. Header Profile */}
+        <div className="flex flex-col items-center mb-6">
+          <div
+            className={`size-20 rounded-3xl flex items-center justify-center mb-4 shadow-sm border border-black/5 ${!displayColor ? typeStyle.bg : ''}`}
+            style={{
+              backgroundColor: displayColor ? `${displayColor}20` : undefined,
+              color: displayColor || undefined
+            }}
+          >
+            <span className={`material-symbols-outlined text-[40px] ${!displayColor ? typeStyle.color : ''}`}>
+              {displayIcon}
+            </span>
+          </div>
+
+          <h2 className="text-xl font-bold text-app-text text-center leading-snug px-4">
+            {transaction.description || 'Sin concepto'}
+          </h2>
+
+          <div className={`mt-2 px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${typeStyle.bg} ${typeStyle.color}`}>
+            {typeStyle.label}
+          </div>
+        </div>
+
+        {/* 2. Amount Card */}
+        <div className="bg-app-subtle border border-app-border rounded-3xl p-6 mb-6 text-center shadow-sm">
+          <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Monto</p>
+          <p className={`text-4xl font-black font-numbers tracking-tight ${typeStyle.color}`}>
+            {transaction.type === 'expense' ? '-' : transaction.type === 'income' ? '+' : ''}
+            {formatCurrency(transaction.amount)}
+          </p>
+          <p className="text-xs text-app-muted mt-2 font-medium">
+            {formatDateUTC(transaction.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+
+        {/* 3. Details List */}
+        <div className="space-y-4 mb-8">
+
+          {/* Account Row */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border">
+            <div className="flex items-center gap-3">
+              <div className="size-10 bg-app-subtle rounded-xl flex items-center justify-center text-app-muted">
+                <span className="material-symbols-outlined">account_balance_wallet</span>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-app-muted uppercase">
+                  {isTransfer ? 'Origen' : 'Cuenta'}
+                </p>
+                <p className="text-sm font-bold text-app-text truncate max-w-[150px]">{account?.name || '---'}</p>
               </div>
             </div>
           </div>
-          {/* Mobile Close Button (Since Desktop has one in Modal, we might want to hide this on desktop or keep it as content close) */}
+
+          {/* Dest Account (Transfer Only) */}
+          {isTransfer && (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border">
+              <div className="flex items-center gap-3">
+                <div className="size-10 bg-app-subtle rounded-xl flex items-center justify-center text-app-muted">
+                  <span className="material-symbols-outlined">login</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-app-muted uppercase">Destino</p>
+                  <p className="text-sm font-bold text-app-text truncate max-w-[150px]">{destinationAccount?.name || '---'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Category (Non-transfer) */}
+          {!isTransfer && category && (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border">
+              <div className="flex items-center gap-3">
+                <div className="size-10 bg-app-subtle rounded-xl flex items-center justify-center text-app-muted">
+                  <span className="material-symbols-outlined">category</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-app-muted uppercase">Categoría</p>
+                  <p className="text-sm font-bold text-app-text">{category.name}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Linked MSI */}
+          {transaction.installmentPurchaseId && (
+            <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 flex items-center gap-3">
+              <span className="material-symbols-outlined text-indigo-500">link</span>
+              <div>
+                <p className="text-[10px] font-bold text-indigo-800 dark:text-indigo-200 uppercase">Vinculado a Plan</p>
+                <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Este movimiento es el pago de una cuota MSI.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Action Footer */}
+        <div className="hidden md:grid grid-cols-2 gap-3 pt-2 border-t border-app-border/50">
           <button
-            onClick={onClose}
-            className="lg:hidden p-2 hover:bg-app-subtle rounded-full transition-colors shrink-0"
+            onClick={() => onEdit(transaction)}
+            className="h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center gap-2 text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-95 transition-all"
           >
-            <span className="material-symbols-outlined text-app-muted">close</span>
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+            Editar
+          </button>
+          <button
+            onClick={() => onDelete(transaction)}
+            className="h-12 rounded-xl bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 flex items-center justify-center gap-2 text-sm font-bold hover:bg-rose-100 dark:hover:bg-rose-900/20 active:scale-95 transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">delete</span>
+            Borrar
           </button>
         </div>
-      </div>
 
-      {/* Amount */}
-      <div className="py-6 text-center border-b border-app-border -mx-6 px-6">
-        <p className="text-xs text-app-muted uppercase font-bold tracking-wider mb-1">Monto</p>
-        <p className={`text-4xl font-black font-numbers ${config.color}`}>
-          {isExpense ? '-' : isIncome ? '+' : ''}{formatCurrency(transaction.amount)}
-        </p>
-      </div>
-
-      {/* Details */}
-      <div className="py-4 space-y-4">
-        {/* Date */}
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-app-subtle flex items-center justify-center">
-            <span className="material-symbols-outlined text-app-muted text-xl">calendar_today</span>
-          </div>
-          <div>
-            <p className="text-[10px] text-app-muted uppercase font-bold">Fecha</p>
-            <p className="text-sm font-semibold text-app-text capitalize">{formatDate(transaction.date)}</p>
-          </div>
-        </div>
-
-        {/* Account */}
-        {account && (
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-app-subtle flex items-center justify-center">
-              <span className="material-symbols-outlined text-app-muted text-xl">account_balance</span>
-            </div>
-            <div>
-              <p className="text-[10px] text-app-muted uppercase font-bold">
-                {isTransfer ? 'Cuenta Origen' : 'Cuenta'}
-              </p>
-              <p className="text-sm font-semibold text-app-text">{account.name}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Destination Account (for transfers) */}
-        {isTransfer && destinationAccount && (
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-app-subtle flex items-center justify-center">
-              <span className="material-symbols-outlined text-app-muted text-xl">arrow_forward</span>
-            </div>
-            <div>
-              <p className="text-[10px] text-app-muted uppercase font-bold">Cuenta Destino</p>
-              <p className="text-sm font-semibold text-app-text">{destinationAccount.name}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Category (for income/expense) */}
-        {!isTransfer && category && (
-          <div className="flex items-center gap-3">
-            <div
-              className="size-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: `${category.color}15`, color: category.color }}
-            >
-              <span className="material-symbols-outlined text-xl">{category.icon}</span>
-            </div>
-            <div>
-              <p className="text-[10px] text-app-muted uppercase font-bold">Categoría</p>
-              <p className="text-sm font-semibold text-app-text">{category.name}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Installment Link */}
-        {transaction.installmentPurchaseId && (
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-indigo-500 text-xl">credit_card</span>
-            </div>
-            <div>
-              <p className="text-[10px] text-app-muted uppercase font-bold">Pago a Meses</p>
-              <p className="text-sm font-semibold text-app-text">Vinculado a plan MSI</p>
-            </div>
-          </div>
-        )}
-
-        {/* Loan Link */}
-        {transaction.loan && (
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-violet-600 text-xl">
-                {transaction.loan.loanType === 'lent' ? 'call_made' : 'call_received'}
-              </span>
-            </div>
-            <div>
-              <p className="text-[10px] text-app-muted uppercase font-bold">
-                {transaction.loan.loanType === 'lent' ? 'Préstamo a' : 'Recibido de'}
-              </p>
-              <p className="text-sm font-semibold text-app-text">
-                {transaction.loan.borrowerName}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="hidden md:flex gap-3 pt-2 border-t border-app-border -mx-6 px-6 mt-2">
-        <button
-          onClick={() => onEdit(transaction)}
-          className="flex-1 py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          <span className="material-symbols-outlined text-lg">edit</span>
-          Editar
-        </button>
-        <button
-          onClick={() => onDelete(transaction)}
-          className="py-3.5 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold hover:opacity-80 transition-opacity flex items-center justify-center"
-        >
-          <span className="material-symbols-outlined text-lg">delete</span>
-        </button>
       </div>
     </SwipeableBottomSheet>
   );

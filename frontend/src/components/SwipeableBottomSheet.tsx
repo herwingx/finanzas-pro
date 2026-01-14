@@ -13,11 +13,16 @@ interface SheetProps {
 
 // Custom Hook para Media Query
 const useIsDesktop = () => {
-  const [isDesktop, setIsDesktop] = React.useState(false);
+  const [isDesktop, setIsDesktop] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(min-width: 768px)').matches;
+    }
+    return false;
+  });
+
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 768px)'); // iPad+
-    const listener = () => setIsDesktop(media.matches);
-    listener();
+    const media = window.matchMedia('(min-width: 768px)');
+    const listener = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
     media.addEventListener('change', listener);
     return () => media.removeEventListener('change', listener);
   }, []);
@@ -60,11 +65,11 @@ export const SwipeableBottomSheet: React.FC<SheetProps> = ({
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-100 flex justify-center items-end md:items-center pointer-events-auto">
+        <div className="fixed inset-0 z-50 grid place-items-end md:place-items-center pointer-events-auto">
 
           {/* 1. BACKDROP (Click to close) */}
           <motion.div
-            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/60 md:bg-black/40 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -76,10 +81,8 @@ export const SwipeableBottomSheet: React.FC<SheetProps> = ({
             className={`
                bg-app-surface w-full overflow-hidden flex flex-col shadow-2xl
                will-change-transform backface-hidden transform-gpu
-               // Estilos Móvil:
                rounded-t-[2.5rem] border-t border-white/10 max-h-[92dvh]
-               // Estilos Desktop:
-               md:max-w-xl md:rounded-4xl md:max-h-[85vh] md:border md:border-app-border
+               md:w-full md:max-w-xl md:h-auto md:max-h-[85vh] md:rounded-3xl md:border md:border-app-border
             `}
             initial={isDesktop ? { scale: 0.95, opacity: 0 } : { y: "100%" }}
             animate={isDesktop ? { scale: 1, opacity: 1 } : { y: 0 }}
@@ -96,13 +99,17 @@ export const SwipeableBottomSheet: React.FC<SheetProps> = ({
             {/* --- HEADER / HANDLE --- */}
             {/* Área sensible al tacto para arrastrar en móvil */}
             <div
-              className="shrink-0 pt-4 pb-2 bg-app-surface z-10 touch-none cursor-grab active:cursor-grabbing relative"
+              className={`shrink-0 pt-4 pb-2 bg-app-surface z-10 touch-none relative ${!isDesktop ? 'cursor-grab active:cursor-grabbing' : ''}`}
               onPointerDown={(e) => !isDesktop && controls.start(e)}
             >
               {/* Desktop Close Button (Floating) */}
               {isDesktop && (
-                <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-app-subtle rounded-full hover:bg-black/10 transition-colors">
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                <button
+                  onClick={onClose}
+                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-app-subtle text-app-text rounded-full hover:bg-app-elevated hover:scale-105 active:scale-95 transition-all duration-200 border border-app-border shadow-sm group"
+                  aria-label="Cerrar"
+                >
+                  <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-300">close</span>
                 </button>
               )}
 
@@ -111,7 +118,7 @@ export const SwipeableBottomSheet: React.FC<SheetProps> = ({
 
               {/* Optional Title in Sheet */}
               {title && (
-                <div className="px-6 pb-2 text-center md:text-left">
+                <div className={`px-6 pb-2 text-center md:text-left ${isDesktop ? 'md:pr-14' : ''}`}>
                   {typeof title === 'string' ? (
                     <h3 className="text-xl font-bold text-app-text">{title}</h3>
                   ) : (

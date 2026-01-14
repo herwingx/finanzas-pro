@@ -75,15 +75,16 @@ export const SwipeableBottomSheet: React.FC<SheetProps> = ({
           <motion.div
             className={`
                bg-app-surface w-full overflow-hidden flex flex-col shadow-2xl
+               will-change-transform backface-hidden transform-gpu
                // Estilos Móvil:
                rounded-t-[2.5rem] border-t border-white/10 max-h-[92dvh]
                // Estilos Desktop:
                md:max-w-xl md:rounded-4xl md:max-h-[85vh] md:border md:border-app-border
             `}
-            initial={isDesktop ? { scale: 0.9, opacity: 0 } : { y: "100%" }}
+            initial={isDesktop ? { scale: 0.95, opacity: 0 } : { y: "100%" }}
             animate={isDesktop ? { scale: 1, opacity: 1 } : { y: 0 }}
-            exit={isDesktop ? { scale: 0.9, opacity: 0 } : { y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            exit={isDesktop ? { scale: 0.95, opacity: 0 } : { y: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 350, mass: 0.8 }}
             // Gestures para cerrar deslizando en Móvil
             drag={!isDesktop ? "y" : false}
             dragControls={controls}

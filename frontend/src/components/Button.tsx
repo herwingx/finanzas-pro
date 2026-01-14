@@ -126,7 +126,7 @@ export const IconButton: React.FC<IconButtonProps> = ({ icon, variant = 'ghost',
 /* ==================================================================================
    COMPONENT 4: Segmented Toggle Group (Tabs)
    ================================================================================== */
-export const ToggleButtonGroup: React.FC<{
+export const ToggleGroup: React.FC<{
   options: { value: string; label: string; icon?: string }[];
   value: string;
   onChange: (val: string) => void;
@@ -157,5 +157,7 @@ export const ToggleButtonGroup: React.FC<{
     </div>
   );
 };
+
+export const ToggleButtonGroup = ToggleGroup;
 
 export default Button;

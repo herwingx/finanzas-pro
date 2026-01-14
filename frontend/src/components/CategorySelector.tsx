@@ -44,7 +44,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   /* MAIN GRID */
   return (
-    <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 pb-safe-offset-2 ${className}`}>
+    <div className={`grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 sm:gap-3 pb-safe-offset-2 overflow-y-auto max-h-[220px] custom-scrollbar ${className}`}>
       {categories.map((cat) => {
         const isSelected = selectedId === cat.id;
 
@@ -55,38 +55,37 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
             onClick={() => onSelect(cat.id)}
             className={`
               relative flex flex-col items-center gap-2 p-2 rounded-2xl transition-all duration-200 outline-none select-none
-              ${isSelected ? 'bg-app-primary/5 -translate-y-1' : 'hover:bg-app-subtle/50 active:scale-95'}
+              ${isSelected ? '-translate-y-1' : 'hover:bg-app-subtle/50 active:scale-95'}
             `}
           >
             {/* Icon Box */}
             <div
               className={`
-                size-14 rounded-2xl flex items-center justify-center text-[26px] shadow-sm transition-all
-                ${isSelected ? 'shadow-md scale-105' : 'border border-black/5 dark:border-white/5'}
+                size-12 rounded-2xl flex items-center justify-center text-[22px] transition-all duration-300
+                ${isSelected
+                  ? 'border-2 scale-105'
+                  : 'bg-app-subtle/40 border border-transparent'
+                }
               `}
               style={{
-                backgroundColor: isSelected ? cat.color : `${cat.color}15`,
-                color: isSelected ? '#FFFFFF' : cat.color,
-                boxShadow: isSelected ? `0 8px 16px -4px ${cat.color}60` : undefined
+                backgroundColor: isSelected ? `${cat.color}20` : undefined, // 20% opacity tint
+                color: cat.color,
+                borderColor: isSelected ? cat.color : 'transparent',
+                boxShadow: isSelected ? `0 4px 12px -2px ${cat.color}40` : undefined,
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{getValidIcon(cat.icon)}</span>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: isSelected ? "'FILL' 1, 'wght' 600" : "'FILL' 0, 'wght' 400" }}>
+                {getValidIcon(cat.icon)}
+              </span>
             </div>
 
             {/* Label */}
             <span className={`
-                text-[10px] text-center w-full truncate font-medium transition-colors
+                text-[10px] text-center w-full truncate font-medium transition-colors mt-1.5
                 ${isSelected ? 'text-app-text font-bold' : 'text-app-muted'}
             `}>
               {cat.name}
             </span>
-
-            {/* Selection Checkmark Badge (Optional Polish) */}
-            {isSelected && (
-              <div className="absolute top-2 right-2 size-4 bg-app-surface rounded-full flex items-center justify-center shadow-sm">
-                <span className="material-symbols-outlined text-[12px]" style={{ color: cat.color }}>check</span>
-              </div>
-            )}
           </button>
         );
       })}

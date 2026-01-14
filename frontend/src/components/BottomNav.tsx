@@ -1,247 +1,169 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Context & Types
 import { useGlobalSheets } from '../context/GlobalSheetContext';
 import { TransactionType, TransactionFormInitialData } from '../types';
 
-// --- Interfaces & Constants ---
-
-interface NavItemProps {
-  to: string;
-  icon: string;
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}
-
+/* ==================================================================================
+   CONSTANTS
+   ================================================================================== */
 const QUICK_ACTIONS = [
-  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense' },
-  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income' },
-  { icon: 'swap_horiz', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer' },
-  { icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new' },
-  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new' },
-  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new' },
-  { icon: 'savings', label: 'Meta', colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400', path: '/goals?action=new' },
-  { icon: 'trending_up', label: 'Inversión', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/investments?action=new' },
+  { id: 'exp', label: 'Gasto', icon: 'remove', color: 'bg-rose-50 text-rose-500 border-rose-200', type: 'expense' },
+  { id: 'inc', label: 'Ingreso', icon: 'add', color: 'bg-emerald-50 text-emerald-500 border-emerald-200', type: 'income' },
+  { id: 'trf', label: 'Transf.', icon: 'sync_alt', color: 'bg-blue-50 text-blue-500 border-blue-200', type: 'transfer' },
+  { id: 'fix', label: 'Recurrente', icon: 'event_repeat', color: 'bg-purple-50 text-purple-500 border-purple-200', action: 'recurring' },
+  { id: 'msi', label: 'A Plazos', icon: 'credit_card', color: 'bg-indigo-50 text-indigo-500 border-indigo-200', action: 'installments' },
+  { id: 'loan', label: 'Deuda', icon: 'handshake', color: 'bg-amber-50 text-amber-500 border-amber-200', action: 'loan' },
 ];
 
-const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
+const MAIN_NAV = ['/', '/history', '/accounts', '/more'];
 
-// --- Helper: Haptic ---
-const triggerHaptic = () => {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    navigator.vibrate(5);
-  }
-};
-
-// --- Sub-components ---
-
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isActive, onClick }) => (
-  <Link
-    to={to}
-    onClick={onClick}
-    className="flex flex-col items-center justify-center flex-1 h-full py-1 group select-none touch-manipulation relative"
-  >
-    <motion.div
-      whileTap={{ scale: 0.85 }}
-      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-      className={`
-         rounded-xl p-1 mb-0.5 transition-colors duration-200
-         ${isActive ? 'text-app-primary' : 'text-app-muted group-hover:text-app-text'}
-      `}
-    >
-      {/* Icon with animated fill */}
-      <span className={`material-symbols-outlined text-[26px] transition-all duration-300 ${isActive ? 'filled-icon' : ''}`}
-        style={{ fontVariationSettings: isActive ? "'FILL' 1, 'wght' 600" : "'FILL' 0, 'wght' 400" }}>
-        {icon}
-      </span>
-
-      {/* Active Indicator Dot (Optional Premium Detail) */}
-      {isActive && (
-        <motion.div
-          layoutId="activeTabIndicator"
-          className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-app-primary rounded-full"
-        />
-      )}
-    </motion.div>
-
-    <span
-      className={`text-[10px] font-medium leading-none tracking-wide transition-colors duration-200 
-      ${isActive ? 'text-app-primary font-semibold' : 'text-app-muted'}
-    `}>
-      {label}
-    </span>
-  </Link>
-);
-
-const QuickActionButton: React.FC<{
-  action: typeof QUICK_ACTIONS[0],
-  onClick: () => void
-}> = ({ action, onClick }) => (
-  <motion.button
-    whileTap={{ scale: 0.95 }}
-    onClick={() => { triggerHaptic(); onClick(); }}
-    className="flex flex-col items-center gap-2 group w-full"
-  >
-    <div
-      className={`size-14 rounded-2xl flex items-center justify-center shadow-sm border border-transparent hover:border-black/5 dark:hover:border-white/10 ${action.colorClass}`}
-    >
-      <span className="material-symbols-outlined text-2xl">{action.icon}</span>
-    </div>
-    <span className="text-[11px] font-medium text-app-text tracking-tight">{action.label}</span>
-  </motion.button>
-);
-
-
-// --- Main Component ---
-
+/* ==================================================================================
+   MAIN COMPONENT
+   ================================================================================== */
 const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Global Context Actions
   const {
-    openInvestmentSheet,
-    openGoalSheet,
-    openInstallmentSheet,
-    openLoanSheet,
+    openTransactionSheet,
     openRecurringSheet,
-    openTransactionSheet
+    openInstallmentSheet,
+    openLoanSheet
   } = useGlobalSheets();
 
-  // Close menu on route change
-  useEffect(() => setIsMenuOpen(false), [location.pathname]);
-
-  const shouldShow = MAIN_NAV_PAGES.includes(location.pathname);
-  if (!shouldShow) return null;
-
-  const toggleMenu = () => {
-    triggerHaptic();
-    setIsMenuOpen(!isMenuOpen);
+  // Haptic Feedback Helper
+  const haptic = () => {
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(5);
   };
 
-  const handleNavClick = () => {
-    triggerHaptic();
-    if (isMenuOpen) setIsMenuOpen(false);
-  };
-
-  const handleQuickAction = (path: string) => {
-    // Intercept Global Sheets
-    // ... (Reuse logic but with haptics already triggered by button)
-
-    // Helper to close and execute
-    const execute = (fn: () => void) => {
-      setIsMenuOpen(false);
-      setTimeout(fn, 150);
-    };
-
-    if (path.includes('/investments?action=new')) return execute(openInvestmentSheet);
-    if (path.includes('/goals?action=new')) return execute(openGoalSheet);
-    if (path.includes('/installments/new')) return execute(openInstallmentSheet);
-    if (path.includes('/loans/new')) return execute(openLoanSheet);
-    if (path.includes('/recurring/new')) return execute(openRecurringSheet);
-
-    if (path.startsWith('/new')) {
-      setIsMenuOpen(false);
-      const split = path.split('?');
-      const query = split.length > 1 ? split[1] : '';
-      const params = new URLSearchParams(query);
-      const type = (params.get('type') as TransactionType) || 'expense';
-      const initialData: TransactionFormInitialData = { type };
-      setTimeout(() => openTransactionSheet(null, initialData), 150);
-      return;
-    }
-
-    // Normal Navigation
+  const handleAction = (item: any) => {
+    haptic();
+    setIsMenuOpen(false);
     setTimeout(() => {
-      setIsMenuOpen(false);
-      navigate(path);
-    }, 50);
+      if (item.action === 'recurring') openRecurringSheet();
+      else if (item.action === 'installments') openInstallmentSheet();
+      else if (item.action === 'loan') openLoanSheet();
+      else openTransactionSheet(null, { type: item.type as TransactionType });
+    }, 100);
   };
+
+  if (!MAIN_NAV.includes(location.pathname) && !MAIN_NAV.some(p => p !== '/' && location.pathname.startsWith(p))) return null;
 
   return (
     <>
-      {/* DIMMED BACKDROP */}
+      {/* --- OVERLAY BACKDROP --- */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] touch-none"
-            onClick={toggleMenu}
+            onClick={() => setIsMenuOpen(false)}
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] touch-none"
           />
         )}
       </AnimatePresence>
 
-      {/* QUICK ACTIONS SHEET */}
+      {/* --- QUICK ACTION BUBBLE MENU --- */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="lg:hidden fixed left-4 right-4 z-50 origin-bottom"
-            style={{ bottom: 'calc(70px + env(safe-area-inset-bottom) + 20px)' }}
+            className="fixed bottom-[84px] left-4 right-4 z-50 max-w-sm mx-auto"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
           >
-            <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl p-5 rounded-[28px] border border-black/5 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
-              <div className="flex justify-between items-center mb-5 px-1">
-                <span className="text-xs font-bold text-app-muted uppercase tracking-wider">Nueva Transacción</span>
-                <button onClick={toggleMenu} className="size-6 rounded-full bg-app-subtle flex items-center justify-center text-app-muted">
-                  <span className="material-symbols-outlined text-sm">close</span>
+            <div className="bg-app-surface/95 backdrop-blur-xl rounded-[28px] p-5 shadow-2xl border border-app-border">
+              <div className="flex justify-between items-center mb-4 px-2">
+                <span className="text-xs font-bold text-app-muted uppercase tracking-wider">Nueva Acción</span>
+                <button onClick={() => setIsMenuOpen(false)} className="bg-app-subtle size-6 rounded-full flex items-center justify-center">
+                  <span className="material-symbols-outlined text-xs">close</span>
                 </button>
               </div>
-
-              <div className="grid grid-cols-4 gap-y-4 gap-x-2 place-items-center">
+              <div className="grid grid-cols-3 gap-3">
                 {QUICK_ACTIONS.map(action => (
-                  <QuickActionButton
-                    key={action.label}
-                    action={action}
-                    onClick={() => handleQuickAction(action.path)}
-                  />
+                  <button
+                    key={action.id}
+                    onClick={() => handleAction(action)}
+                    className="flex flex-col items-center gap-2 group active:scale-95 transition-transform"
+                  >
+                    <div className={`size-12 rounded-2xl flex items-center justify-center border ${action.color} dark:bg-opacity-10 dark:border-white/10 shadow-sm`}>
+                      <span className="material-symbols-outlined text-[24px]">{action.icon}</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-app-text">{action.label}</span>
+                  </button>
                 ))}
               </div>
             </div>
-            {/* Arrow */}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-white/95 dark:bg-zinc-900/95 rotate-45 border-b border-r border-black/5 dark:border-white/10 rounded-br"></div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* MAIN NAVIGATION BAR */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-950 border-t border-app-border pb-safe">
-        <div className="h-[60px] relative flex items-center justify-around px-2 w-full max-w-md mx-auto">
+      {/* --- TAB BAR --- */}
+      <nav className="fixed bottom-0 w-full z-50 bg-app-surface/90 backdrop-blur-md border-t border-app-border pb-safe">
+        <div className="flex justify-around items-center h-[60px] px-2 max-w-md mx-auto relative">
 
-          <NavItem to="/" icon="space_dashboard" label="Inicio" isActive={location.pathname === '/'} onClick={handleNavClick} />
+          {/* Home */}
+          <NavItem to="/" icon="space_dashboard" label="Inicio" isActive={location.pathname === '/'} onClick={haptic} />
 
-          <NavItem to="/history" icon="receipt_long" label="Historial" isActive={location.pathname === '/history'} onClick={handleNavClick} />
+          {/* History */}
+          <NavItem to="/history" icon="receipt_long" label="Historial" isActive={location.pathname.startsWith('/history')} onClick={haptic} />
 
-          {/* CENTRAL FAB */}
-          <div className="relative -top-5 w-14 shrink-0 flex justify-center z-10">
-            <motion.button
-              onClick={toggleMenu}
-              whileTap={{ scale: 0.9 }}
-              animate={{ rotate: isMenuOpen ? 45 : 0 }}
+          {/* FAB (Floating Action Button) */}
+          <div className="relative -top-5">
+            <button
+              onClick={() => { haptic(); setIsMenuOpen(!isMenuOpen); }}
               className={`
-                    size-14 rounded-full flex items-center justify-center
-                    shadow-[0_8px_20px_-4px_rgba(37,99,235,0.5)] dark:shadow-[0_8px_20px_-4px_rgba(37,99,235,0.3)]
-                    border-[3px] border-white dark:border-zinc-950
-                    bg-app-primary text-white
-                    ${isMenuOpen ? 'bg-app-text text-app-bg' : ''}
-                 `}
+                 size-14 rounded-full flex items-center justify-center shadow-lg
+                 border-4 border-app-bg transition-transform active:scale-95
+                 ${isMenuOpen ? 'bg-app-text text-app-bg rotate-45' : 'bg-app-primary text-white'}
+              `}
             >
-              <span className="material-symbols-outlined text-[32px] font-medium leading-none">add</span>
-            </motion.button>
+              <span className="material-symbols-outlined text-[30px] font-medium">add</span>
+            </button>
           </div>
 
-          <NavItem to="/accounts" icon="account_balance" label="Cuentas" isActive={location.pathname.startsWith('/accounts')} onClick={handleNavClick} />
+          {/* Accounts */}
+          <NavItem to="/accounts" icon="account_balance_wallet" label="Cuentas" isActive={location.pathname.startsWith('/accounts')} onClick={haptic} />
 
-          <NavItem to="/more" icon="apps" label="Más" isActive={location.pathname === '/more'} onClick={handleNavClick} />
+          {/* Menu */}
+          <NavItem to="/more" icon="grid_view" label="Menú" isActive={location.pathname.startsWith('/more')} onClick={haptic} />
 
         </div>
       </nav>
     </>
   );
 };
+
+/* --- NavItem Sub-component --- */
+const NavItem = ({ to, icon, label, isActive, onClick }: any) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className={`flex-1 flex flex-col items-center justify-center gap-1 h-full select-none touch-manipulation group ${isActive ? 'text-app-primary' : 'text-app-muted'}`}
+  >
+    <div className="relative px-5 py-1 rounded-2xl">
+      {isActive && (
+        <motion.div
+          layoutId="nav-pill"
+          className="absolute inset-0 bg-app-primary/10 rounded-2xl"
+          initial={false}
+          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        />
+      )}
+      <span className={`relative z-10 material-symbols-outlined text-[26px] transition-all duration-300 ${isActive ? 'scale-110 font-semibold' : 'scale-100 font-light group-hover:scale-105'}`}>
+        {icon}
+      </span>
+    </div>
+    <span className={`text-[10px] tracking-tight transition-all duration-300 ${isActive ? 'font-bold opacity-100 translate-y-0' : 'font-medium opacity-70 group-hover:opacity-90'}`}>
+      {label}
+    </span>
+  </Link>
+);
 
 export default BottomNav;

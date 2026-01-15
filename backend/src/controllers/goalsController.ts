@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import prisma from '../services/database';
 import { AuthRequest } from '../middleware/auth';
 import { createTransactionAndAdjustBalances } from '../services/transactions';
@@ -171,7 +171,7 @@ export const addContribution = async (req: AuthRequest, res: Response) => {
 export const updateGoal = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -214,7 +214,7 @@ export const updateGoal = async (req: AuthRequest, res: Response) => {
 export const deleteGoal = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -244,7 +244,7 @@ export const deleteGoal = async (req: AuthRequest, res: Response) => {
 export const withdrawFromGoal = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { amount, targetAccountId } = req.body; // targetAccount = where money goes
 
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });

@@ -9,7 +9,7 @@
  */
 
 import prisma from './database';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '@prisma/client';
 
 /**
  * Tipo de acción de auditoría.

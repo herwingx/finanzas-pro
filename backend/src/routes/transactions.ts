@@ -1,6 +1,6 @@
 import express from 'express';
 import prisma from '../services/database';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { addDays, addMonths, addWeeks, addYears, subMonths } from 'date-fns';
 
@@ -104,7 +104,7 @@ router.get('/deleted', async (req: AuthRequest, res) => {
 // Restore a soft-deleted transaction (UNDO)
 router.post('/:id/restore', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
 
   try {
     await prisma.$transaction(async (tx: any) => {
@@ -221,7 +221,7 @@ router.post('/:id/restore', async (req: AuthRequest, res) => {
 // Get a single transaction by ID
 router.get('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
 
   try {
     const transaction = await prisma.transaction.findFirst({
@@ -243,7 +243,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 // Update a transaction
 router.put('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const data = req.body;
 
   try {
@@ -380,7 +380,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 // Delete a transaction
 router.delete('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const force = req.query.force === 'true';
 
   try {

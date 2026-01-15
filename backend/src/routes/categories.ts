@@ -55,7 +55,7 @@ router.post('/', async (req: AuthRequest, res) => {
 
 router.put('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { name, icon, color, type, budgetType } = req.body || {};
 
     if (!name && !icon && !color && !type && !budgetType) {
@@ -91,7 +91,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 
 router.delete('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { newCategoryId } = req.body || {}; // Safe destructuring
 
     try {

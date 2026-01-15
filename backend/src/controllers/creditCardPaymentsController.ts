@@ -78,7 +78,7 @@ export const getStatementDetails = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { accountId } = req.params;
+    const { accountId } = req.params as { accountId: string };
 
     const account = await prisma.account.findFirst({
       where: {
@@ -249,7 +249,7 @@ export const payFullStatement = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { accountId } = req.params;
+    const { accountId } = req.params as { accountId: string };
     const { sourceAccountId, date } = req.body;
 
     if (!sourceAccountId) {
@@ -434,7 +434,7 @@ export const payMsiInstallment = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { installmentId } = req.params;
+    const { installmentId } = req.params as { installmentId: string };
     const { sourceAccountId, date } = req.body;
 
     if (!sourceAccountId) {
@@ -532,7 +532,7 @@ export const revertStatementPayment = async (req: AuthRequest, res: Response) =>
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { transactionId } = req.params;
+    const { transactionId } = req.params as { transactionId: string };
 
     const transaction = await prisma.transaction.findFirst({
       where: {

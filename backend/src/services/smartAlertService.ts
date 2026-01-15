@@ -1,5 +1,5 @@
 import prisma from './database';
-import { AccountType, StatementStatus } from '@prisma/client';
+// import { AccountType, StatementStatus } from '@prisma/client'; // Removed to avoid runtime enum issues
 
 
 /**
@@ -45,7 +45,7 @@ export class SmartAlertService {
    */
   static async checkCreditCards(userId: string) {
     const creditCards = await prisma.account.findMany({
-      where: { userId, type: AccountType.CREDIT, isArchived: false }
+      where: { userId, type: 'CREDIT', isArchived: false }
     });
 
     for (const card of creditCards) {
@@ -74,7 +74,7 @@ export class SmartAlertService {
       // MSI Check (Pending MSI)
       // This might be better as a specialized Insight than a push notification, but checking logic here:
       const statement = await prisma.creditCardStatement.findFirst({
-        where: { accountId: card.id, status: StatementStatus.PENDING },
+        where: { accountId: card.id, status: 'PENDING' },
         orderBy: { cycleEnd: 'desc' }
       });
 

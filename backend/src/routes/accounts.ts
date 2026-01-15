@@ -58,7 +58,7 @@ router.post('/', async (req: AuthRequest, res) => {
 // Update an existing account
 router.put('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { name, type, balance, creditLimit, cutoffDay, paymentDay } = req.body || {};
 
     if (!name && !type && balance === undefined && creditLimit === undefined && cutoffDay === undefined && paymentDay === undefined) {
@@ -99,7 +99,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 // Delete an account
 router.delete('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     try {
         // Before deleting an account, ensure there are no transactions associated with it

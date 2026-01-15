@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import prisma from '../services/database';
 import { AuthRequest } from '../middleware/auth';
 import { createTransactionAndAdjustBalances } from '../services/transactions';
@@ -36,7 +36,7 @@ export const getInvestments = async (req: AuthRequest, res: Response) => {
 export const getInvestment = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -161,7 +161,7 @@ export const createInvestment = async (req: AuthRequest, res: Response) => {
 export const updateInvestment = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -217,7 +217,7 @@ export const updateInvestment = async (req: AuthRequest, res: Response) => {
 export const deleteInvestment = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });

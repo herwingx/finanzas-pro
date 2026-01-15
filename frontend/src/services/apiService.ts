@@ -17,7 +17,7 @@ export const getInstallmentPurchases = async (): Promise<InstallmentPurchase[]> 
     return response.json();
 };
 
-export const addInstallmentPurchase = async (purchase: Omit<InstallmentPurchase, 'id' | 'user' | 'account' | 'generatedTransactions' | 'paidInstallments' | 'paidAmount' | 'userId' | 'monthlyPayment'>): Promise<InstallmentPurchase> => {
+export const addInstallmentPurchase = async (purchase: Omit<InstallmentPurchase, 'id' | 'user' | 'account' | 'generatedTransactions' | 'paidInstallments' | 'paidAmount' | 'userId' | 'monthlyPayment'> & { initialPaidInstallments?: number }): Promise<InstallmentPurchase> => {
     const response = await fetch(`${API_URL}/installments`, {
         method: 'POST',
         headers: getAuthHeaders(),

@@ -23,7 +23,7 @@ router.get('/', async (req: AuthRequest, res) => {
 // Get a single recurring transaction by ID
 router.get('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   try {
     const recurring = await prisma.recurringTransaction.findFirst({
       where: { id, userId },
@@ -73,7 +73,7 @@ router.post('/', async (req: AuthRequest, res) => {
 // Update a recurring transaction
 router.put('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { amount, description, type, frequency, startDate, categoryId, accountId, endDate } = req.body || {};
 
   try {
@@ -130,7 +130,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 // Delete recurring transaction
 router.delete('/:id', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
 
   try {
     await prisma.recurringTransaction.deleteMany({
@@ -145,7 +145,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 // Execute/Pay a recurring transaction manually
 router.post('/:id/pay', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { amount, date } = req.body; // Allow overriding amount and date
 
   try {
@@ -200,7 +200,7 @@ router.post('/:id/pay', async (req: AuthRequest, res) => {
 // Skip/Deffer a recurring transaction (just move date without paying)
 router.post('/:id/skip', async (req: AuthRequest, res) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
 
   try {
     const recurring = await prisma.recurringTransaction.findFirst({

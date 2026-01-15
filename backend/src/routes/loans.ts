@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../services/database';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
-import { Loan } from '../generated/prisma/client';
+import { Loan } from '@prisma/client';
 
 const router = Router();
 
@@ -72,7 +72,7 @@ router.get('/summary', async (req: AuthRequest, res: Response) => {
 // GET single loan by ID
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   try {
     const loan = await prisma.loan.findFirst({
       where: { id, userId },
@@ -208,7 +208,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 // PUT update loan
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const {
     borrowerName,
     borrowerPhone,
@@ -378,7 +378,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 // POST register payment received on a loan
 router.post('/:id/payment', async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { amount, paymentDate, notes, accountId } = req.body;
 
   if (!amount) {
@@ -491,7 +491,7 @@ router.post('/:id/payment', async (req: AuthRequest, res: Response) => {
 // POST mark loan as fully paid
 router.post('/:id/mark-paid', async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { accountId } = req.body;
 
   try {
@@ -575,7 +575,7 @@ router.post('/:id/mark-paid', async (req: AuthRequest, res: Response) => {
 // DELETE a loan
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId;
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const revertBalance = req.query.revert === 'true';
 
   try {

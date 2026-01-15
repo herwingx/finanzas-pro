@@ -1,5 +1,5 @@
 import express from 'express';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '@prisma/client';
 import prismaClient from '../services/database';
 const prisma = prismaClient as any;
 import { authMiddleware, AuthRequest } from '../middleware/auth';
@@ -130,7 +130,7 @@ router.post('/', async (req: AuthRequest, res) => {
 // GET a single installment purchase by ID
 router.get('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     try {
         // Initial fetch with filtering
@@ -188,7 +188,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 // PUT (Update) an installment purchase
 router.put('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { description, totalAmount, installments, purchaseDate, categoryId } = req.body;
 
     if (!description && !totalAmount && !installments && !purchaseDate && !categoryId) {
@@ -295,7 +295,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 // DELETE an installment purchase
 router.delete('/:id', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     try {
         await prisma.$transaction(async (tx: any) => {
@@ -371,7 +371,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
 router.post('/:id/pay', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { id: installmentPurchaseId } = req.params;
+    const { id: installmentPurchaseId } = req.params as { id: string };
     const { amount, description, date, accountId } = req.body;
 
     if (!amount || !date || !accountId) {

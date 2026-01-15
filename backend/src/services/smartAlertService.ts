@@ -1,6 +1,6 @@
 import prisma from './database';
 import { AccountType, StatementStatus } from '@prisma/client';
-import { formatDate } from '../utils/dateUtils'; // Assuming exists, otherwise I'll use native Date
+
 
 /**
  * Smart Alert Service

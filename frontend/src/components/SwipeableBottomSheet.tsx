@@ -1,185 +1,146 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
 
-interface SwipeableBottomSheetProps {
+// --- Types ---
+interface SheetProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  /** Optional: threshold in pixels to trigger close (default: 100) */
-  closeThreshold?: number;
+  title?: React.ReactNode; // Flexible: string or component
+  noPadding?: boolean; // Para full-bleed content (gráficos, listas largas)
 }
 
-/**
- * A bottom sheet component that supports swipe-to-dismiss gesture.
- * - Swipe down on the handle or content to close
- * - Tap outside (on backdrop) to close
- * - Smooth animations with spring physics
- */
-export const SwipeableBottomSheet: React.FC<SwipeableBottomSheetProps> = ({
+// Custom Hook para Media Query
+const useIsDesktop = () => {
+  const [isDesktop, setIsDesktop] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(min-width: 768px)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px)');
+    const listener = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
+  return isDesktop;
+};
+
+export const SwipeableBottomSheet: React.FC<SheetProps> = ({
   isOpen,
   onClose,
   children,
-  closeThreshold = 100
+  title,
+  noPadding = false
 }) => {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const [translateY, setTranslateY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const startY = useRef(0);
-  const currentY = useRef(0);
+  const isDesktop = useIsDesktop();
+  const controls = useDragControls();
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  // Lock body scroll when modal is open
+  // Bloquear scroll del body al abrir
   useEffect(() => {
     if (isOpen) {
-      // Save current scroll position and lock body
-      const scrollY = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = '0';
-      document.body.style.right = '0';
       document.body.style.overflow = 'hidden';
-
-      return () => {
-        // Restore scroll position when modal closes
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
-        document.body.style.overflow = '';
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [isOpen]);
-
-  // Reset state when opened
-  useEffect(() => {
-    if (isOpen) {
-      setTranslateY(0);
-      setIsClosing(false);
-    }
-  }, [isOpen]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const sheet = sheetRef.current;
-    if (!sheet) return;
-
-    const touch = e.touches[0];
-    const sheetRect = sheet.getBoundingClientRect();
-    const handleArea = sheetRect.top + 60; // First 60px is the handle area
-
-    startY.current = touch.clientY;
-    currentY.current = touch.clientY;
-
-    // If touching the handle handle, drag immediately
-    if (touch.clientY <= handleArea) {
-      setIsDragging(true);
-    }
-    // If touching content, DO NOT set dragging yet. We verify intention in TouchMove.
-    // But reset 'isDragging' to ensure we don't carry over state.
-    else {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const sheet = sheetRef.current;
-    if (!sheet) return;
-
-    const touch = e.touches[0];
-    currentY.current = touch.clientY;
-    const deltaY = currentY.current - startY.current;
-
-    // Logic to determine if we should start dragging (if not already)
-    const isAtTop = sheet.scrollTop <= 0;
-    const isPullingDown = deltaY > 0;
-
-    // If we are already dragging, OR if we are at the top and pulling down
-    if (isDragging || (isAtTop && isPullingDown)) {
-      // If we weren't dragging before, start now
-      if (!isDragging) {
-        setIsDragging(true);
-      }
-
-      // Prevent native scroll/refresh ONLY if we are actively dragging the sheet
-      // Note: This relies on the event not being passive, which can be tricky in React.
-      // But 'overscroll-behavior: contain' on the parent helps too.
-      // e.preventDefault(); 
-
-      // Apply resistance
-      const resistance = 0.6;
-      setTranslateY(deltaY * resistance);
-    }
-    // Otherwise, let native scroll happen (do nothing here)
-  }, [isDragging]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isDragging && translateY === 0) return;
-
-    setIsDragging(false);
-
-    // If dragged past threshold, close the sheet
-    if (translateY > closeThreshold) {
-      setIsClosing(true);
-      setTranslateY(window.innerHeight);
-      setTimeout(() => {
-        onClose();
-        setTranslateY(0);
-        setIsClosing(false);
-      }, 300);
     } else {
-      // Snap back
-      setTranslateY(0);
+      document.body.style.overflow = '';
     }
-  }, [isDragging, translateY, closeThreshold, onClose]);
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
-  if (!isOpen && !isClosing) return null;
+  const handleDragEnd = (event: any, info: PanInfo) => {
+    const y = info.offset.y;
+    const v = info.velocity.y;
+    // Si se arrastra más de 150px abajo o se lanza rápido hacia abajo -> Cerrar
+    if (y > 150 || v > 400) {
+      onClose();
+    }
+  };
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      style={{ overscrollBehavior: 'contain' }}
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
-        style={{
-          opacity: isClosing ? 0 : 1 - (translateY / 400),
-          touchAction: 'none' // Prevent any touch gestures on backdrop
-        }}
-        onClick={onClose}
-      />
+  // Portal Target (aseguramos que exista en document.body)
+  if (typeof document === 'undefined') return null;
 
-      {/* Sheet */}
-      <div
-        ref={sheetRef}
-        onClick={(e) => e.stopPropagation()}
-        className={`
-                    relative w-full max-w-md max-h-[90vh] overflow-y-auto
-                    bg-app-surface border-t sm:border border-app-border
-                    rounded-t-3xl sm:rounded-3xl shadow-2xl
-                    ${!isDragging && !isClosing ? 'transition-transform duration-300 ease-out' : ''}
-                    ${isClosing ? 'transition-transform duration-300 ease-in' : ''}
-                `}
-        style={{
-          transform: `translateY(${translateY}px)`,
-          animation: !isDragging && !isClosing && translateY === 0 ? 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-          overscrollBehaviorY: 'contain', // Prevent pull-to-refresh
-          touchAction: 'pan-y', // Allow vertical scroll, prevent other gestures
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Swipe Handle */}
-        <div className="sticky top-0 z-10 pt-3 pb-2 bg-app-surface sm:hidden cursor-grab active:cursor-grabbing">
-          <div className="w-12 h-1.5 bg-app-border rounded-full mx-auto opacity-60" />
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-end md:place-items-center pointer-events-auto">
+
+          {/* 1. BACKDROP (Click to close) */}
+          <motion.div
+            className="absolute inset-0 bg-black/60 md:bg-black/40 backdrop-blur-[2px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+
+          {/* 2. SHEET CONTAINER */}
+          <motion.div
+            className={`
+               bg-app-surface w-full overflow-hidden flex flex-col shadow-2xl
+               will-change-transform backface-hidden transform-gpu
+               rounded-t-[2.5rem] border-t border-white/10 max-h-[92dvh]
+               md:w-full md:max-w-xl md:h-auto md:max-h-[85vh] md:rounded-3xl md:border md:border-app-border
+            `}
+            initial={isDesktop ? { scale: 0.95, opacity: 0 } : { y: "100%" }}
+            animate={isDesktop ? { scale: 1, opacity: 1 } : { y: 0 }}
+            exit={isDesktop ? { scale: 0.95, opacity: 0 } : { y: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 350, mass: 0.8 }}
+            // Gestures para cerrar deslizando en Móvil
+            drag={!isDesktop ? "y" : false}
+            dragControls={controls}
+            dragListener={false} // Usar el "handle" explícito para iniciar drag
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0.05 }} // Poca elasticidad arriba, mucha abajo
+            onDragEnd={handleDragEnd}
+          >
+            {/* --- HEADER / HANDLE --- */}
+            {/* Área sensible al tacto para arrastrar en móvil */}
+            <div
+              className={`shrink-0 pt-4 pb-2 bg-app-surface z-10 touch-none relative ${!isDesktop ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              onPointerDown={(e) => !isDesktop && controls.start(e)}
+            >
+              {/* Desktop Close Button (Floating) */}
+              {isDesktop && (
+                <button
+                  onClick={onClose}
+                  className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-app-subtle text-app-text rounded-full hover:bg-app-elevated hover:scale-105 active:scale-95 transition-all duration-200 border border-app-border shadow-sm group"
+                  aria-label="Cerrar"
+                >
+                  <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-300">close</span>
+                </button>
+              )}
+
+              {/* Mobile Pill Handle */}
+              <div className={`w-12 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto mb-4 ${isDesktop ? 'hidden' : 'block'}`} />
+
+              {/* Optional Title in Sheet */}
+              {title && (
+                <div className={`px-6 pb-2 text-center md:text-left ${isDesktop ? 'md:pr-14' : ''}`}>
+                  {typeof title === 'string' ? (
+                    <h3 className="text-xl font-bold text-app-text">{title}</h3>
+                  ) : (
+                    title
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* --- CONTENT (Scrollable) --- */}
+            <div
+              ref={contentRef}
+              className={`flex-1 overflow-y-auto overscroll-contain pb-safe-offset-8 bg-app-surface ${!noPadding ? 'px-6' : ''}`}
+            >
+              {children}
+            </div>
+
+          </motion.div>
         </div>
-
-        {/* Content - extra bottom padding for BottomNav on mobile */}
-        <div className="p-6 pt-2 sm:pt-6 pb-24 sm:pb-8">
-          {children}
-        </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 };
 

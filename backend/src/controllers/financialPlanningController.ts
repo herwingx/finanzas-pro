@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../services/database';
-import { addDays, addWeeks, addMonths, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { addDays, addWeeks, addMonths, startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { AuthRequest } from '../middleware/auth';
 
@@ -167,7 +167,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     // Get user's timezone
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { timezone: true }
+      select: { timezone: true, monthlyNetIncome: true, incomeFrequency: true }
     });
     const userTimezone = user?.timezone || 'America/Mexico_City';
 
@@ -252,8 +252,40 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
     // ...
 
-    // GLOBAL deduplication to prevent any duplicate uniqueIds
-    const globalAddedIds = new Set<string>();
+    // OPTIMIZATION: Batch fetch existing payments to avoid N+1 queries
+    // Instead of querying inside the loop, we fetch all payments for these recurring transactions at once.
+    const recurringIds = recurringTransactions.map(rt => rt.id);
+    let allExistingPayments: { recurringTransactionId: string | null; date: Date }[] = [];
+
+    if (recurringIds.length > 0) {
+      allExistingPayments = await prisma.transaction.findMany({
+        where: {
+          recurringTransactionId: { in: recurringIds },
+          deletedAt: null
+        },
+        select: {
+          recurringTransactionId: true,
+          date: true
+        }
+      });
+    }
+
+    // Create a lookup map: RecurringID -> Set of Paid Dates (YYYY-MM-DD)
+    const paymentsMap = new Map<string, Set<string>>();
+
+    for (const payment of allExistingPayments) {
+      if (!payment.recurringTransactionId) continue;
+
+      const dateObj = new Date(payment.date);
+      if (isNaN(dateObj.getTime())) continue; // Skip invalid dates
+
+      const dateKey = dateObj.toISOString().split('T')[0];
+
+      if (!paymentsMap.has(payment.recurringTransactionId)) {
+        paymentsMap.set(payment.recurringTransactionId, new Set());
+      }
+      paymentsMap.get(payment.recurringTransactionId)?.add(dateKey);
+    }
 
     // Dynamic limit based on period type (ensures we project enough instances)
     const maxInstances: Record<string, number> = {
@@ -273,20 +305,14 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       else if (freq === 'WEEKLY' || freq === 'weekly') d.setDate(d.getDate() + 7);
       else if (freq === 'BIWEEKLY' || freq === 'biweekly') d.setDate(d.getDate() + 14);
       else if (freq === 'biweekly_15_30' || freq === 'BIWEEKLY_15_30') {
-        // Quincena mexicana: días 15 y último del mes
         const day = d.getDate();
         const currentMonth = d.getMonth();
         const currentYear = d.getFullYear();
 
         if (day <= 15) {
-          // Si estamos en el 15 o antes, próximo es fin de este mes
-          // getDate(0) del MES SIGUIENTE da el último día del mes actual
           const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
           d.setDate(lastDayOfMonth);
         } else {
-          // Si estamos después del 15 (fin de mes), próximo es el 15 del siguiente mes
-          // IMPORTANTE: Primero cambiamos al día 15 (que existe en todos los meses) para evitar
-          // que setMonth salte un mes si venimos de un día 31 y vamos a un mes de 30 días.
           d.setDate(15);
           d.setMonth(currentMonth + 1);
         }
@@ -296,6 +322,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       return d;
     };
 
+    const globalAddedIds = new Set<string>();
+
     for (const rt of recurringTransactions) {
       let projectionDate = new Date(rt.nextDueDate);
       projectionDate.setHours(12, 0, 0, 0); // Normalize time
@@ -304,19 +332,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       // Use user's local time for "today" calculation
       const today = startOfDay(userLocalNow);
 
-      // Check for existing payments linked to this recurring transaction
-      const existingPayments = await prisma.transaction.findMany({
-        where: {
-          recurringTransactionId: rt.id,
-          deletedAt: null,
-        },
-        select: { date: true }
-      });
-
-      // Create a set of paid dates (normalized to date string)
-      const paidDates = new Set(
-        existingPayments.map(p => new Date(p.date).toISOString().split('T')[0])
-      );
+      // Retrieve paid dates from Map (O(1) lookup)
+      const paidDates = paymentsMap.get(rt.id) || new Set();
 
       // Get the end date limit for this recurring transaction (if any)
       const endDateLimit = rt.endDate ? new Date(rt.endDate) : null;
@@ -386,26 +403,15 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       const nextDue = new Date(rt.nextDueDate);
       nextDue.setHours(12, 0, 0, 0);
 
-      // Skip if this recurring has an end date that has already passed
       const endDateLimit = rt.endDate ? new Date(rt.endDate) : null;
       if (endDateLimit && nextDue > endDateLimit) {
-        continue; // Don't show as overdue if it's past its end date
+        continue;
       }
 
       // Only process if the nextDueDate is BEFORE the current period start (truly overdue)
       if (nextDue < periodStart) {
-        // Check if there's a payment for this specific date
-        const existingPayments = await prisma.transaction.findMany({
-          where: {
-            recurringTransactionId: rt.id,
-            deletedAt: null,
-          },
-          select: { date: true }
-        });
-
-        const paidDates = new Set(
-          existingPayments.map(p => new Date(p.date).toISOString().split('T')[0])
-        );
+        // Retrieve paid dates from Map
+        const paidDates = paymentsMap.get(rt.id) || new Set();
 
         const dueDateStr = nextDue.toISOString().split('T')[0];
         const uniqueId = `${rt.id}-overdue-${dueDateStr}`;
@@ -440,22 +446,28 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     const creditAccounts = await prisma.account.findMany({
       where: {
         userId,
-        OR: [
-          { type: 'credit' },
-          { type: 'CREDIT' },
-          { type: 'Credit Card' },
-          { type: 'Tarjeta de Crédito' }
-        ]
+        type: { in: ['CREDIT', 'LOAN'] }
       },
       include: {
         installmentPurchases: {
-          where: {
-            paidAmount: { lt: prisma.installmentPurchase.fields.totalAmount }
-          },
           include: { category: true }
+        },
+        statements: {
+          where: { status: 'PENDING' },
+          orderBy: { cycleEnd: 'desc' },
+          take: 1
         }
       }
     });
+
+    // Manual filtering for active installments (Prisma doesn't support col comparison in where)
+    for (const account of creditAccounts) {
+      if (account.installmentPurchases) {
+        account.installmentPurchases = account.installmentPurchases.filter(
+          ip => ip.paidInstallments < ip.installments
+        );
+      }
+    }
 
 
     const msiPaymentsDue: any[] = [];
@@ -465,6 +477,30 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     // Para períodos largos: usar solo proyección extendida (más abajo)
     if (!isLongPeriod) {
       for (const account of creditAccounts) {
+
+        // P1 FIX: Handle Simple LOAN accounts (Interest only)
+        if (account.type === 'LOAN') {
+          const rate = account.interestRate || 0;
+          if (account.balance > 0 && rate > 0) {
+            const monthlyInterest = (account.balance * (rate / 100)) / 12;
+
+            // If significant interest, add as a projected expense
+            if (monthlyInterest > 5) {
+              msiPaymentsDue.push({
+                id: `loan-int-${account.id}`,
+                description: `Interés Estimado (${account.name})`,
+                amount: monthlyInterest,
+                dueDate: new Date(), // Due immediately/today for projection
+                accountId: account.id,
+                accountName: account.name,
+                isMsi: false,
+                category: { name: 'Intereses', color: '#f59e0b', icon: 'trending_up', budgetType: 'NEEDS' }
+              });
+            }
+          }
+          continue; // Loans don't have cutoff logic usually
+        }
+
         if (!account.cutoffDay || !account.paymentDay) {
           continue;
         }
@@ -483,6 +519,31 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
           payDate.setHours(12, 0, 0, 0);
 
           if (isWithinInterval(payDate, { start: periodStart, end: periodEnd })) {
+
+            // P1 FIX: Check for Frozen Statement (Source of Truth)
+            // If we have a generated statement for this due date, use it instead of recalculating
+            const matchingStatement = account.statements?.find(st => {
+              const sDate = new Date(st.paymentDueDate);
+              return sDate.getDate() === payDate.getDate() &&
+                sDate.getMonth() === payDate.getMonth() &&
+                sDate.getFullYear() === payDate.getFullYear();
+            });
+
+            if (matchingStatement) {
+              msiPaymentsDue.push({
+                id: `stmt-${matchingStatement.id}`,
+                description: `Pago Tarjeta (Corte ${matchingStatement.cycleEnd.toLocaleDateString()})`,
+                amount: matchingStatement.totalDue, // Full balance to avoid interest
+                dueDate: payDate,
+                accountId: account.id,
+                accountName: account.name,
+                isMsi: false,
+                category: { name: 'Tarjeta Crédito', color: '#64748b', icon: 'credit_card', budgetType: 'NEEDS' },
+                isStatement: true,
+                minimumPayment: matchingStatement.minimumPayment
+              });
+              continue; // Skip dynamic calculation for this date
+            }
 
             // 1. Calculate the Cutoff Date associated with this Payment Date
             // The relationship between Cutoff and Payment dates:
@@ -807,10 +868,25 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     const shortfall = isSufficient ? 0 : Math.abs(disposableIncome);
 
     // 5. 50/30/20 Analysis (Projected + Actual)
+    // FIX-002: Use designated Net Income if available for accurate planning
+    let baseIncomeForAnalysis = totalPeriodIncome || currentBalance;
+
+    if (user?.monthlyNetIncome) {
+      // Adjust monthly income to the requested period
+      switch (periodType) {
+        case 'semanal': baseIncomeForAnalysis = user.monthlyNetIncome / 4; break;
+        case 'quincenal': baseIncomeForAnalysis = user.monthlyNetIncome / 2; break;
+        case 'mensual': baseIncomeForAnalysis = user.monthlyNetIncome; break;
+        case 'bimestral': baseIncomeForAnalysis = user.monthlyNetIncome * 2; break;
+        case 'semestral': baseIncomeForAnalysis = user.monthlyNetIncome * 6; break;
+        case 'anual': baseIncomeForAnalysis = user.monthlyNetIncome * 12; break;
+      }
+    }
+
     const budgetAnalysis = {
-      needs: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.5 },
-      wants: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.3 },
-      savings: { projected: 0, ideal: (totalPeriodIncome || currentBalance) * 0.2 }
+      needs: { projected: 0, ideal: baseIncomeForAnalysis * 0.5 },
+      wants: { projected: 0, ideal: baseIncomeForAnalysis * 0.3 },
+      savings: { projected: 0, ideal: baseIncomeForAnalysis * 0.2 }
     };
 
     // Helper to categorize (normalize to uppercase for comparison)

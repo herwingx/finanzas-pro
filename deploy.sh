@@ -26,8 +26,15 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuración
+# Configuración
 COMPOSE_FILE="docker-compose.yml"
 PROJECT_NAME="finanzas-pro"
+
+# Detectar modo Self-Hosted
+if [[ "$*" == *"--self-hosted"* ]]; then
+    COMPOSE_FILE="docker-compose.selfhosted.yml"
+    echo -e "${YELLOW}[INFO] Modo Self-Hosted activado (usando $COMPOSE_FILE)${NC}"
+fi
 BACKUP_DIR="./backups"
 POSTGRES_USER="${POSTGRES_USER:-finanzas}"
 POSTGRES_DB="${POSTGRES_DB:-finanzas_pro}"
@@ -64,19 +71,15 @@ check_docker() {
 
 # Verificar variables de entorno
 check_env() {
-    if [ ! -f ".env.production" ] && [ ! -f ".env" ]; then
-        log_warning "No se encontró archivo .env.production ni .env"
-        log_info "Copia .env.production.example a .env.production y configura los valores"
+    if [ ! -f ".env" ]; then
+        log_warning "No se encontró archivo .env"
+        log_info "Copia .env.example y configura los valores para producción:"
+        log_info "  cp .env.example .env && nano .env"
+        exit 1
     fi
     
-    # Cargar variables de entorno (Prioridad: .env.production > .env)
-    if [ -f ".env" ]; then
-        export $(cat .env | grep -v '^#' | xargs)
-    fi
-    
-    if [ -f ".env.production" ]; then
-        export $(cat .env.production | grep -v '^#' | xargs)
-    fi
+    # Cargar variables de entorno
+    export $(cat .env | grep -v '^#' | xargs)
 }
 
 # Comandos principales
@@ -178,6 +181,36 @@ cmd_db() {
         psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 }
 
+cmd_reset_password() {
+    local email="$1"
+    local pass="$2"
+    
+    # Modo interactivo si faltan argumentos
+    if [[ -z "$email" ]]; then
+        echo ""
+        log_info "=== Resetear Contraseña ==="
+        read -p "  📧 Email del usuario: " email
+        read -s -p "  🔑 Nueva contraseña: " pass
+        echo ""
+    fi
+    
+    if [[ -z "$email" ]] || [[ -z "$pass" ]]; then
+        log_error "Email y contraseña son requeridos"
+        return 1
+    fi
+    
+    # Exportar contexto de Docker Compose para el script hijo
+    export COMPOSE_FILE="$COMPOSE_FILE"
+    export COMPOSE_PROJECT_NAME="$PROJECT_NAME"
+    
+    if [ -f "./reset_password.sh" ]; then
+        chmod +x ./reset_password.sh
+        ./reset_password.sh "$email" "$pass"
+    else
+        log_error "No se encuentra reset_password.sh"
+    fi
+}
+
 cmd_help() {
     echo "
 ╔═══════════════════════════════════════════════════════════════════╗
@@ -198,6 +231,7 @@ COMANDOS DISPONIBLES:
   ${GREEN}migrate${NC}   Ejecuta migraciones de Prisma
   ${GREEN}shell${NC}     Abre shell en el backend
   ${GREEN}db${NC}        Conecta a PostgreSQL
+  ${GREEN}reset-pw${NC}  Resetea contraseña de usuario
 
 EJEMPLOS:
 
@@ -205,6 +239,10 @@ EJEMPLOS:
   ./deploy.sh update    # Después de hacer push a main
   ./deploy.sh logs      # Ver qué está pasando
   ./deploy.sh backup    # Antes de cambios importantes
+  ./deploy.sh reset-pw  # Resetear contraseña interactivamente
+
+MODO SELF-HOSTED (sin Cloudflare):
+  ./deploy.sh start --self-hosted
 "
 }
 
@@ -212,38 +250,101 @@ EJEMPLOS:
 check_docker
 check_env
 
-case "${1:-help}" in
-    start)
-        cmd_start
-        ;;
-    stop)
-        cmd_stop
-        ;;
-    restart)
-        cmd_restart
-        ;;
-    update)
-        cmd_update
-        ;;
-    logs)
-        cmd_logs
-        ;;
-    status)
-        cmd_status
-        ;;
-    backup)
-        cmd_backup
-        ;;
-    migrate)
-        cmd_migrate
-        ;;
-    shell)
-        cmd_shell
-        ;;
-    db)
-        cmd_db
-        ;;
-    help|--help|-h|*)
-        cmd_help
-        ;;
-esac
+# Menú Interactivo Premium
+show_menu() {
+    clear
+    echo -e "${BLUE}"
+    echo "  ______ _                              _____           "
+    echo " |  ____(_)                            |  __ \          "
+    echo " | |__   _ _ __   __ _ _ __  ______ _  | |__) | __ ___  "
+    echo " |  __| | | '_ \ / _\` | '_ \|_  / _\` | |  ___/ '__/ _ \ "
+    echo " | |    | | | | | (_| | | | |/ / (_| | | |   | | | (_) |"
+    echo " |_|    |_|_| |_|\__,_|_| |_/___\__,_| |_|   |_|  \___/ "
+    echo -e "${NC}"
+    echo -e "  🌍 ${GREEN}Production Deploy Manager${NC}"
+    
+    if [[ "$COMPOSE_FILE" == *"selfhosted"* ]]; then
+        echo -e "  🔧 MODO: ${YELLOW}Self-Hosted (Direct Ports)${NC}"
+    else
+        echo -e "  ☁️  MODO: ${BLUE}Cloudflare Tunnel (Secure)${NC}"
+    fi
+    echo "=========================================================="
+    echo ""
+    echo -e "  ${GREEN}1)${NC} Iniciar servicios     ${YELLOW}(start)${NC}"
+    echo -e "  ${GREEN}2)${NC} Detener servicios     ${YELLOW}(stop)${NC}"
+    echo -e "  ${GREEN}3)${NC} Actualizar App        ${YELLOW}(update)${NC}"
+    echo -e "  ${GREEN}4)${NC} Ver Estado            ${YELLOW}(status)${NC}"
+    echo -e "  ${GREEN}5)${NC} Ver Logs              ${YELLOW}(logs)${NC}"
+    echo -e "  ${GREEN}6)${NC} Backup Datos          ${YELLOW}(backup)${NC}"
+    echo -e "  ${GREEN}7)${NC} Shell Backend         ${YELLOW}(shell)${NC}"
+    echo -e "  ${GREEN}8)${NC} Shell Base Datos      ${YELLOW}(db)${NC}"
+    echo -e "  ${GREEN}9)${NC} Reset Password        ${YELLOW}(reset-pw)${NC}"
+    echo -e "  ${GREEN}0)${NC} Salir"
+    echo ""
+    echo "=========================================================="
+    read -p "  👉 Selecciona una opción [0-9]: " option
+    
+    case $option in
+        1) cmd_start ;;
+        2) cmd_stop ;;
+        3) cmd_update ;;
+        4) cmd_status ;;
+        5) cmd_logs ;;
+        6) cmd_backup ;;
+        7) cmd_shell ;;
+        8) cmd_db ;;
+        9) cmd_reset_password ;;
+        *) echo "¡Hasta luego! 👋"; exit 0 ;;
+    esac
+}
+
+# Main
+check_docker
+check_env
+
+if [ $# -eq 0 ]; then
+    show_menu
+else
+    case "${1}" in
+        start)
+            cmd_start
+            ;;
+        stop)
+            cmd_stop
+            ;;
+        restart)
+            cmd_restart
+            ;;
+        update)
+            cmd_update
+            ;;
+        logs)
+            cmd_logs
+            ;;
+        status)
+            cmd_status
+            ;;
+        backup)
+            cmd_backup
+            ;;
+        migrate)
+            cmd_migrate
+            ;;
+        shell)
+            cmd_shell
+            ;;
+        db)
+            cmd_db
+            ;;
+        reset-pw|reset-password)
+            shift
+            cmd_reset_password "$@"
+            ;;
+        help|--help|-h)
+            cmd_help
+            ;;
+        *)
+            cmd_help
+            ;;
+    esac
+fi

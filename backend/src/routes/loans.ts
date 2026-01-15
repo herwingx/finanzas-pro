@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../services/database';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
-import { Loan } from '@prisma/client';
+import { Loan } from '../generated/prisma/client';
 
 const router = Router();
 
@@ -216,7 +216,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     reason,
     expectedPayDate,
     notes,
-    originalAmount // Allow updating amount
+    originalAmount,
+    accountId,
+    affectBalance = true
   } = req.body;
 
   try {
@@ -229,78 +231,119 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         throw new Error('Préstamo no encontrado');
       }
 
+      const newOriginal = originalAmount !== undefined ? parseFloat(originalAmount) : existingLoan.originalAmount;
+      const oldOriginal = existingLoan.originalAmount;
+      const amountDiff = newOriginal - oldOriginal;
+
+      // Handle remaining amount recalculation if original amount changed
       let newRemainingAmount = existingLoan.remainingAmount;
-      let amountDiff = 0;
-
-      // Handle amount change logic
-      if (originalAmount !== undefined && originalAmount !== existingLoan.originalAmount) {
-        const newOriginal = parseFloat(originalAmount);
-        const oldOriginal = existingLoan.originalAmount;
-        amountDiff = newOriginal - oldOriginal;
-
-        // Recalculate remaining: (New Original) - (Already Paid)
+      if (originalAmount !== undefined && originalAmount !== oldOriginal) {
         const alreadyPaid = oldOriginal - existingLoan.remainingAmount;
         newRemainingAmount = Math.max(0, newOriginal - alreadyPaid);
+      }
 
-        // Update associated transaction if it exists
-        // Valid for "expense" (lent) or "income" (borrowed) initial transaction
-        const initialTx = await tx.transaction.findFirst({
-          where: {
-            loanId: id,
-            // Try to find the initial tx by checking if amount matches roughly or it's the first one
-            // Ideally we should have flagged it, but amount match is a good heuristic if purely editing
-            amount: oldOriginal
-          } as any
-        });
+      // --- BALANCE ADJUSTMENT LOGIC ---
+      if (affectBalance) {
+        const oldAccountId = existingLoan.accountId;
+        const newAccountId = accountId;
 
-        if (initialTx) {
-          await tx.transaction.update({
-            where: { id: initialTx.id },
-            data: { amount: newOriginal }
-          });
-        }
-
-        // Update Account Balance
-        if (existingLoan.accountId && Math.abs(amountDiff) > 0.01) {
-          const account = await tx.account.findUnique({ where: { id: existingLoan.accountId } });
-          if (account) {
-            const isLent = (existingLoan as any).loanType === 'lent';
-
-            if (isLent) {
-              // I Lent more (diff > 0) -> Balance decreases more
-              // I Lent less (diff < 0) -> Balance increases (refund)
-              if (account.type === 'CREDIT') {
-                // Credit: Lending more increases debt (balance) ??? 
-                // Wait, LENT from Credit: Balance Increases (Debt).
-                await tx.account.update({
-                  where: { id: account.id },
-                  data: { balance: { increment: amountDiff } }
-                });
+        // If account changed or is being set for the first time
+        if (newAccountId !== undefined && newAccountId !== oldAccountId) {
+          // 1. Revert Old Account (if it existed)
+          if (oldAccountId) {
+            const oldAcc = await tx.account.findUnique({ where: { id: oldAccountId } });
+            if (oldAcc) {
+              const isLent = (existingLoan as any).loanType === 'lent';
+              const revertAmount = oldOriginal;
+              if (isLent) {
+                if (oldAcc.type === 'CREDIT') await tx.account.update({ where: { id: oldAccountId }, data: { balance: { decrement: revertAmount } } });
+                else await tx.account.update({ where: { id: oldAccountId }, data: { balance: { increment: revertAmount } } });
               } else {
-                // Debit: Lending more decreases balance
-                await tx.account.update({
-                  where: { id: account.id },
-                  data: { balance: { decrement: amountDiff } }
-                });
-              }
-            } else {
-              // I Borrowed more (diff > 0) -> Balance Increases
-              // I Borrowed less (diff < 0) -> Balance Decreases
-              if (account.type === 'CREDIT') {
-                // Credit: Borrowing to credit card? Rare. Usually decreases debt?
-                // Let's assume Borrowing MEANS receiving money.
-                await tx.account.update({
-                  where: { id: account.id },
-                  data: { balance: { decrement: amountDiff } } // Debt decreases if I get money?
-                });
-              } else {
-                await tx.account.update({
-                  where: { id: account.id },
-                  data: { balance: { increment: amountDiff } }
-                });
+                if (oldAcc.type === 'CREDIT') await tx.account.update({ where: { id: oldAccountId }, data: { balance: { increment: revertAmount } } });
+                else await tx.account.update({ where: { id: oldAccountId }, data: { balance: { decrement: revertAmount } } });
               }
             }
           }
+
+          // 2. Apply to New Account (if provided)
+          if (newAccountId) {
+            const newAcc = await tx.account.findUnique({ where: { id: newAccountId } });
+            if (newAcc) {
+              const isLent = (existingLoan as any).loanType === 'lent';
+              const applyAmount = newOriginal;
+              if (isLent) {
+                if (newAcc.type === 'CREDIT') await tx.account.update({ where: { id: newAccountId }, data: { balance: { increment: applyAmount } } });
+                else await tx.account.update({ where: { id: newAccountId }, data: { balance: { decrement: applyAmount } } });
+              } else {
+                if (newAcc.type === 'CREDIT') await tx.account.update({ where: { id: newAccountId }, data: { balance: { decrement: applyAmount } } });
+                else await tx.account.update({ where: { id: newAccountId }, data: { balance: { increment: applyAmount } } });
+              }
+            }
+          }
+
+          // 3. Update or Create Transaction
+          const initialTx = await tx.transaction.findFirst({ where: { loanId: id, amount: oldOriginal } as any });
+          if (initialTx) {
+            if (newAccountId) {
+              await tx.transaction.update({
+                where: { id: initialTx.id },
+                data: { amount: newOriginal, accountId: newAccountId }
+              });
+            } else {
+              await tx.transaction.delete({ where: { id: initialTx.id } });
+            }
+          } else if (newAccountId) {
+            const transactionType = (existingLoan as any).loanType === 'lent' ? 'expense' : 'income';
+            const desc = (existingLoan as any).loanType === 'lent' ? `Préstamo a ${borrowerName || existingLoan.borrowerName}` : `Préstamo de ${borrowerName || existingLoan.borrowerName}`;
+            await tx.transaction.create({
+              data: {
+                amount: newOriginal,
+                description: desc,
+                type: transactionType,
+                date: existingLoan.loanDate,
+                userId,
+                accountId: newAccountId,
+                loanId: id
+              } as any
+            });
+          }
+        }
+        // If account is the same but amount changed
+        else if (oldAccountId && Math.abs(amountDiff) > 0.01) {
+          const account = await tx.account.findUnique({ where: { id: oldAccountId } });
+          if (account) {
+            const isLent = (existingLoan as any).loanType === 'lent';
+            if (isLent) {
+              if (account.type === 'CREDIT') await tx.account.update({ where: { id: oldAccountId }, data: { balance: { increment: amountDiff } } });
+              else await tx.account.update({ where: { id: oldAccountId }, data: { balance: { decrement: amountDiff } } });
+            } else {
+              if (account.type === 'CREDIT') await tx.account.update({ where: { id: oldAccountId }, data: { balance: { decrement: amountDiff } } });
+              else await tx.account.update({ where: { id: oldAccountId }, data: { balance: { increment: amountDiff } } });
+            }
+          }
+          const initialTx = await tx.transaction.findFirst({ where: { loanId: id, amount: oldOriginal } as any });
+          if (initialTx) {
+            await tx.transaction.update({ where: { id: initialTx.id }, data: { amount: newOriginal } });
+          }
+        }
+      } else {
+        // --- CASE: affectBalance is FALSE ---
+        // If it WAS affecting an account, we REVERT and REMOVE link
+        if (existingLoan.accountId) {
+          const oldAcc = await tx.account.findUnique({ where: { id: existingLoan.accountId } });
+          if (oldAcc) {
+            const isLent = (existingLoan as any).loanType === 'lent';
+            const revertAmount = oldOriginal;
+            if (isLent) {
+              if (oldAcc.type === 'CREDIT') await tx.account.update({ where: { id: existingLoan.accountId }, data: { balance: { decrement: revertAmount } } });
+              else await tx.account.update({ where: { id: existingLoan.accountId }, data: { balance: { increment: revertAmount } } });
+            } else {
+              if (oldAcc.type === 'CREDIT') await tx.account.update({ where: { id: existingLoan.accountId }, data: { balance: { increment: revertAmount } } });
+              else await tx.account.update({ where: { id: existingLoan.accountId }, data: { balance: { decrement: revertAmount } } });
+            }
+          }
+          // Delete initial transaction
+          await tx.transaction.deleteMany({ where: { loanId: id, amount: oldOriginal } as any });
         }
       }
 
@@ -311,13 +354,13 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
           borrowerPhone: borrowerPhone ?? existingLoan.borrowerPhone,
           borrowerEmail: borrowerEmail ?? existingLoan.borrowerEmail,
           reason: reason ?? existingLoan.reason,
-          // Handle expectedPayDate: null = clear, undefined = keep existing, string = set new date
           expectedPayDate: expectedPayDate === null
             ? null
             : (expectedPayDate ? new Date(expectedPayDate) : existingLoan.expectedPayDate),
           notes: notes ?? existingLoan.notes,
           originalAmount: originalAmount ? parseFloat(originalAmount) : undefined,
           remainingAmount: newRemainingAmount,
+          accountId: affectBalance ? (accountId ?? existingLoan.accountId) : null, // IMPORTANTE: Borrar si es FALSE
         },
         include: { account: true }
       });
@@ -478,7 +521,7 @@ router.post('/:id/mark-paid', async (req: AuthRequest, res: Response) => {
         include: { account: true }
       });
 
-      // Add remaining amount back to account
+      // Add remaining amount back to account and create transaction
       const targetAccountId = accountId || loan.accountId;
       if (targetAccountId && remainingToPay > 0) {
         const account = await tx.account.findFirst({
@@ -486,15 +529,34 @@ router.post('/:id/mark-paid', async (req: AuthRequest, res: Response) => {
         });
 
         if (account) {
+          const isLent = (loan as any).loanType === 'lent';
+          const transactionType = isLent ? 'income' : 'expense';
+          const description = isLent
+            ? `Cobro final: ${loan.borrowerName}`
+            : `Pago final: ${loan.borrowerName}`;
+
+          // Create transaction for history tracking
+          await tx.transaction.create({
+            data: {
+              amount: remainingToPay,
+              description: `Liquidación total: ${description}`,
+              type: transactionType,
+              date: new Date(),
+              userId,
+              accountId: targetAccountId,
+              loanId: id,
+            } as any
+          });
+
           if (account.type === 'CREDIT') {
             await tx.account.update({
               where: { id: targetAccountId },
-              data: { balance: { decrement: remainingToPay } }
+              data: { balance: { [isLent ? 'decrement' : 'increment']: remainingToPay } }
             });
           } else {
             await tx.account.update({
               where: { id: targetAccountId },
-              data: { balance: { increment: remainingToPay } }
+              data: { balance: { [isLent ? 'increment' : 'decrement']: remainingToPay } }
             });
           }
         }

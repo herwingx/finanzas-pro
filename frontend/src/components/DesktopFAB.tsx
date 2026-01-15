@@ -1,75 +1,124 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const QUICK_ACTIONS = [
-  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense', hideOnPaths: [] as string[] },
-  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income', hideOnPaths: [] as string[] },
-  { icon: 'swap_horiz', label: 'Transf.', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer', hideOnPaths: [] as string[] },
-  { icon: 'event_repeat', label: 'Fijo', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new', hideOnPaths: ['/recurring'] },
-  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new', hideOnPaths: ['/installments'] },
-  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new', hideOnPaths: ['/loans'] },
+// Context
+import { useGlobalSheets } from '../context/GlobalSheetContext';
+
+/* ==================================================================================
+   CONFIGURATION CONSTANTS
+   ================================================================================== */
+const ACTIONS = [
+  { id: 'expense', label: 'Gasto', icon: 'remove', color: 'bg-rose-500 text-white', exclude: [] },
+  { id: 'income', label: 'Ingreso', icon: 'add', color: 'bg-emerald-500 text-white', exclude: [] },
+  { id: 'transfer', label: 'Transferencia', icon: 'sync_alt', color: 'bg-blue-500 text-white', exclude: [] },
+  { id: 'recurring', label: 'Recurrente', icon: 'event_repeat', color: 'bg-purple-500 text-white', exclude: [] },
+  { id: 'installments', label: 'Plazos', icon: 'credit_card', color: 'bg-indigo-500 text-white', exclude: [] },
+  { id: 'loan', label: 'Préstamo', icon: 'handshake', color: 'bg-amber-500 text-white', exclude: [] },
+  { id: 'goal', label: 'Nueva Meta', icon: 'savings', color: 'bg-teal-500 text-white', exclude: [] },
+  { id: 'invest', label: 'Inversión', icon: 'trending_up', color: 'bg-cyan-600 text-white', exclude: [] },
 ];
 
+/* ==================================================================================
+   MAIN COMPONENT
+   ================================================================================== */
 export const DesktopFAB: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
+  const {
+    openTransactionSheet,
+    openRecurringSheet,
+    openInstallmentSheet,
+    openLoanSheet,
+    openGoalSheet,
+    openInvestmentSheet
+  } = useGlobalSheets();
 
-  // Filter out redundant actions based on current path
-  const filteredActions = QUICK_ACTIONS.filter(
-    action => !action.hideOnPaths.some(p => location.pathname.startsWith(p))
-  );
+  // Filter based on current page context (e.g. don't show "Add Loan" if already on Loans Page main view if redundant)
+  // Logic simplified: Filter actions based on `exclude` path prefixes.
+  const visibleActions = ACTIONS.filter(action =>
+    !action.exclude.some(path => location.pathname.startsWith(path))
+  ).reverse(); // Reverse for bottom-to-top stacking order visual
 
-  const handleAction = (path: string) => {
+  const handleAction = (id: string) => {
     setIsOpen(false);
-    navigate(path);
+    // Slight delay for smooth UI transition
+    setTimeout(() => {
+      switch (id) {
+        case 'expense': openTransactionSheet(null, { type: 'expense' }); break;
+        case 'income': openTransactionSheet(null, { type: 'income' }); break;
+        case 'transfer': openTransactionSheet(null, { type: 'transfer' }); break;
+        case 'recurring': openRecurringSheet(); break;
+        case 'installments': openInstallmentSheet(); break;
+        case 'loan': openLoanSheet(); break;
+        case 'goal': openGoalSheet(); break;
+        case 'invest': openInvestmentSheet(); break;
+      }
+    }, 100);
   };
 
   return (
     <>
-      {/* Backdrop to close when clicking outside */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] hidden lg:block"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* 1. BACKDROP OVERLAY */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="hidden lg:block fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
+      {/* 2. FAB CONTAINER */}
       <div className="hidden lg:flex flex-col items-end fixed bottom-8 right-8 z-50">
 
-        {/* Actions List */}
-        <div className={`
-          flex flex-col gap-3 mb-4 transition-all duration-300 origin-bottom
-          ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-10 scale-90 pointer-events-none'}
-        `}>
-          {filteredActions.map((action, idx) => (
-            <button
-              key={action.label}
-              onClick={() => handleAction(action.path)}
-              style={{ transitionDelay: `${isOpen ? (filteredActions.length - 1 - idx) * 30 : 0}ms` }}
-              className="group flex items-center justify-end gap-3"
-            >
-              <span className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 text-xs font-bold text-app-text shadow-md border border-app-border opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
-                {action.label}
-              </span>
-              <div className={`size-12 rounded-full flex items-center justify-center shadow-lg border border-transparent group-hover:scale-110 transition-all duration-200 bg-white dark:bg-zinc-800 text-app-text`}>
-                <span className={`material-symbols-outlined text-[24px] ${action.colorClass.split(' ')[1]}`}>{action.icon}</span>
-              </div>
-            </button>
-          ))}
-        </div>
+        {/* Actions Stack */}
+        <AnimatePresence>
+          {isOpen && (
+            <div className="flex flex-col items-end gap-3 mb-4 pr-1">
+              {visibleActions.map((action, i) => (
+                <motion.div
+                  key={action.id}
+                  initial={{ opacity: 0, x: 20, scale: 0.8 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 20, scale: 0.8 }}
+                  transition={{ duration: 0.2, delay: i * 0.04 }}
+                  className="flex items-center gap-3 group"
+                >
+                  {/* Label Tooltip */}
+                  <span className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 text-xs font-bold text-app-text shadow-lg border border-black/5 dark:border-white/10 whitespace-nowrap opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all pointer-events-none">
+                    {action.label}
+                  </span>
 
-        {/* Main FAB */}
+                  {/* Button */}
+                  <button
+                    onClick={() => handleAction(action.id)}
+                    className={`size-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 ${action.color}`}
+                  >
+                    <span className="material-symbols-outlined text-[24px]">{action.icon}</span>
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* 3. MAIN TRIGGER BUTTON */}
+        {/* 3. MAIN TRIGGER BUTTON */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={`
-            size-14 rounded-full flex items-center justify-center shadow-xl 
+            size-14 rounded-full flex items-center justify-center shadow-2xl z-50
             transition-all duration-300 hover:scale-105 active:scale-95
-            ${isOpen ? 'bg-app-text text-app-bg rotate-45' : 'bg-app-primary text-white'}
+            ${isOpen ? 'bg-app-text text-app-bg rotate-45' : 'bg-app-primary text-white hover:bg-app-primary-dark'}
           `}
         >
-          <span className="material-symbols-outlined text-[32px]">add</span>
+          <span className="material-symbols-outlined text-[32px] font-medium">add</span>
         </button>
+
       </div>
     </>
   );

@@ -20,6 +20,13 @@ import installmentsRoutes from './routes/installments';
 import financialPlanningRoutes from './routes/financialPlanningRoutes';
 import creditCardPaymentsRoutes from './routes/creditCardPayments';
 import loansRoutes from './routes/loans';
+import investmentsRoutes from './routes/investments';
+import goalsRoutes from './routes/goals';
+import aiRoutes from './routes/ai';
+import notificationRoutes from './routes/notifications';
+
+// Jobs (P0 - Persistencia Crítica)
+import { generateCreditCardStatements, createDailyAccountSnapshots } from './jobs';
 
 const app = express();
 
@@ -83,6 +90,10 @@ app.use('/api/installments', installmentsRoutes);
 app.use('/api/financial-planning', financialPlanningRoutes);
 app.use('/api/credit-card', creditCardPaymentsRoutes);
 app.use('/api/loans', loansRoutes);
+app.use('/api/investments', investmentsRoutes); // P2: Inversiones
+app.use('/api/goals', goalsRoutes); // P2: Metas de ahorro
+app.use('/api/ai', aiRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // =============================================================================
 // Server Startup with Security Info
@@ -91,13 +102,70 @@ app.use('/api/loans', loansRoutes);
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
+  // ANSI Colors
+  const BLUE = '\x1b[34m';
+  const GREEN = '\x1b[32m';
+  const YELLOW = '\x1b[33m';
+  const RED = '\x1b[31m';
+  const RESET = '\x1b[0m';
+  const BOLD = '\x1b[1m';
+
+  console.log(BLUE);
+  console.log('  ______ _                              _____           ');
+  console.log(' |  ____(_)                            |  __ \\          ');
+  console.log(' | |__   _ _ __   __ _ _ __  ______ _  | |__) | __ ___  ');
+  console.log(' |  __| | | \'_ \\ / _` | \'_ \\|_  / _` | |  ___/ \'__/ _ \\ ');
+  console.log(' | |    | | | | | (_| | | | |/ / (_| | | |   | | | (_) |');
+  console.log(' |_|    |_|_| |_|\\__,_|_| |_/___\\__,_| |_|   |_|  \\___/ ');
+  console.log(RESET);
+
+  console.log(`  🚀 ${GREEN}${BOLD}Finanzas Pro Backend v1.0.0${RESET}`);
+  console.log(`  🌍 environment: ${YELLOW}${process.env.NODE_ENV || 'development'}${RESET}`);
+  console.log(`  📍 port:        ${YELLOW}${PORT}${RESET}`);
   console.log('');
-  console.log('🚀 Finanzas Pro Backend is running!');
-  console.log(`📍 Port: ${PORT}`);
+
+  console.log(`  ${BOLD}🔒 Security Status:${RESET}`);
+  console.log(`     • CORS:           ${process.env.ALLOWED_ORIGINS ? GREEN + 'Restricted' + RESET : YELLOW + 'Open (Dev)' + RESET}`);
+  console.log(`     • Rate Limiting:  ${process.env.RATE_LIMIT_ENABLED !== 'false' ? GREEN + 'Enabled' + RESET : RED + 'Disabled' + RESET}`);
+  console.log(`     • Registration:   ${process.env.REGISTRATION_ENABLED !== 'false' ? GREEN + 'Open' + RESET : YELLOW + 'Closed' + RESET}`);
   console.log('');
-  console.log('🔒 Security Configuration:');
-  console.log(`   • CORS: ${process.env.ALLOWED_ORIGINS || 'Open (development mode)'}`);
-  console.log(`   • Rate Limiting: ${process.env.RATE_LIMIT_ENABLED !== 'false' ? 'Enabled' : 'Disabled'}`);
-  console.log(`   • Registration: ${process.env.REGISTRATION_ENABLED !== 'false' ? 'Open' : 'Disabled'}`);
-  console.log('');
+
+  // =============================================================================
+  // Cronjobs P0 (solo en producción)
+  // =============================================================================
+  if (process.env.NODE_ENV === 'production' && process.env.ENABLE_CRON_JOBS === 'true') {
+    console.log(`  ${BOLD}⏰ Active Cronjobs:${RESET}`);
+    console.log(`     • Credit Cards:   ${BLUE}00:05 daily${RESET}`);
+    console.log(`     • Balance Snaps:  ${BLUE}23:55 daily${RESET}`);
+    console.log('');
+
+    // Ejecutar statements job diario a las 00:05
+    const runStatementsJob = async () => {
+      const now = new Date();
+      // Solo ejecutar a las 00:05
+      if (now.getHours() === 0 && now.getMinutes() >= 5 && now.getMinutes() < 6) {
+        console.log(`[${new Date().toISOString()}] 💳 Running CC Statements Job...`);
+        await generateCreditCardStatements();
+      }
+    };
+
+    // Ejecutar snapshots job diario a las 23:55
+    const runSnapshotsJob = async () => {
+      const now = new Date();
+      // Solo ejecutar a las 23:55
+      if (now.getHours() === 23 && now.getMinutes() >= 55 && now.getMinutes() < 56) {
+        console.log(`[${new Date().toISOString()}] 📸 Running Balance Snapshot Job...`);
+        await createDailyAccountSnapshots();
+      }
+    };
+
+    // Verificar cada minuto
+    setInterval(() => {
+      runStatementsJob().catch(console.error);
+      runSnapshotsJob().catch(console.error);
+    }, 60000);
+  } else {
+    console.log(`  ${BOLD}⏰ Cronjobs:${RESET}        ${YELLOW}Disabled${RESET}`);
+    console.log('');
+  }
 });

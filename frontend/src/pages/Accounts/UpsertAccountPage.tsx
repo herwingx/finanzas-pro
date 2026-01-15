@@ -1,396 +1,181 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { PageHeader } from '../../components/PageHeader';
-import { DeleteConfirmationSheet } from '../../components/DeleteConfirmationSheet';
-import { useAddAccount, useUpdateAccount, useAccounts, useDeleteAccount, useAddTransaction, useCategories, useAddCategory } from '../../hooks/useApi';
-import { AccountType } from '../../types';
-import { toastSuccess, toastError, toast } from '../../utils/toast';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 
-const UpsertAccountPage: React.FC = () => {
-    // --- Routing ---
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+const ResetPasswordPage: React.FC = () => {
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
 
-    // Modes
-    const isEditMode = !!id;
-    const mode = searchParams.get('mode');
-    const [isViewingDetails, setIsViewingDetails] = useState(!!id && mode !== 'edit');
+    // Form State
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
 
-    // --- Queries ---
-    const { data: accounts } = useAccounts();
-    const { data: categories } = useCategories();
-    const existingAccount = useMemo(() => accounts?.find(acc => acc.id === id), [accounts, id]);
+    // Get token from URL query params
+    const token = searchParams.get('token');
 
-    // --- Form State ---
-    const [name, setName] = useState('');
-    const [type, setType] = useState<AccountType>('DEBIT');
-    const [balance, setBalance] = useState('');
-    const [creditLimit, setCreditLimit] = useState('');
-    const [cutoffDay, setCutoffDay] = useState('');
-    const [paymentDay, setPaymentDay] = useState('');
-
-    // --- UI State ---
-    const [showDelete, setShowDelete] = useState(false);
-    const [showAdjustment, setShowAdjustment] = useState(false);
-    const [adjustmentAmount, setAdjustmentAmount] = useState('');
-    const [adjustmentDescription, setAdjustmentDescription] = useState('');
-
-    // --- Mutations ---
-    const addAccountMutation = useAddAccount();
-    const updateAccountMutation = useUpdateAccount();
-    const deleteAccountMutation = useDeleteAccount();
-    const addTransactionMutation = useAddTransaction();
-    const addCategoryMutation = useAddCategory();
-
-    // Init form
+    // Pre-validate Token presence
     useEffect(() => {
-        if (isEditMode && existingAccount) {
-            setName(existingAccount.name);
-            setType(existingAccount.type);
-            setBalance(String(existingAccount.balance));
-            setCreditLimit(existingAccount.creditLimit?.toString() || '');
-            setCutoffDay(existingAccount.cutoffDay?.toString() || '');
-            setPaymentDay(existingAccount.paymentDay?.toString() || '');
-        } else if (!isEditMode) {
-            setName('');
-            setType('DEBIT');
-            setBalance('');
-            setCreditLimit('');
-            setCutoffDay('');
-            setPaymentDay('');
-        }
-    }, [isEditMode, existingAccount]);
-
-    // --- Handlers ---
+        if (!token) setError('Enlace de recuperación inválido o caducado.');
+    }, [token]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
 
-        // Validation basic
-        if (!name) return toast.error('Ingresa un nombre para la cuenta');
+        // Local Validation
+        if (password !== confirmPassword) return setError('Las contraseñas no coinciden.');
+        if (password.length < 6) return setError('La contraseña debe ser más segura (+6 caracteres).');
 
-        const accountData = {
-            name,
-            type,
-            balance: parseFloat(balance) || 0,
-            creditLimit: creditLimit ? parseFloat(creditLimit) : undefined,
-            cutoffDay: cutoffDay ? parseInt(cutoffDay, 10) : undefined,
-            paymentDay: paymentDay ? parseInt(paymentDay, 10) : undefined,
-        };
-
-        // Clean irrelevant fields
-        if (type !== 'CREDIT') {
-            delete accountData.creditLimit;
-            delete accountData.cutoffDay;
-            delete accountData.paymentDay;
-        }
+        setIsLoading(true);
 
         try {
-            if (isEditMode) {
-                await updateAccountMutation.mutateAsync({ id: id!, account: accountData });
-                toastSuccess('Cuenta actualizada');
-            } else {
-                await addAccountMutation.mutateAsync(accountData);
-                toastSuccess('Cuenta creada');
-            }
-            navigate('/accounts', { replace: true });
-        } catch (error: any) {
-            toastError(error.message);
-        }
-    };
-
-    const confirmDelete = async () => {
-        if (!id) return;
-        try {
-            await deleteAccountMutation.mutateAsync(id);
-            toastSuccess('Cuenta eliminada');
-            navigate('/accounts', { replace: true });
-        } catch (error: any) {
-            if (error.message.includes('associated') || error.message.includes('foreign key')) {
-                toastError('No se puede eliminar', 'La cuenta tiene historial registrado');
-            } else {
-                toastError(error.message);
-            }
-        }
-    };
-
-    const handleAdjustment = async () => {
-        const target = parseFloat(adjustmentAmount);
-        if (isNaN(target)) return;
-
-        const current = parseFloat(balance);
-        const diff = target - current;
-
-        if (Math.abs(diff) < 0.01) {
-            setShowAdjustment(false);
-            return;
-        }
-
-        try {
-            // Logic reused from your original code (simplified for clarity)
-            let adjType: 'income' | 'expense';
-            let adjAmount = Math.abs(diff);
-
-            // Logic correction for CREDIT vs DEBIT
-            if (type === 'CREDIT') {
-                // En credito, BALANCE POSITIVO ES DEUDA.
-                // Si quiero SUBIR el balance (subir deuda), es GASTO.
-                // Si quiero BAJAR el balance (pagar deuda), es INGRESO.
-                adjType = target > current ? 'expense' : 'income';
-            } else {
-                // En debito, normal.
-                adjType = target > current ? 'income' : 'expense';
-            }
-
-            // Find or create Category
-            let catId: string | undefined;
-            const catName = adjType === 'income' ? 'Ajuste (+)' : 'Ajuste (-)';
-
-            const existingCat = categories?.find(c => c.name.includes('Ajuste') && c.type === adjType);
-            if (existingCat) {
-                catId = existingCat.id;
-            } else {
-                // Try create one implicitly
-                const newCat = await addCategoryMutation.mutateAsync({
-                    name: catName, type: adjType, icon: 'tune', color: '#94a3b8', userId: ''
-                } as any);
-                catId = newCat.id;
-            }
-
-            await addTransactionMutation.mutateAsync({
-                amount: adjAmount,
-                description: `🔧 Ajuste: ${adjustmentDescription || 'Corrección manual'}`,
-                date: new Date().toISOString(),
-                type: adjType,
-                accountId: id!,
-                categoryId: catId!
+            const response = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, newPassword: password }),
             });
 
-            toastSuccess(`Saldo ajustado a ${target}`);
-            setShowAdjustment(false);
-            navigate('/accounts', { replace: true });
-        } catch (e) {
-            toastError('Error al crear ajuste');
+            const data = await response.json();
+
+            if (!response.ok) throw new Error(data.message || 'Fallo al restablecer contraseña.');
+
+            setSuccess(true);
+            // Auto-redirect for smooth UX
+            setTimeout(() => navigate('/login'), 2500);
+
+        } catch (err: any) {
+            setError(err.message || 'Error desconocido.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
-
-    // ========================================================================
-    // VIEW 1: DETAILS (Dashboard Style)
-    // ========================================================================
-    if (isViewingDetails && existingAccount) {
-        const isCredit = existingAccount.type === 'CREDIT';
-
+    /* SUCCESS VIEW STATE */
+    if (success) {
         return (
-            <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
-                <PageHeader
-                    title="Detalle"
-                    showBackButton={true}
-                    onBack={() => navigate('/accounts')}
-                    rightAction={
-                        <button onClick={() => setIsViewingDetails(false)} className="text-sm font-medium text-app-primary">
-                            Editar
-                        </button>
-                    }
-                />
-
-                <main className="px-6 py-8">
-                    {/* Big Hero Card */}
-                    <div className="flex flex-col items-center">
-                        <div className={`size-20 rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-lg 
-                            ${isCredit ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30'}`}
-                        >
-                            <span className="material-symbols-outlined text-[40px]">
-                                {isCredit ? 'credit_card' : 'account_balance'}
-                            </span>
-                        </div>
-
-                        <h1 className="text-2xl font-bold text-app-text text-center mb-1">{existingAccount.name}</h1>
-                        <p className="text-sm text-app-muted uppercase tracking-wider font-bold mb-6">
-                            {isCredit ? 'Tarjeta de Crédito' : 'Cuenta de Efectivo/Débito'}
-                        </p>
-
-                        <div className={`
-                            py-4 px-8 rounded-3xl text-center border-2 
-                            ${isCredit ? 'border-rose-100 bg-rose-50/50 dark:bg-rose-900/10 dark:border-rose-900' : 'border-emerald-100 bg-emerald-50/50 dark:bg-emerald-900/10 dark:border-emerald-900'}
-                        `}>
-                            <p className="text-xs font-bold text-app-muted uppercase mb-1">Saldo Actual</p>
-                            <p className={`text-4xl font-black tabular-nums tracking-tight ${isCredit ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                ${existingAccount.balance.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                            </p>
-                        </div>
+            <div className="min-h-dvh flex items-center justify-center bg-app-bg p-4 font-sans">
+                <div className="w-full max-w-[380px] bg-app-surface border border-app-border rounded-[32px] p-8 text-center shadow-xl animate-scale-in">
+                    <div className="size-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-6 shadow-sm">
+                        <span className="material-symbols-outlined text-[40px]">check_circle</span>
                     </div>
-
-                    {/* Metadata Grid */}
-                    {isCredit && (
-                        <div className="mt-8 grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-app-surface border border-app-border rounded-2xl text-center">
-                                <p className="text-xs text-app-muted mb-1 font-medium">Límite</p>
-                                <p className="text-lg font-bold text-app-text tabular-nums">${existingAccount.creditLimit?.toLocaleString()}</p>
-                            </div>
-                            <div className="p-4 bg-app-surface border border-app-border rounded-2xl text-center">
-                                <p className="text-xs text-app-muted mb-1 font-medium">Fechas</p>
-                                <div className="text-sm font-bold text-app-text">
-                                    <span className="text-indigo-500">Corte {existingAccount.cutoffDay}</span>
-                                    <span className="mx-2 text-app-border">|</span>
-                                    <span className="text-emerald-500">Pago {existingAccount.paymentDay}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Footer Actions */}
-                    <div className="mt-12 space-y-3">
-                        <button
-                            onClick={() => setIsViewingDetails(false)}
-                            className="w-full py-4 rounded-2xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/20 active:scale-95 transition-transform"
-                        >
-                            Editar Configuración
-                        </button>
-                        <button
-                            onClick={() => setShowDelete(true)}
-                            className="w-full py-4 rounded-2xl bg-transparent border border-app-border text-rose-500 font-bold active:scale-95 transition-transform hover:bg-rose-50 dark:hover:bg-rose-900/20"
-                        >
-                            Eliminar Cuenta
-                        </button>
-                    </div>
-                </main>
-
-                <DeleteConfirmationSheet
-                    isOpen={showDelete}
-                    onClose={() => setShowDelete(false)}
-                    onConfirm={confirmDelete}
-                    itemName={existingAccount.name}
-                    isDeleting={deleteAccountMutation.isPending}
-                    // For accounts, deletion is rarely catastrophic unless high history, simplified warning
-                    warningMessage="¿Eliminar Cuenta?"
-                    warningDetails={['Si hay transacciones asociadas, esta acción fallará por seguridad.']}
-                />
+                    <h2 className="text-2xl font-black text-app-text tracking-tight mb-2">¡Todo listo!</h2>
+                    <p className="text-sm text-app-muted leading-relaxed mb-8">
+                        Tu contraseña ha sido actualizada correctamente. Ya puedes acceder a tu cuenta.
+                    </p>
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all hover:bg-emerald-600"
+                    >
+                        Ir al Login
+                    </button>
+                </div>
             </div>
         );
     }
 
-    // ========================================================================
-    // VIEW 2: EDIT/CREATE FORM
-    // ========================================================================
+    /* FORM VIEW STATE */
     return (
-        <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
-            <PageHeader title={isEditMode ? 'Editar Cuenta' : 'Nueva Cuenta'} showBackButton={true} />
+        <div className="min-h-dvh flex items-center justify-center relative overflow-hidden bg-app-bg text-app-text selection:bg-app-primary/30 p-4 font-sans">
 
-            <main className="px-5 pt-6 max-w-lg mx-auto">
-                <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Background Ambience */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10">
+                <div className="absolute top-0 left-0 w-full h-[60vh] bg-linear-to-b from-app-primary/5 to-transparent" />
+            </div>
 
-                    {/* Primary Info */}
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Nombre</label>
-                            <input
-                                type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. BBVA Débito" autoFocus
-                                className="w-full bg-app-surface border border-app-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-app-primary outline-none"
-                            />
-                        </div>
+            <div className="w-full max-w-[420px] animate-fade-in space-y-8">
 
-                        <div>
-                            <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">Tipo</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {(['DEBIT', 'CREDIT', 'CASH'] as AccountType[]).map(t => (
-                                    <button
-                                        type="button" key={t} onClick={() => setType(t)}
-                                        className={`py-3 rounded-xl text-xs font-bold transition-all border 
-                                        ${type === t
-                                                ? 'bg-app-text text-app-bg border-app-text shadow-md'
-                                                : 'bg-app-surface text-app-muted border-app-border hover:bg-app-subtle'
-                                            }`}
-                                    >
-                                        {t === 'DEBIT' ? 'DÉBITO' : t === 'CREDIT' ? 'CRÉDITO' : 'EFECTIVO'}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                {/* 1. Header */}
+                <div className="text-center flex flex-col items-center">
+                    <div className="size-16 mb-6 bg-app-surface border border-app-border rounded-2xl flex items-center justify-center text-app-primary shadow-lg">
+                        <span className="material-symbols-outlined text-[32px]">vpn_key</span>
                     </div>
-
-                    {/* Balance */}
-                    <div className="pt-2">
-                        <label className="text-[10px] uppercase font-bold text-app-muted pl-1 mb-1 block">
-                            {type === 'CREDIT' ? 'Deuda Inicial' : 'Saldo Inicial'}
-                        </label>
-                        <div className={`flex items-center bg-app-surface border border-app-border rounded-2xl px-4 py-4 ${isEditMode ? 'opacity-70 bg-app-subtle cursor-not-allowed' : 'focus-within:ring-2 focus-within:ring-app-primary'}`}>
-                            <span className="text-xl font-bold text-app-muted mr-2">$</span>
-                            <input
-                                type="number" inputMode="decimal" step="0.01" min="0" onWheel={(e) => e.currentTarget.blur()}
-                                value={balance} onChange={e => setBalance(e.target.value)} placeholder="0.00" disabled={isEditMode}
-                                className="bg-transparent text-2xl font-bold text-app-text outline-none w-full placeholder-app-muted/30 no-spin-button"
-                            />
-                        </div>
-                        {isEditMode && (
-                            <button type="button" onClick={() => { setAdjustmentAmount(balance); setShowAdjustment(true); }} className="mt-2 text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[14px]">build</span> Corregir saldo manual
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Credit Specifics */}
-                    {type === 'CREDIT' && (
-                        <div className="space-y-4 pt-4 border-t border-app-border">
-                            <p className="text-xs font-bold text-app-text">Detalles de Tarjeta</p>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[10px] font-bold text-app-muted block mb-1">Día Corte</label>
-                                    <input type="number" min="1" max="31" onWheel={(e) => e.currentTarget.blur()} placeholder="14" value={cutoffDay} onChange={e => setCutoffDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold no-spin-button" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-app-muted block mb-1">Día Pago</label>
-                                    <input type="number" min="1" max="31" onWheel={(e) => e.currentTarget.blur()} placeholder="4" value={paymentDay} onChange={e => setPaymentDay(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 text-center font-bold no-spin-button" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] font-bold text-app-muted block mb-1">Límite de Crédito</label>
-                                <input type="number" min="0" step="0.01" onWheel={(e) => e.currentTarget.blur()} placeholder="50000" value={creditLimit} onChange={e => setCreditLimit(e.target.value)} className="w-full bg-app-surface border border-app-border rounded-xl px-3 py-2 font-bold no-spin-button" />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="pt-8 pb-12">
-                        <button type="submit" disabled={addAccountMutation.isPending || updateAccountMutation.isPending}
-                            className="w-full py-4 bg-app-primary hover:bg-app-primary-dark text-white font-bold rounded-2xl shadow-xl shadow-app-primary/30 transition-all active:scale-95 disabled:opacity-50">
-                            {isEditMode ? 'Guardar Cambios' : 'Crear Cuenta'}
-                        </button>
-                    </div>
-                </form>
-            </main>
-
-            {/* Modal de Ajuste (Modal Manual, Tailwind limpio) */}
-            {showAdjustment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-app-surface border border-app-border rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-scale-in">
-                        <h3 className="text-lg font-bold text-app-text mb-4">Ajuste de Saldo</h3>
-                        <p className="text-sm text-app-muted mb-4">Ingresa el saldo real de tu banco. Se creará una transacción de ajuste automáticamente.</p>
-
-                        <div className="mb-4">
-                            <label className="text-[10px] font-bold uppercase text-app-muted block mb-1">Nuevo Saldo Real</label>
-                            <input
-                                type="number" autoFocus min="0" step="0.01" onWheel={(e) => e.currentTarget.blur()} value={adjustmentAmount} onChange={e => setAdjustmentAmount(e.target.value)}
-                                className="w-full p-3 bg-app-bg border border-app-border rounded-xl font-bold text-xl outline-none focus:border-app-primary no-spin-button"
-                            />
-                        </div>
-                        <input
-                            type="text" placeholder="Motivo (opcional)" value={adjustmentDescription} onChange={e => setAdjustmentDescription(e.target.value)}
-                            className="w-full p-3 mb-6 bg-app-bg border border-app-border rounded-xl text-sm outline-none"
-                        />
-
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowAdjustment(false)} className="flex-1 py-3 font-bold text-sm text-app-muted hover:bg-app-bg rounded-xl transition-colors">Cancelar</button>
-                            <button onClick={handleAdjustment} className="flex-1 py-3 font-bold text-sm bg-app-primary text-white rounded-xl hover:bg-app-primary-dark shadow-lg shadow-app-primary/20">Aplicar</button>
-                        </div>
-                    </div>
+                    <h1 className="text-2xl font-black text-app-text tracking-tight">Nueva Contraseña</h1>
+                    <p className="text-sm text-app-muted mt-2 max-w-[260px]">
+                        Ingresa tus nuevas credenciales para recuperar el acceso seguro.
+                    </p>
                 </div>
-            )}
+
+                {/* 2. Main Card */}
+                <div className="bg-app-surface/90 backdrop-blur-xl border border-app-border rounded-[32px] p-6 md:p-8 shadow-2xl shadow-black/5 relative">
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+
+                        {/* New Password */}
+                        <div className="group">
+                            <label className="block text-xs font-bold text-app-muted uppercase tracking-wider mb-2 ml-1">Contraseña</label>
+                            <div className="relative">
+                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-app-muted transition-colors text-[20px] group-focus-within:text-app-primary">
+                                    lock
+                                </span>
+                                <input
+                                    type="password"
+                                    placeholder="Mínimo 6 caracteres"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full bg-app-subtle border-2 border-transparent focus:border-app-primary/20 rounded-2xl py-3.5 pl-12 pr-4 text-app-text outline-none transition-all placeholder:text-app-muted/50 font-medium text-sm focus:bg-white dark:focus:bg-black/20"
+                                    disabled={isLoading || !!error}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Confirm Password */}
+                        <div className="group">
+                            <label className="block text-xs font-bold text-app-muted uppercase tracking-wider mb-2 ml-1">Confirmar</label>
+                            <div className="relative">
+                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-app-muted transition-colors text-[20px] group-focus-within:text-app-primary">
+                                    lock_reset
+                                </span>
+                                <input
+                                    type="password"
+                                    placeholder="Repite la contraseña"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-app-subtle border-2 border-transparent focus:border-app-primary/20 rounded-2xl py-3.5 pl-12 pr-4 text-app-text outline-none transition-all placeholder:text-app-muted/50 font-medium text-sm focus:bg-white dark:focus:bg-black/20"
+                                    disabled={isLoading || !!error}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Error Message */}
+                        {error && (
+                            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 flex gap-3 items-center animate-shake">
+                                <span className="material-symbols-outlined text-rose-500 shrink-0">error</span>
+                                <p className="text-xs font-bold text-rose-600 dark:text-rose-400">{error}</p>
+                            </div>
+                        )}
+
+                        {/* Submit */}
+                        <div className="space-y-4 pt-2">
+                            <button
+                                type="submit"
+                                disabled={isLoading || !token}
+                                className="w-full py-4 bg-app-text text-app-bg font-bold rounded-2xl text-sm shadow-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                        <span>Actualizando...</span>
+                                    </>
+                                ) : (
+                                    <span>Guardar Cambios</span>
+                                )}
+                            </button>
+
+                            <div className="text-center">
+                                <Link to="/login" className="text-xs font-bold text-app-muted hover:text-app-text hover:underline transition-all">
+                                    Cancelar operación
+                                </Link>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+            </div>
         </div>
     );
 };
 
-export default UpsertAccountPage;
+export default ResetPasswordPage;

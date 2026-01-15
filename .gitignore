@@ -10,10 +10,11 @@ dist-ssr/
 build/
 .vite/
 
-# Environment files - Bloquear en TODOS los niveles
+# Environment files - Bloquear archivos sensibles, permitir plantillas
 .env
 **/.env
-.env.*
+.env.local
+.env.production
 !.env.example
 !**/.env.example
 

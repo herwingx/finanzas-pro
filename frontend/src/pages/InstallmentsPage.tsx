@@ -1,17 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { PageHeader } from '../components/PageHeader';
-import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } from '../hooks/useApi';
-import { toastSuccess, toastError } from '../utils/toast';
 import { useNavigate } from 'react-router-dom';
-import { SwipeableItem } from '../components/SwipeableItem';
-import { SkeletonAccountList } from '../components/Skeleton';
-import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
-import { InstallmentPurchase } from '../types';
-import { formatDateUTC } from '../utils/dateUtils';
-import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 
-// ============== MSI DETAIL SHEET ==============
-// Similar to LoanDetailSheet and RecurringDetailSheet for consistency
+// Hooks & Context
+import { useGlobalSheets } from '../context/GlobalSheetContext';
+import { useInstallmentPurchases, useProfile, useDeleteInstallmentPurchase } from '../hooks/useApi';
+import { useIsMobile } from '../hooks/useIsMobile';
+
+// Components
+import { PageHeader } from '../components/PageHeader';
+import { SwipeableItem } from '../components/SwipeableItem';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { SkeletonInstallmentList } from '../components/Skeleton';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
+
+// Utils
+import { toastSuccess, toastError } from '../utils/toast';
+import { formatDateUTC } from '../utils/dateUtils';
+import { InstallmentPurchase } from '../types';
+
+/* ==================================================================================
+   SUB-COMPONENT: DETAIL SHEET
+   ================================================================================== */
 const MSIDetailSheet = ({
     purchase,
     onClose,
@@ -25,325 +34,304 @@ const MSIDetailSheet = ({
     onDelete: () => void;
     formatCurrency: (val: number) => string;
 }) => {
-    const navigate = useNavigate();
+    const { openTransactionSheet } = useGlobalSheets();
 
     if (!purchase) return null;
 
-    const paid = purchase.paidAmount;
+    /* Metrics Calculation */
     const total = purchase.totalAmount;
-    const remaining = total - paid;
-    const percentPaid = Math.min(100, Math.round((paid / total) * 100));
-    const isSettled = remaining <= 0.05;
+    const paid = purchase.paidAmount;
+    const remaining = Math.max(0, total - paid);
+    const progress = Math.min(100, (paid / total) * 100);
+    const isFinished = remaining <= 0.5;
 
-    // Next payment logic
-    const nextPaymentNum = purchase.paidInstallments + 1;
-    const nextPaymentAmt = Math.min(purchase.monthlyPayment, remaining);
+    // Projection Logic
+    const nextPayNum = purchase.paidInstallments + 1;
+    const nextAmount = Math.min(purchase.monthlyPayment, remaining);
 
-    // Forecast next payment date
-    const nextPaymentDate = new Date(purchase.purchaseDate);
-    nextPaymentDate.setMonth(nextPaymentDate.getMonth() + nextPaymentNum);
+    // Naive next date: purchase date + N months
+    const nextDate = new Date(purchase.purchaseDate);
+    nextDate.setMonth(nextDate.getMonth() + purchase.paidInstallments);
 
-    const handleRegisterPayment = () => {
-        navigate(`/new?type=transfer&destinationAccountId=${purchase.accountId}&amount=${nextPaymentAmt.toFixed(2)}&description=${encodeURIComponent(`Pago MSI: ${purchase.description}`)}&installmentPurchaseId=${purchase.id}`);
-        onClose();
+    /* Handlers */
+    const handleManualPayment = () => {
+        onClose(); // Close sheet first
+        openTransactionSheet(null, {
+            type: 'transfer', // Treat as transfer/payment
+            amount: nextAmount.toFixed(2),
+            description: `Abono a plan: ${purchase.description}`,
+            destinationAccountId: purchase.accountId,
+            installmentPurchaseId: purchase.id
+        });
     };
 
     return (
-        <SwipeableBottomSheet isOpen={!!purchase} onClose={onClose}>
-            <div className="text-center mb-6">
-                <div className="size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
-                    <span className="material-symbols-outlined">credit_score</span>
-                </div>
-                <h2 className="text-xl font-bold text-app-text">{purchase.description}</h2>
-                <p className="text-sm text-app-muted">{purchase.account?.name}</p>
-            </div>
+        <SwipeableBottomSheet isOpen={true} onClose={onClose}>
+            <div className="pt-2 pb-6 px-4 animate-fade-in">
 
-            {/* Balance Card */}
-            <div className="bg-app-subtle rounded-2xl p-5 mb-4 text-center border border-app-border/50">
-                <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Saldo Pendiente</p>
-                <div className={`text-4xl font-black tabular-nums tracking-tight ${isSettled ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                    {formatCurrency(remaining)}
+                {/* 1. HERO HEADER */}
+                <div className="flex flex-col items-center mb-8 text-center">
+                    <div className={`size-20 rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-md ${isFinished ? 'bg-emerald-50 text-emerald-500' : 'bg-indigo-50 text-indigo-500'}`}>
+                        <span className="material-symbols-outlined">{isFinished ? 'check_circle' : 'credit_card'}</span>
+                    </div>
+
+                    <h2 className="text-xl font-bold text-app-text px-4 leading-tight mb-1">{purchase.description}</h2>
+                    <p className="text-xs text-app-muted font-medium bg-app-subtle px-3 py-1 rounded-full">
+                        {purchase.account?.name || 'Tarjeta desconocida'}
+                    </p>
                 </div>
 
-                {/* Progress bar */}
-                <div className="mt-4">
-                    <div className="w-full h-2 bg-app-bg rounded-full overflow-hidden">
+                {/* 2. PROGRESS SECTION */}
+                <div className="bento-card bg-app-subtle p-5 mb-6 border border-app-border/60">
+                    <div className="flex justify-between items-end mb-2">
+                        <span className="text-[10px] uppercase font-bold text-app-muted tracking-widest">Estado del Plan</span>
+                        <span className={`text-2xl font-black font-numbers tracking-tight ${isFinished ? 'text-emerald-500' : 'text-app-text'}`}>
+                            {isFinished ? 'Completado' : formatCurrency(remaining)}
+                        </span>
+                    </div>
+
+                    <div className="relative h-4 bg-white/50 dark:bg-black/20 rounded-full overflow-hidden mb-2">
                         <div
-                            className={`h-full rounded-full transition-all duration-700 ${isSettled ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                            style={{ width: `${percentPaid}%` }}
+                            className={`h-full rounded-full transition-all duration-1000 ease-out ${isFinished ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                            style={{ width: `${progress}%` }}
                         />
                     </div>
-                    <div className="flex justify-between text-[10px] text-app-muted font-medium mt-1.5">
-                        <span>{purchase.paidInstallments} de {purchase.installments} pagos</span>
-                        <span>{percentPaid}%</span>
+
+                    <div className="flex justify-between text-[11px] font-bold text-app-muted">
+                        <span>{purchase.paidInstallments} de {purchase.installments} cuotas</span>
+                        <span>{progress.toFixed(0)}%</span>
                     </div>
                 </div>
-            </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-app-bg border border-app-border rounded-xl p-3">
-                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Total</p>
-                    <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(total)}</p>
-                </div>
-                <div className="bg-app-bg border border-app-border rounded-xl p-3">
-                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Mensualidad</p>
-                    <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(purchase.monthlyPayment)}</p>
-                </div>
-                <div className="bg-app-bg border border-app-border rounded-xl p-3">
-                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">Pagado</p>
-                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(paid)}</p>
-                </div>
-                <div className={`rounded-xl p-3 border ${!isSettled ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-app-bg border-app-border'}`}>
-                    <p className="text-[10px] text-app-muted uppercase font-bold mb-1">
-                        {isSettled ? 'Estado' : 'Próximo pago'}
-                    </p>
-                    <div className="flex items-center gap-1.5">
-                        {isSettled ? (
-                            <>
-                                <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
-                                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Liquidado</p>
-                            </>
-                        ) : (
-                            <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                                {formatDateUTC(nextPaymentDate, { style: 'monthYear' })}
-                            </p>
-                        )}
+                {/* 3. INFO GRID */}
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                    <div className="bg-app-surface border border-app-border p-3 rounded-xl">
+                        <p className="text-[10px] uppercase font-bold text-app-muted mb-0.5">Total Original</p>
+                        <p className="font-bold text-app-text tabular-nums">{formatCurrency(total)}</p>
                     </div>
+                    <div className="bg-app-surface border border-app-border p-3 rounded-xl">
+                        <p className="text-[10px] uppercase font-bold text-app-muted mb-0.5">Mensualidad</p>
+                        <p className="font-bold text-app-text tabular-nums">{formatCurrency(purchase.monthlyPayment)}</p>
+                    </div>
+
+                    {!isFinished && (
+                        <div className="col-span-2 flex items-center justify-between p-3 rounded-xl bg-app-surface border border-app-border">
+                            <div>
+                                <p className="text-[10px] uppercase font-bold text-app-muted mb-0.5">Próximo cargo estimado</p>
+                                <p className="font-bold text-indigo-500 flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm">event</span>
+                                    {formatDateUTC(nextDate, { month: 'short', year: 'numeric' })}
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleManualPayment}
+                                className="px-4 py-2 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-lg active:scale-95 transition-transform"
+                            >
+                                Pagar
+                            </button>
+                        </div>
+                    )}
                 </div>
-            </div>
 
-            {/* Status Badge */}
-            <div className="flex items-center justify-center gap-2 mb-6">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${isSettled
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'}`}>
-                    {isSettled ? '✅ Liquidado' : '💳 MSI Activo'}
-                </span>
-            </div>
+                {/* 4. ACTIONS FOOTER */}
+                <div className="hidden md:grid grid-cols-2 gap-3 pt-2 border-t border-app-border">
+                    <button
+                        onClick={() => { onClose(); onEdit(); }}
+                        className="h-12 flex items-center justify-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/20 active:scale-[0.98] transition-all"
+                    >
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                        Editar
+                    </button>
+                    <button
+                        onClick={() => { onClose(); onDelete(); }}
+                        className="h-12 flex items-center justify-center gap-2 text-sm font-bold text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500/20 active:scale-[0.98] transition-all"
+                    >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                        Eliminar
+                    </button>
+                </div>
 
-            {/* Actions */}
-            {!isSettled && (
-                <button
-                    onClick={handleRegisterPayment}
-                    className="w-full py-3.5 rounded-xl bg-app-primary text-white font-bold shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all flex items-center justify-center gap-2 mb-3"
-                >
-                    <span className="material-symbols-outlined">payments</span>
-                    Registrar Pago de {formatCurrency(nextPaymentAmt)}
-                </button>
-            )}
-
-            {/* Edit/Delete Buttons */}
-            <div className="flex gap-3">
-                <button
-                    onClick={onEdit}
-                    className="flex-1 py-3 rounded-xl bg-app-subtle text-app-text font-bold text-sm hover:bg-app-subtle/80 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-lg">edit</span>
-                    Editar
-                </button>
-                <button
-                    onClick={onDelete}
-                    className="py-3 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold text-sm hover:opacity-80 transition-opacity flex items-center justify-center"
-                >
-                    <span className="material-symbols-outlined text-lg">delete</span>
-                </button>
             </div>
         </SwipeableBottomSheet>
     );
 };
 
-// ============== MAIN COMPONENT ==============
+/* ==================================================================================
+   MAIN COMPONENT
+   ================================================================================== */
 const InstallmentsPage: React.FC = () => {
-    const { data: purchases, isLoading, isError } = useInstallmentPurchases();
+    // 1. Hooks
+    const { data: purchases, isLoading } = useInstallmentPurchases();
     const { data: profile } = useProfile();
-    const [activeTab, setActiveTab] = useState<'active' | 'settled'>('active');
-    const [itemToDelete, setItemToDelete] = useState<InstallmentPurchase | null>(null);
-    const [selectedItem, setSelectedItem] = useState<InstallmentPurchase | null>(null);
-    const navigate = useNavigate();
+    const { openInstallmentSheet } = useGlobalSheets();
     const deleteMutation = useDeleteInstallmentPurchase();
+    const isMobile = useIsMobile();
 
-    // Helper: Formato de Moneda
-    const formatCurrency = useMemo(() => (value: number) => {
-        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'USD', minimumFractionDigits: 0 }).format(value);
-    }, [profile?.currency]);
+    // 2. State
+    const [selectedItem, setSelectedItem] = useState<InstallmentPurchase | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<InstallmentPurchase | null>(null);
+    const [viewMode, setViewMode] = useState<'active' | 'settled'>('active');
 
-    // Lógica de Tabs
-    const activePurchases = useMemo(() => purchases?.filter(p => p.paidAmount < p.totalAmount) || [], [purchases]);
-    const settledPurchases = useMemo(() => purchases?.filter(p => p.paidAmount >= p.totalAmount) || [], [purchases]);
-    const displayedPurchases = useMemo(() => activeTab === 'active' ? activePurchases : settledPurchases, [activeTab, activePurchases, settledPurchases]);
-
-    // Handle Delete
-    const handleDelete = (purchase: InstallmentPurchase) => {
-        setSelectedItem(null);
-        setItemToDelete(purchase);
-    };
-
-    const confirmDelete = (options?: { revertBalance: boolean }) => {
-        if (!itemToDelete) return;
-
-        const shouldRevert = options?.revertBalance ?? false;
-
-        deleteMutation.mutate({ id: itemToDelete.id, revert: shouldRevert }, {
-            onSuccess: () => {
-                toastSuccess('Plan eliminado');
-                setItemToDelete(null);
-            },
-            onError: () => toastError('Error eliminando plan')
+    // 3. Filter Logic
+    const { activeList, settledList } = useMemo(() => {
+        const active: InstallmentPurchase[] = [];
+        const settled: InstallmentPurchase[] = [];
+        purchases?.forEach(p => {
+            const left = p.totalAmount - p.paidAmount;
+            if (left > 0.5) active.push(p);
+            else settled.push(p);
         });
+        return { activeList: active, settledList: settled };
+    }, [purchases]);
+
+    const displayedList = viewMode === 'active' ? activeList : settledList;
+
+    // 4. Formatters
+    const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', {
+        style: 'currency', currency: profile?.currency || 'USD'
+    }).format(val);
+
+    // 5. Actions
+    const handleDelete = (item: InstallmentPurchase) => {
+        setSelectedItem(null); // Ensure detail is closed
+        setItemToDelete(item); // Open confirmation
     };
 
-    const handleEdit = (purchase: InstallmentPurchase) => {
-        setSelectedItem(null);
-        navigate(`/installments/edit/${purchase.id}?mode=edit`, { replace: true });
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        try {
+            await deleteMutation.mutateAsync({ id: itemToDelete.id });
+            toastSuccess('Plan eliminado');
+            setItemToDelete(null);
+        } catch (e) { toastError('No se pudo eliminar'); }
     };
 
-    if (isLoading) {
-        return (
-            <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
-                <PageHeader title="Mis Planes MSI" showBackButton={true} />
-                <div className="max-w-3xl mx-auto px-4 pt-4">
-                    <SkeletonAccountList />
-                </div>
-            </div>
-        );
-    }
-
-    if (isError) return <div className="p-8 text-center text-rose-500">Error cargando datos.</div>;
+    if (isLoading) return (
+        <div className="min-h-dvh bg-app-bg">
+            <PageHeader title="Mis Planes" showBackButton />
+            <div className="p-4"><SkeletonInstallmentList /></div>
+        </div>
+    );
 
     return (
-        <div className="min-h-dvh bg-app-bg pb-safe text-app-text">
-            <PageHeader title="Mis Planes MSI" showBackButton={true} />
-
-            <div className="max-w-3xl mx-auto px-4 pt-4">
-
-                {/* Section Header with Add Button */}
-                <div className="flex justify-between items-center mb-4 px-1">
-                    <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Planes Activos</h2>
+        <div className="min-h-dvh bg-app-bg pb-safe md:pb-12 text-app-text font-sans">
+            <PageHeader
+                title="Compras a Plazos"
+                showBackButton
+                rightAction={
                     <button
-                        onClick={() => navigate('/installments/new')}
-                        className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
+                        onClick={() => openInstallmentSheet()}
+                        className="bg-app-text text-app-bg size-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform hover:shadow-xl hover:scale-105"
                     >
-                        <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                        <span className="hidden sm:inline">Nuevo Plan</span>
+                        <span className="material-symbols-outlined text-[22px] font-bold">add</span>
                     </button>
-                </div>
+                }
+            />
 
-                {/* Modern Tabs (Segmented Control) */}
-                <div className="bg-app-subtle p-1 rounded-xl flex mb-6 mx-auto max-w-xs">
-                    {(['active', 'settled'] as const).map(tab => (
+            <div className="max-w-3xl mx-auto px-4 pt-4 pb-20 animate-fade-in space-y-6">
+
+                {/* 1. TABS (Segmented Control) */}
+                <div className="bg-app-subtle p-1 rounded-xl flex mx-auto max-w-sm">
+                    {(['active', 'settled'] as const).map(mode => (
                         <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === tab
-                                ? 'bg-app-surface text-app-text shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                                : 'text-app-muted hover:text-app-text'}`}
+                            key={mode}
+                            onClick={() => setViewMode(mode)}
+                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === mode
+                                ? 'bg-app-surface text-app-text shadow-sm'
+                                : 'text-app-muted hover:text-app-text'
+                                }`}
                         >
-                            {tab === 'active' ? 'Activos' : 'Liquidados'}
+                            {mode === 'active' ? `Activos (${activeList.length})` : `Historial (${settledList.length})`}
                         </button>
                     ))}
                 </div>
 
-                <div className="space-y-3">
-                    {displayedPurchases.length === 0 ? (
-                        <div className="py-12 flex flex-col items-center justify-center text-app-muted opacity-60">
-                            <span className="material-symbols-outlined text-4xl mb-3">credit_card_off</span>
-                            <p className="text-sm font-medium">No hay planes {activeTab === 'active' ? 'activos' : 'liquidados'}</p>
-                        </div>
-                    ) : (
-                        displayedPurchases.map(purchase => {
-                            const remaining = purchase.totalAmount - purchase.paidAmount;
-                            const percent = (purchase.paidInstallments / purchase.installments) * 100;
+                {/* 2. LIST */}
+                <div className="space-y-4">
+                    {displayedList.length > 0 ? displayedList.map(item => {
+                        const progress = (item.paidInstallments / item.installments) * 100;
+                        const isFinished = progress >= 99;
 
-                            return (
-                                <SwipeableItem
-                                    key={purchase.id}
-                                    onSwipeRight={() => navigate(`/installments/edit/${purchase.id}?mode=edit`, { replace: true })}
-                                    leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                                    onSwipeLeft={() => handleDelete(purchase)}
-                                    rightAction={{ icon: 'delete', color: '#ef4444', label: 'Eliminar' }}
-                                    className="mb-3 rounded-2xl"
+                        return (
+                            <SwipeableItem
+                                key={item.id}
+                                leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
+                                rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
+                                onSwipeRight={() => { setSelectedItem(null); openInstallmentSheet(item); }}
+                                onSwipeLeft={() => handleDelete(item)}
+                                className="rounded-3xl"
+                                disabled={!isMobile}
+                            >
+                                <div
+                                    onClick={() => setSelectedItem(item)}
+                                    className={`bento-card p-5 relative overflow-hidden group cursor-pointer transition-all hover:border-app-border-strong active:scale-[0.99] bg-app-surface`}
                                 >
-                                    <div
-                                        onClick={() => setSelectedItem(purchase)}
-                                        className="group bg-app-surface border border-app-border rounded-2xl p-4 md:p-5 hover:border-app-border/80 transition-all active:scale-[0.99] cursor-pointer"
-                                    >
+                                    <div className="relative z-10">
                                         <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-start gap-3">
-                                                <div className="mt-1 size-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500">
-                                                    <span className="material-symbols-outlined text-[18px]">credit_score</span>
+                                            <div className="flex items-center gap-3.5">
+                                                <div className={`size-10 rounded-xl flex items-center justify-center border shadow-sm ${isFinished ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-indigo-50 border-indigo-100 text-indigo-600'}`}>
+                                                    <span className="material-symbols-outlined text-lg">{isFinished ? 'check' : 'calendar_month'}</span>
                                                 </div>
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-app-text group-hover:text-app-primary transition-colors">{purchase.description}</h3>
-                                                    <p className="text-xs text-app-muted">{purchase.account?.name}</p>
+                                                <div className="min-w-0">
+                                                    <h3 className="font-bold text-sm text-app-text truncate">{item.description}</h3>
+                                                    <p className="text-[10px] text-app-muted uppercase tracking-wide mt-0.5">{item.account?.name}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right flex items-center gap-2">
-                                                <div>
-                                                    <p className="text-sm font-bold text-app-text tabular-nums">{formatCurrency(purchase.monthlyPayment)}</p>
-                                                    <p className="text-[10px] text-app-muted font-medium">/ mes</p>
-                                                </div>
-                                                <span className="material-symbols-outlined text-app-muted text-sm">chevron_right</span>
+
+                                            <div className="text-right">
+                                                <p className="font-bold text-base font-numbers tabular-nums">{formatCurrency(item.monthlyPayment)}</p>
+                                                <p className="text-[9px] text-app-muted font-bold opacity-60">/ mes</p>
                                             </div>
                                         </div>
 
-                                        {/* Progress Bar & Stats */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[10px] text-app-muted font-medium uppercase tracking-wide">
-                                                <span>{purchase.paidInstallments} de {purchase.installments} cuotas</span>
-                                                <span>Restante: {formatCurrency(remaining)}</span>
+                                        <div className="space-y-1.5">
+                                            <div className="flex justify-between text-[10px] font-bold text-app-muted uppercase">
+                                                <span>Progreso</span>
+                                                <span>{item.paidInstallments}/{item.installments} cuotas</span>
                                             </div>
-
                                             <div className="h-1.5 w-full bg-app-subtle rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full rounded-full transition-all duration-500 ease-out"
-                                                    style={{
-                                                        width: `${percent}%`,
-                                                        backgroundColor: activeTab === 'active' ? 'var(--brand-primary)' : 'var(--text-muted)'
-                                                    }}
+                                                    className={`h-full transition-all duration-700 rounded-full ${isFinished ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                                    style={{ width: `${progress}%` }}
                                                 />
                                             </div>
                                         </div>
                                     </div>
-                                </SwipeableItem>
-                            );
-                        })
+                                </div>
+                            </SwipeableItem>
+                        );
+                    }) : (
+                        <div className="py-20 flex flex-col items-center justify-center opacity-50 border-2 border-dashed border-app-border rounded-3xl bg-app-subtle/10">
+                            <span className="material-symbols-outlined text-4xl mb-2 text-app-muted">credit_card_off</span>
+                            <p className="text-sm font-medium text-app-text">Sin planes en esta vista.</p>
+                        </div>
                     )}
                 </div>
 
-                {/* Spacer for safe bottom */}
-                <div className="h-16" />
-
-                {/* MSI Detail Sheet */}
+                {/* 3. DETAILS MODAL */}
                 {selectedItem && (
                     <MSIDetailSheet
                         purchase={selectedItem}
                         onClose={() => setSelectedItem(null)}
-                        onEdit={() => handleEdit(selectedItem)}
+                        onEdit={() => { setSelectedItem(null); openInstallmentSheet(selectedItem); }}
                         onDelete={() => handleDelete(selectedItem)}
                         formatCurrency={formatCurrency}
                     />
                 )}
 
-                {/* Delete Confirmation Sheet */}
+                {/* 4. CONFIRMATION MODAL */}
                 {itemToDelete && (
                     <DeleteConfirmationSheet
                         isOpen={!!itemToDelete}
                         onClose={() => setItemToDelete(null)}
-                        onConfirm={confirmDelete}
+                        onConfirm={() => confirmDelete()}
                         itemName={itemToDelete.description}
-                        warningLevel={itemToDelete.paidAmount < itemToDelete.totalAmount ? 'warning' : 'normal'}
-                        warningMessage={itemToDelete.paidAmount < itemToDelete.totalAmount ? 'Plan Activo' : undefined}
-                        warningDetails={[
-                            "Se eliminará el plan de tus proyecciones.",
-                            "La deuda pendiente se cancelará de la tarjeta."
-                        ]}
-                        showRevertOption={itemToDelete.paidAmount > 0}
-                        revertOptionLabel="Reembolsar pagos realizados (Devolver dinero a mi cuenta)"
-                        defaultRevertState={false}
+                        warningMessage="Eliminar plan de pagos"
+                        warningDetails={["Esta acción es irreversible.", "Se dejará de considerar en el presupuesto mensual."]}
                         isDeleting={deleteMutation.isPending}
                     />
                 )}
+
             </div>
         </div>
     );

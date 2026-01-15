@@ -1,4 +1,4 @@
-import { Transaction, Category, Budget, Profile, RecurringTransaction, Account, InstallmentPurchase, Loan, LoanSummary } from '../types';
+import { Transaction, Category, Budget, Profile, RecurringTransaction, Account, InstallmentPurchase, Loan, LoanSummary, Investment, InvestmentType } from '../types';
 
 const API_URL = '/api';
 
@@ -608,4 +608,145 @@ export const deleteLoan = async (id: string, revertBalance: boolean = false): Pr
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to delete loan');
     }
+};
+
+// ============== INVESTMENTS API ==============
+
+export const getInvestments = async (): Promise<Investment[]> => {
+    const response = await fetch(`${API_URL}/investments`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch investments');
+    return response.json();
+};
+
+export const addInvestment = async (investment: Omit<Investment, 'id' | 'userId' | 'lastPriceUpdate'>): Promise<Investment> => {
+    const response = await fetch(`${API_URL}/investments`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(investment),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add investment');
+    }
+    return response.json();
+};
+
+export const updateInvestment = async (id: string, investment: Partial<Omit<Investment, 'id' | 'userId'>>): Promise<Investment> => {
+    const response = await fetch(`${API_URL}/investments/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(investment),
+    });
+    if (!response.ok) throw new Error('Failed to update investment');
+    return response.json();
+};
+
+export const deleteInvestment = async (id: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/investments/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete investment');
+};
+
+// ============== GOALS API ==============
+
+import { SavingsGoal } from '../types';
+
+export const getGoals = async (): Promise<SavingsGoal[]> => {
+    const response = await fetch(`${API_URL}/goals`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch goals');
+    return response.json();
+};
+
+export const addGoal = async (goal: Omit<SavingsGoal, 'id' | 'currentAmount' | 'contributions'>): Promise<SavingsGoal> => {
+    const response = await fetch(`${API_URL}/goals`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(goal),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add goal');
+    }
+    return response.json();
+};
+
+export const updateGoal = async (id: string, goal: Partial<SavingsGoal>): Promise<SavingsGoal> => {
+    const response = await fetch(`${API_URL}/goals/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(goal),
+    });
+    if (!response.ok) throw new Error('Failed to update goal');
+    return response.json();
+};
+
+export const deleteGoal = async (id: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/goals/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete goal');
+};
+
+export const addGoalContribution = async (id: string, contribution: { amount: number; date?: string; notes?: string; sourceAccountId: string }): Promise<any> => {
+    const response = await fetch(`${API_URL}/goals/${id}/contribute`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(contribution),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add contribution');
+    }
+    return response.json();
+};
+
+export const withdrawFromGoal = async (id: string, withdrawal: { amount: number; targetAccountId: string }): Promise<any> => {
+    const response = await fetch(`${API_URL}/goals/${id}/withdraw`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(withdrawal),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to withdraw');
+    }
+    return response.json();
+};
+
+// ============== NOTIFICATIONS API ==============
+
+export const getNotifications = async (): Promise<any[]> => {
+    const response = await fetch(`${API_URL}/notifications`, { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch notifications');
+    return response.json();
+};
+
+export const markNotificationRead = async (id: string): Promise<any> => {
+    const response = await fetch(`${API_URL}/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to mark notification as read');
+    return response.json();
+};
+
+export const markAllNotificationsRead = async (): Promise<any> => {
+    const response = await fetch(`${API_URL}/notifications/read-all`, {
+        method: 'PUT',
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to mark all notifications as read');
+    return response.json();
+};
+
+export const triggerDebugNotification = async (): Promise<any> => {
+    const response = await fetch(`${API_URL}/notifications/debug-trigger`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Failed to trigger debug notification');
+    return response.json();
 };

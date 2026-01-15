@@ -93,7 +93,8 @@ export function DatePicker({
           "shadow-premium backdrop-blur-3xl",
           "animate-in zoom-in-95 fade-in-0 duration-200",
           // Mobile: full width and centered, Desktop: auto width
-          "max-w-[calc(100vw-2rem)] sm:max-w-none"
+          "max-w-[calc(100vw-2rem)] sm:max-w-none",
+          "z-9999" // Force high z-index
         )}
         align="start"
         sideOffset={8}

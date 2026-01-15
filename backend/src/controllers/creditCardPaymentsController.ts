@@ -84,18 +84,10 @@ export const getStatementDetails = async (req: AuthRequest, res: Response) => {
       where: {
         id: accountId,
         userId,
-        OR: [
-          { type: 'credit' },
-          { type: 'CREDIT' },
-          { type: 'Credit Card' },
-          { type: 'Tarjeta de Crédito' }
-        ]
+        type: 'CREDIT'
       },
       include: {
         installmentPurchases: {
-          where: {
-            paidAmount: { lt: prisma.installmentPurchase.fields.totalAmount }
-          },
           include: { category: true }
         }
       }
@@ -125,7 +117,10 @@ export const getStatementDetails = async (req: AuthRequest, res: Response) => {
       categoryIcon: string;
     }> = [];
 
-    for (const msi of account.installmentPurchases) {
+    // Filter active installments in memory (Prisma doesn't support field comparison in where clause yet)
+    const activeInstallments = account.installmentPurchases.filter(msi => msi.paidAmount < msi.totalAmount);
+
+    for (const msi of activeInstallments) {
       const purchaseDate = new Date(msi.purchaseDate);
       const purchaseDay = purchaseDate.getDate();
 
@@ -265,19 +260,10 @@ export const payFullStatement = async (req: AuthRequest, res: Response) => {
       where: {
         id: accountId,
         userId,
-        OR: [
-          { type: 'credit' },
-          { type: 'CREDIT' },
-          { type: 'Credit Card' },
-          { type: 'Tarjeta de Crédito' }
-        ]
+        type: 'CREDIT'
       },
       include: {
-        installmentPurchases: {
-          where: {
-            paidAmount: { lt: prisma.installmentPurchase.fields.totalAmount }
-          }
-        }
+        installmentPurchases: true // Filter active ones in memory
       }
     });
 
@@ -298,7 +284,10 @@ export const payFullStatement = async (req: AuthRequest, res: Response) => {
     // Calculate what needs to be paid
     const msiToPay: Array<{ id: string; description: string; amount: number; installmentNumber: number; totalInstallments: number }> = [];
 
-    for (const msi of account.installmentPurchases) {
+    // Filter for active installments (paidAmount < totalAmount)
+    const activeInstallments = account.installmentPurchases.filter(msi => msi.paidAmount < msi.totalAmount);
+
+    for (const msi of activeInstallments) {
       const purchaseDate = new Date(msi.purchaseDate);
       const purchaseDay = purchaseDate.getDate();
 
@@ -562,10 +551,8 @@ export const revertStatementPayment = async (req: AuthRequest, res: Response) =>
       return res.status(404).json({ error: 'Payment transaction not found' });
     }
 
-    // Check if destination is a credit card
-    const isCreditCard = ['credit', 'CREDIT', 'Credit Card', 'Tarjeta de Crédito'].includes(
-      transaction.destinationAccount?.type || ''
-    );
+    // Check if destination is a credit card (USING ENUM VALUE)
+    const isCreditCard = transaction.destinationAccount?.type === 'CREDIT';
 
     if (!isCreditCard) {
       return res.status(400).json({ error: 'This is not a credit card payment' });

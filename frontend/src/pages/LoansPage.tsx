@@ -1,350 +1,391 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getLoans, getLoanSummary, markLoanAsPaid, deleteLoan, registerLoanPayment } from '../services/apiService';
-import { Loan, LoanStatus, LoanType, LoanSummary } from '../types';
-import { SwipeableItem } from '../components/SwipeableItem';
-import { toastSuccess, toastError, toast } from '../utils/toast';
+
+// API Services
+import { getLoans, getLoanSummary, markLoanAsPaid, deleteLoan } from '../services/apiService';
+
+// Hooks & Context
+import { useGlobalSheets } from '../context/GlobalSheetContext';
+import { useIsMobile } from '../hooks/useIsMobile';
+
+// Components
 import { PageHeader } from '../components/PageHeader';
+import { SwipeableItem } from '../components/SwipeableItem';
+import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
 import { SkeletonTransactionList } from '../components/Skeleton';
 import { Button } from '../components/Button';
-import { useAccounts } from '../hooks/useApi';
-import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
-import { SwipeableBottomSheet } from '../components/SwipeableBottomSheet';
 
-// --- Sub-Components (Inline for brevity but could be split) ---
+// Utils
+import { toastSuccess, toastError } from '../utils/toast';
+import { Loan, LoanSummary } from '../types';
 
-// 1. DETAIL SHEET
-const LoanDetailSheet = ({ loan, onClose, onEdit, onDelete, onMarkPaid }: any) => {
-  const [isPaymentMode, setIsPaymentMode] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [selectedAccountId, setSelectedAccountId] = useState(loan?.accountId || '');
+/* ==================================================================================
+   SUB-COMPONENT: HEADER SUMMARY
+   ================================================================================== */
+const LoanSummaryCard: React.FC<{ lent: number; owed: number }> = ({ lent, owed }) => (
+  <div className="grid grid-cols-2 gap-4 mb-8">
 
-  const { data: accounts } = useAccounts();
-  const queryClient = useQueryClient();
-  const paymentMutation = useMutation({
-    mutationFn: (data: any) => registerLoanPayment(loan.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
-      toastSuccess('Abono registrado');
-      onClose();
-    },
-    onError: (e: any) => toastError(e.message)
-  });
-
-  // Filter accounts - for 'borrowed' show non-credit accounts to pay from; for 'lent' show all (receiving money)
-  const availableAccounts = useMemo(() => {
-    if (!accounts) return [];
-    return accounts.filter(acc => !['CREDIT', 'credit', 'Credit Card'].includes(acc.type));
-  }, [accounts]);
-
-  if (!loan) return null;
-
-  const isLent = loan.loanType === 'lent';
-  const percentPaid = Math.min(100, Math.round(((loan.originalAmount - loan.remainingAmount) / loan.originalAmount) * 100));
-
-  const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
-
-  return (
-    <SwipeableBottomSheet isOpen={!!loan} onClose={onClose}>
-      <div className="text-center mb-8">
-        <div className={`size-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-sm ${isLent ? 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20'
-          }`}>
-          <span className="material-symbols-outlined">{isLent ? 'arrow_outward' : 'arrow_downward'}</span>
-        </div>
-        <h2 className="text-xl font-bold text-app-text">{loan.borrowerName}</h2>
-        <p className="text-sm text-app-muted">{isLent ? 'Te debe' : 'Le debes'}</p>
+    {/* Card: Me Deben (Lent) */}
+    <div className="group bg-violet-50/50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-900 rounded-[20px] p-5 relative overflow-hidden transition-all hover:scale-[1.02]">
+      <div className="absolute right-0 top-0 opacity-[0.07] dark:opacity-[0.1] -mr-4 -mt-4 transition-transform group-hover:rotate-12 duration-500">
+        <span className="material-symbols-outlined text-[90px] text-violet-600">arrow_outward</span>
       </div>
-
-      <div className="bg-app-subtle rounded-2xl p-5 mb-6 text-center border border-app-border/50">
-        <p className="text-[10px] uppercase font-bold text-app-muted tracking-widest mb-1">Saldo Pendiente</p>
-        <div className={`text-4xl font-black tabular-nums tracking-tight ${isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-500'}`}>
-          {formatCurrency(loan.remainingAmount)}
-        </div>
-        {loan.remainingAmount !== loan.originalAmount && (
-          <div className="mt-3 w-full bg-app-subtle h-1.5 rounded-full overflow-hidden">
-            <div className={`h-full ${isLent ? 'bg-violet-500' : 'bg-rose-500'}`} style={{ width: `${percentPaid}%` }} />
-          </div>
-        )}
-      </div>
-
-      {isPaymentMode ? (
-        <form onSubmit={(e) => { e.preventDefault(); paymentMutation.mutate({ amount: parseFloat(amount), accountId: selectedAccountId || undefined }); }} className="space-y-4 animate-fade-in">
-          <div>
-            <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">Monto a abonar</label>
-            <input autoFocus type="number" step="0.01" min="0" inputMode="decimal" onWheel={(e) => e.currentTarget.blur()} value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-lg font-bold outline-none focus:ring-2 focus:ring-app-primary no-spin-button" placeholder="0.00" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-app-muted ml-1 mb-1 block">
-              {isLent ? 'Recibir en cuenta' : 'Pagar desde cuenta'}
-            </label>
-            <select
-              value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-app-primary appearance-none"
-            >
-              <option value="">Sin afectar cuentas</option>
-              {availableAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-app-muted mt-1 ml-1">
-              {selectedAccountId
-                ? (isLent ? 'Se sumará a esta cuenta' : 'Se restará de esta cuenta')
-                : 'Solo se actualizará el saldo del préstamo'
-              }
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => setIsPaymentMode(false)} fullWidth>Cancelar</Button>
-            <Button type="submit" disabled={!amount} isLoading={paymentMutation.isPending} fullWidth>Registrar</Button>
-          </div>
-        </form>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex gap-3">
-            {loan.status !== 'paid' && (
-              <>
-                <button onClick={() => setIsPaymentMode(true)} className="flex-1 bg-app-primary text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-app-primary/25 hover:bg-app-primary-dark active:scale-95 transition-all">Abonar</button>
-                <button onClick={onMarkPaid} className="flex-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 py-3 rounded-xl font-bold text-sm hover:opacity-80 transition-opacity">Liquidar</button>
-              </>
-            )}
-          </div>
-          {/* Edit/Delete Buttons */}
-          <div className="hidden md:flex gap-3 pt-2 border-t border-app-border">
-            <button
-              onClick={onEdit}
-              className="flex-1 py-3 rounded-xl bg-app-subtle text-app-text font-bold text-sm hover:bg-app-subtle/80 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-lg">edit</span>
-              Editar
-            </button>
-            <button
-              onClick={onDelete}
-              className="py-3 px-5 rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 font-bold text-sm hover:opacity-80 transition-opacity flex items-center justify-center"
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-            </button>
-          </div>
-        </div>
-      )}
-    </SwipeableBottomSheet>
-  );
-};
-
-
-// 2. SUMMARY CARD
-const LoanSummaryCard = ({ lent, owed }: { lent: number, owed: number }) => (
-  <div className="grid grid-cols-2 gap-3 mb-6">
-    <div className="bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm">
-      <div className="flex items-center gap-1.5 mb-1 text-violet-500">
-        <span className="material-symbols-outlined text-[18px]">trending_up</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider">Me Deben</span>
-      </div>
-      <p className="text-xl font-bold text-app-text">${lent.toLocaleString()}</p>
+      <p className="text-[10px] uppercase font-bold text-violet-700/70 dark:text-violet-300 tracking-wider mb-1">
+        Por cobrar
+      </p>
+      <p className="text-2xl md:text-3xl font-black text-violet-700 dark:text-violet-300 font-numbers tracking-tight">
+        ${lent.toLocaleString()}
+      </p>
     </div>
-    <div className="bg-app-surface border border-app-border p-4 rounded-2xl shadow-sm">
-      <div className="flex items-center gap-1.5 mb-1 text-rose-500">
-        <span className="material-symbols-outlined text-[18px]">trending_down</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider">Debo</span>
+
+    {/* Card: Debo (Borrowed) */}
+    <div className="group bg-rose-50/50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900 rounded-[20px] p-5 relative overflow-hidden transition-all hover:scale-[1.02]">
+      <div className="absolute right-0 top-0 opacity-[0.07] dark:opacity-[0.1] -mr-4 -mt-4 transition-transform group-hover:-rotate-12 duration-500">
+        <span className="material-symbols-outlined text-[90px] text-rose-600">arrow_downward</span>
       </div>
-      <p className="text-xl font-bold text-app-text">${owed.toLocaleString()}</p>
+      <p className="text-[10px] uppercase font-bold text-rose-700/70 dark:text-rose-300 tracking-wider mb-1">
+        Por pagar
+      </p>
+      <p className="text-2xl md:text-3xl font-black text-rose-600 dark:text-rose-300 font-numbers tracking-tight">
+        ${owed.toLocaleString()}
+      </p>
     </div>
   </div>
 );
 
+/* ==================================================================================
+   SUB-COMPONENT: DETAIL SHEET
+   ================================================================================== */
+interface LoanDetailSheetProps {
+  loan: Loan;
+  onClose: () => void;
+  onMarkPaid: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+}
 
-// ====== MAIN COMPONENT ======
+const LoanDetailSheet: React.FC<LoanDetailSheetProps> = ({ loan, onClose, onMarkPaid, onDelete, onEdit }) => {
+  const isLent = loan.loanType === 'lent';
+  const isPaid = loan.status === 'paid';
+  const hasNotes = Boolean(loan.notes);
 
+  return (
+    <SwipeableBottomSheet isOpen={true} onClose={onClose}>
+      <div className="pt-2 pb-6 px-4 animate-fade-in">
+
+        {/* 1. Header Profile */}
+        <div className="text-center mb-8 relative">
+          <div
+            className={`size-24 rounded-full mx-auto flex items-center justify-center text-4xl mb-4 shadow-xl border-4 border-app-bg ${isPaid ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20' :
+              isLent ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/20' :
+                'bg-rose-100 text-rose-600 dark:bg-rose-900/20'
+              }`}
+          >
+            <span className="material-symbols-outlined text-[42px]">
+              {isPaid ? 'handshake' : isLent ? 'call_made' : 'call_received'}
+            </span>
+          </div>
+
+          <h2 className="text-2xl font-black text-app-text tracking-tight mb-1">{loan.borrowerName}</h2>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-app-subtle border border-app-border text-app-muted">
+            {isPaid
+              ? <span className="flex items-center gap-1 text-emerald-600"><span className="material-symbols-outlined text-sm">check</span> Saldado</span>
+              : <span>{isLent ? 'Préstamo otorgado' : 'Préstamo recibido'}</span>
+            }
+          </div>
+        </div>
+
+        {/* 2. Amount Box */}
+        <div className="bg-app-surface border border-app-border rounded-3xl p-6 text-center shadow-sm mb-6 relative overflow-hidden">
+          {isPaid && <div className="absolute inset-0 bg-app-subtle/50 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none" />}
+
+          <p className="text-xs uppercase font-bold text-app-muted tracking-widest mb-1">Pendiente Total</p>
+          <p className="text-4xl font-black text-app-text font-numbers tracking-tight">
+            ${loan.remainingAmount.toLocaleString()}
+          </p>
+
+          {loan.remainingAmount !== loan.originalAmount && (
+            <div className="mt-3 text-[10px] font-bold text-app-muted uppercase tracking-wide bg-app-subtle inline-block px-3 py-1 rounded-lg">
+              De un total de ${loan.originalAmount.toLocaleString()}
+            </div>
+          )}
+        </div>
+
+        {/* 3. Details Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          <div className="bg-app-subtle/50 p-4 rounded-2xl border border-app-border/50">
+            <p className="text-[10px] uppercase font-bold text-app-muted mb-1">Fecha Inicio</p>
+            <p className="font-bold text-sm text-app-text">
+              {new Date(loan.loanDate).toLocaleDateString()}
+            </p>
+          </div>
+
+          <div className="bg-app-subtle/50 p-4 rounded-2xl border border-app-border/50">
+            <p className="text-[10px] uppercase font-bold text-app-muted mb-1">Vencimiento</p>
+            {loan.expectedPayDate ? (
+              <div className="flex items-center gap-1.5">
+                <span className={`material-symbols-outlined text-sm ${!isPaid && new Date(loan.expectedPayDate) < new Date() ? 'text-rose-500' : 'text-app-primary'}`}>event</span>
+                <p className="font-bold text-sm text-app-text">
+                  {new Date(loan.expectedPayDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+            ) : (
+              <p className="font-medium text-sm text-app-muted italic">Sin fecha</p>
+            )}
+          </div>
+
+          {hasNotes && (
+            <div className="col-span-2 bg-app-subtle/30 p-4 rounded-2xl border border-app-border/30">
+              <p className="text-[10px] uppercase font-bold text-app-muted mb-1">Notas</p>
+              <p className="text-xs text-app-text italic">"{loan.notes}"</p>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Action Buttons */}
+        <div className="space-y-3">
+          {!isPaid && (
+            <Button
+              onClick={() => { onClose(); onMarkPaid(); }}
+              className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 bg-emerald-500 text-white shadow-emerald-500/20"
+            >
+              <span className="material-symbols-outlined">check_circle</span>
+              Marcar como Saldado
+            </Button>
+          )}
+
+          <div className="hidden md:grid grid-cols-2 gap-3 pt-1">
+            <button
+              onClick={() => { onClose(); onEdit(); }}
+              className="h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">edit</span>
+              Editar
+            </button>
+            <button
+              onClick={() => { onClose(); onDelete(); }}
+              className="h-12 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-900/10 dark:text-rose-400 text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-rose-100"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              Borrar
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </SwipeableBottomSheet>
+  );
+};
+
+/* ==================================================================================
+   MAIN PAGE COMPONENT
+   ================================================================================== */
 const LoansPage: React.FC = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { openLoanSheet } = useGlobalSheets();
+  const isMobile = useIsMobile();
 
-  const [filter, setFilter] = useState<'all' | 'lent' | 'borrowed'>('all');
+  // State
+  const [filter, setFilter] = useState<'all' | 'lent' | 'borrowed' | 'paid'>('all');
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [loanToDelete, setLoanToDelete] = useState<Loan | null>(null);
 
+  // Queries
   const { data: loans = [], isLoading } = useQuery<Loan[]>({ queryKey: ['loans'], queryFn: getLoans });
   const { data: summary } = useQuery<LoanSummary>({ queryKey: ['loans-summary'], queryFn: getLoanSummary });
 
-  const deleteMutation = useMutation({
-    mutationFn: ({ id, revert }: { id: string; revert: boolean }) => deleteLoan(id, revert),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
-      toastSuccess('Préstamo eliminado');
-      setSelectedLoan(null);
-      setLoanToDelete(null);
-    },
-    onError: (error: any) => {
-      toastError(error.message || 'Error al eliminar préstamo');
-    }
-  });
+  // Filtering Logic
+  const filteredLoans = useMemo(() => {
+    if (filter === 'paid') return loans.filter(l => l.status === 'paid');
 
+    // For other tabs, we only show active ones
+    const active = loans.filter(l => l.status !== 'paid');
+    if (filter === 'all') return active;
+    return active.filter(l => l.loanType === filter);
+  }, [loans, filter]);
+
+  // Render Helper for Loan items
+  const renderLoanItem = (loan: Loan) => {
+    const isLent = loan.loanType === 'lent';
+    const isPaid = loan.status === 'paid';
+
+    // Icon Colors
+    const iconBg = isPaid ? 'bg-emerald-50' : isLent ? 'bg-violet-50' : 'bg-rose-50';
+    const iconColor = isPaid ? 'text-emerald-500' : isLent ? 'text-violet-600' : 'text-rose-500';
+    const darkIconBg = isPaid ? 'dark:bg-emerald-900/20' : isLent ? 'dark:bg-violet-900/20' : 'dark:bg-rose-900/20';
+
+    return (
+      <SwipeableItem
+        key={loan.id}
+        leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
+        onSwipeRight={() => { setSelectedLoan(null); setTimeout(() => openLoanSheet(loan), 50); }}
+        rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
+        onSwipeLeft={() => handleDeleteRequest(loan)}
+        className="rounded-3xl"
+        disabled={!isMobile}
+      >
+        <div
+          onClick={() => setSelectedLoan(loan)}
+          className="bento-card p-4 flex items-center gap-4 cursor-pointer hover:border-app-border-strong active:scale-[0.99] transition-all bg-app-surface group"
+        >
+          <div className={`size-12 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-colors ${iconBg} ${iconColor} ${darkIconBg}`}>
+            <span className="material-symbols-outlined">
+              {isPaid ? 'check' : isLent ? 'call_made' : 'call_received'}
+            </span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start mb-0.5">
+              <h4 className={`font-bold text-sm text-app-text truncate ${isPaid ? 'opacity-60 line-through font-medium' : ''}`}>
+                {loan.borrowerName}
+              </h4>
+              <span className={`font-black font-numbers text-[15px] ${isPaid ? 'text-app-muted' : isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                ${loan.remainingAmount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center text-xs text-app-muted">
+              <span className="truncate">{new Date(loan.loanDate).toLocaleDateString()}</span>
+              {loan.remainingAmount < loan.originalAmount && !isPaid && (
+                <span className="text-[10px] font-bold bg-app-subtle px-1.5 py-0.5 rounded">Parcial</span>
+              )}
+              {isPaid && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">Saldado</span>
+              )}
+            </div>
+          </div>
+
+          <span className="material-symbols-outlined text-app-border group-hover:text-app-text text-xl">chevron_right</span>
+        </div>
+      </SwipeableItem>
+    );
+  };
+
+  // Mutations
   const markPaidMutation = useMutation({
     mutationFn: (id: string) => markLoanAsPaid(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toastSuccess('Marcado como pagado');
-      setSelectedLoan(null);
     }
   });
 
-  const filteredLoans = useMemo(() => {
-    if (filter === 'all') return loans;
-    return loans.filter(l => l.loanType === filter);
-  }, [loans, filter]);
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, revert }: { id: string; revert: boolean }) => deleteLoan(id, revert),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loans-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Because of potential refunds
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      toastSuccess('Préstamo eliminado');
+      setLoanToDelete(null);
+    },
+    onError: () => toastError('Error eliminando préstamo')
+  });
 
-  if (isLoading) return <div className="min-h-dvh bg-app-bg pb-safe"><PageHeader title="Préstamos" showBackButton /><div className="p-4"><SkeletonTransactionList count={5} /></div></div>;
+  const handleDeleteRequest = (loan: Loan) => {
+    setSelectedLoan(null); // Ensure details closed
+    setLoanToDelete(loan);
+  };
+
+  const handleConfirmDelete = (options: { revertBalance: boolean }) => {
+    if (!loanToDelete) return;
+    deleteMutation.mutate({ id: loanToDelete.id, revert: options.revertBalance });
+  };
+
+
+  if (isLoading) return (
+    <div className="min-h-dvh bg-app-bg">
+      <PageHeader title="Préstamos" showBackButton />
+      <div className="p-4"><SkeletonTransactionList count={4} /></div>
+    </div>
+  );
 
   return (
-    <div className="min-h-dvh bg-app-bg text-app-text font-sans pb-safe">
+    <div className="min-h-dvh bg-app-bg pb-safe md:pb-12 text-app-text font-sans">
       <PageHeader
-        title="Préstamos"
-        showBackButton={true}
+        title="Gestor de Deudas"
+        showBackButton
+        rightAction={
+          <button onClick={() => openLoanSheet()} className="bg-app-text text-app-bg size-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform hover:shadow-xl hover:scale-105">
+            <span className="material-symbols-outlined text-[22px] font-bold">add</span>
+          </button>
+        }
       />
 
-      <div className="max-w-2xl mx-auto px-4 py-4">
+      <div className="max-w-2xl mx-auto px-4 py-4 animate-fade-in space-y-6 pb-20">
 
+        {/* 1. HERO SUMMARY */}
         <LoanSummaryCard
           lent={summary?.totalOwedToMe || 0}
           owed={summary?.totalIOwe || 0}
         />
 
-        {/* Section Header with Add Button */}
-        <div className="flex justify-between items-center px-1 mb-4">
-          <h2 className="text-xs font-bold text-app-muted uppercase tracking-wide">Tus Préstamos</h2>
-          <button
-            onClick={() => navigate('/loans/new')}
-            className="text-app-primary hover:bg-app-primary/10 p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold"
-          >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
-            <span className="hidden sm:inline">Nuevo</span>
-          </button>
+        {/* 2. FILTER SEGMENT */}
+        <div className="bg-app-subtle p-1 rounded-xl flex mx-auto gap-1">
+          {[
+            { id: 'all', label: 'Todos' },
+            { id: 'lent', label: 'Me deben' },
+            { id: 'borrowed', label: 'Debo' },
+            { id: 'paid', label: 'Saldados' }
+          ].map((t) => (
+            <button
+              key={t.id} onClick={() => setFilter(t.id as any)}
+              className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filter === t.id ? 'bg-app-surface shadow-sm text-app-text' : 'text-app-muted hover:text-app-text'}`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Segmented Control */}
-        <div className="bg-app-subtle p-1 rounded-xl flex mb-6">
-          {['all', 'lent', 'borrowed'].map((t) => {
-            const label = t === 'all' ? 'Todos' : t === 'lent' ? 'Me deben' : 'Debo';
-            const isActive = filter === t;
-            return (
-              <button
-                key={t} onClick={() => setFilter(t as any)}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${isActive ? 'bg-app-surface shadow-sm text-app-text' : 'text-app-muted hover:text-app-text'}`}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* List */}
+        {/* 3. LOAN LIST */}
         <div className="space-y-3">
           {filteredLoans.length === 0 ? (
-            <div className="py-12 text-center text-app-muted">
-              <span className="material-symbols-outlined text-4xl mb-2 opacity-50">handshake</span>
-              <p className="text-sm">No tienes préstamos en esta sección</p>
+            <div className="py-16 flex flex-col items-center justify-center text-app-muted opacity-50 border-2 border-dashed border-app-border rounded-3xl">
+              <span className="material-symbols-outlined text-4xl mb-3">
+                {filter === 'paid' ? 'history' : 'handshake'}
+              </span>
+              <p className="text-sm font-medium">
+                {filter === 'paid' ? 'No hay registros saldados' : 'No hay deudas pendientes'}
+              </p>
             </div>
           ) : (
-            filteredLoans.map(loan => {
-              const isLent = loan.loanType === 'lent';
-              const isPaid = loan.status === 'paid';
-
-              return (
-                <SwipeableItem
-                  key={loan.id}
-                  // Swipe RIGHT -> muestra leftAction (Editar)
-                  leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                  onSwipeRight={() => navigate(`/loans/${loan.id}`, { replace: true })}
-                  // Swipe LEFT -> muestra rightAction (Eliminar)
-                  rightAction={{ icon: 'delete', color: '#EF4444', label: 'Borrar' }}
-                  onSwipeLeft={() => setLoanToDelete(loan)}
-                  className="mb-3 rounded-2xl"
-                >
-                  <div onClick={() => setSelectedLoan(loan)} className="bg-app-surface p-4 rounded-2xl border border-app-border hover:bg-app-subtle/50 transition-colors flex items-center gap-4 cursor-pointer">
-                    <div className={`size-12 rounded-full flex items-center justify-center text-xl shrink-0 ${isPaid ? 'bg-emerald-100 text-emerald-600' :
-                      isLent ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/20' : 'bg-rose-100 text-rose-600 dark:bg-rose-900/20'
-                      }`}>
-                      <span className="material-symbols-outlined">
-                        {isPaid ? 'check' : isLent ? 'arrow_outward' : 'arrow_downward'}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h4 className={`font-bold text-sm text-app-text truncate ${isPaid ? 'line-through text-app-muted' : ''}`}>{loan.borrowerName}</h4>
-                      <p className="text-xs text-app-muted">
-                        {new Date(loan.loanDate).toLocaleDateString()}
-                        {loan.expectedPayDate && !isPaid && <span className="text-rose-500 font-medium ml-1">• Vence {new Date(loan.expectedPayDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className={`font-bold text-[15px] ${isPaid ? 'text-app-muted' : isLent ? 'text-violet-600 dark:text-violet-400' : 'text-rose-500'}`}>
-                        ${loan.remainingAmount.toLocaleString()}
-                      </p>
-                      {loan.remainingAmount !== loan.originalAmount && (
-                        <p className="text-[10px] text-app-muted">de ${loan.originalAmount.toLocaleString()}</p>
-                      )}
-                    </div>
-                  </div>
-                </SwipeableItem>
-              )
-            })
+            filteredLoans.map(loan => renderLoanItem(loan))
           )}
         </div>
+
       </div>
 
-      {/* Sheet Overlay */}
+      {/* 4. DETAIL OVERLAY */}
       {selectedLoan && (
         <LoanDetailSheet
           loan={selectedLoan}
           onClose={() => setSelectedLoan(null)}
           onMarkPaid={() => markPaidMutation.mutate(selectedLoan.id)}
-          onDelete={() => {
-            setSelectedLoan(null);
-            setLoanToDelete(selectedLoan);
-          }}
-          onEdit={() => navigate(`/loans/${selectedLoan.id}`, { replace: true })}
+          onDelete={() => handleDeleteRequest(selectedLoan)}
+          onEdit={() => { setSelectedLoan(null); openLoanSheet(selectedLoan); }}
         />
       )}
 
-      {/* Delete Confirmation Sheet */}
+      {/* 5. CONFIRMATION OVERLAY */}
       {loanToDelete && (
         <DeleteConfirmationSheet
           isOpen={!!loanToDelete}
           onClose={() => setLoanToDelete(null)}
-          onConfirm={(options) => {
-            const isPaid = loanToDelete.status === 'paid';
-            // Use user selection if available, otherwise default to logic
-            const shouldRevert = options?.revertBalance ?? !isPaid;
-            deleteMutation.mutate({ id: loanToDelete.id, revert: shouldRevert });
-          }}
-          itemName={`"${loanToDelete.borrowerName}"`}
-          warningLevel={loanToDelete.status !== 'paid' ? 'warning' : 'normal'}
-          warningMessage={loanToDelete.status !== 'paid' ? 'Préstamo activo' : undefined}
-          warningDetails={
-            loanToDelete.status !== 'paid'
-              ? [
-                'Se borrará el historial de pagos asociados',
-              ]
-              : []
-          }
-          isDeleting={deleteMutation.isPending}
-          // Only show toggle for active loans where reversion makes sense
+          onConfirm={(opt) => handleConfirmDelete(opt as any)}
+          itemName={loanToDelete.borrowerName}
+          warningMessage={loanToDelete.status !== 'paid' ? 'Eliminar deuda activa' : 'Eliminar registro'}
+          // Show revert toggle ONLY for unpaid loans to offer refund
           showRevertOption={loanToDelete.status !== 'paid'}
-          revertOptionLabel="Devolver saldo pendiente a mi cuenta"
+          revertOptionLabel={loanToDelete.loanType === 'lent' ? 'Devolver el dinero a mi saldo' : 'Restaurar deuda original'}
           defaultRevertState={true}
+          isDeleting={deleteMutation.isPending}
         />
       )}
     </div>

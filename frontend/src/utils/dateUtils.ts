@@ -6,7 +6,7 @@
 
 type DateFormatStyle = 'short' | 'medium' | 'long' | 'full' | 'monthYear' | 'dayMonth' | 'chart';
 
-interface FormatOptions {
+interface FormatOptions extends Intl.DateTimeFormatOptions {
   style?: DateFormatStyle;
   locale?: string;
 }
@@ -21,7 +21,7 @@ export const formatDateUTC = (
   date: Date | string,
   options: FormatOptions = {}
 ): string => {
-  const { style = 'short', locale = 'es-MX' } = options;
+  const { style, locale = 'es-MX', ...rest } = options;
   const d = typeof date === 'string' ? new Date(date) : date;
 
   const formats: Record<DateFormatStyle, Intl.DateTimeFormatOptions> = {
@@ -65,7 +65,9 @@ export const formatDateUTC = (
     }
   };
 
-  return d.toLocaleDateString(locale, formats[style]);
+  const finalOptions = style ? { ...formats[style], ...rest } : { ...formats.short, ...rest };
+
+  return d.toLocaleDateString(locale, finalOptions);
 };
 
 /**

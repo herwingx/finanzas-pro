@@ -26,7 +26,18 @@ router.get('/', async (req: AuthRequest, res) => {
     try {
         let user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { name: true, email: true, currency: true, timezone: true, avatar: true, _count: { select: { categories: true } } }
+            select: {
+                name: true,
+                email: true,
+                currency: true,
+                timezone: true,
+                avatar: true,
+                monthlyNetIncome: true,
+                incomeFrequency: true,
+                taxRate: true,
+                notificationsEnabled: true,
+                _count: { select: { categories: true } }
+            }
         });
 
         if (!user) {
@@ -56,7 +67,17 @@ router.get('/', async (req: AuthRequest, res) => {
         // Refetch user data to include the new categories if they were just added
         const finalUser = await prisma.user.findUnique({
             where: { id: userId },
-            select: { name: true, email: true, currency: true, timezone: true, avatar: true }
+            select: {
+                name: true,
+                email: true,
+                currency: true,
+                timezone: true,
+                avatar: true,
+                monthlyNetIncome: true,
+                incomeFrequency: true,
+                taxRate: true,
+                notificationsEnabled: true,
+            }
         });
 
         res.json(finalUser);
@@ -68,30 +89,40 @@ router.get('/', async (req: AuthRequest, res) => {
 
 router.put('/', multer().any(), async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
-    const { name, currency, timezone, avatar } = req.body;
+    const { name, currency, timezone, avatar, monthlyNetIncome, incomeFrequency, taxRate, notificationsEnabled } = req.body;
 
     try {
         const updatedUser = await prisma.user.update({
             where: { id: userId },
             data: {
-                name,
-                currency,
-                timezone,
-                avatar
+                name: name !== undefined ? name : undefined,
+                currency: currency !== undefined ? currency : undefined,
+                timezone: timezone !== undefined ? timezone : undefined,
+                avatar: avatar !== undefined ? avatar : undefined,
+                monthlyNetIncome: monthlyNetIncome !== undefined ? (monthlyNetIncome === null ? null : parseFloat(monthlyNetIncome)) : undefined,
+                incomeFrequency: incomeFrequency !== undefined ? incomeFrequency : undefined,
+                taxRate: taxRate !== undefined ? (taxRate === null ? null : parseFloat(taxRate)) : undefined,
+                notificationsEnabled: notificationsEnabled !== undefined ? (typeof notificationsEnabled === 'boolean' ? notificationsEnabled : notificationsEnabled === 'true') : undefined,
             },
             select: {
                 name: true,
                 email: true,
                 currency: true,
                 timezone: true,
-                avatar: true
+                avatar: true,
+                monthlyNetIncome: true,
+                incomeFrequency: true,
+                taxRate: true,
+                notificationsEnabled: true,
             }
         });
 
         res.json(updatedUser);
     } catch (error) {
+        console.error("Failed to update profile:", error);
         res.status(500).json({ message: 'Failed to update profile.' });
     }
 });
+
 
 export default router;

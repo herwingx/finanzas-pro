@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
 
 /**
  * MobileFAB - Floating Action Button for secondary pages on mobile
@@ -13,51 +14,54 @@ import { useNavigate, useLocation } from 'react-router-dom';
  */
 
 const QUICK_ACTIONS = [
-  { icon: 'trending_down', label: 'Gasto', colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400', path: '/new?type=expense', hideOnPaths: [] },
-  { icon: 'trending_up', label: 'Ingreso', colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', path: '/new?type=income', hideOnPaths: [] },
-  { icon: 'swap_horiz', label: 'Transferencia', colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', path: '/new?type=transfer', hideOnPaths: [] },
-  { icon: 'event_repeat', label: 'Recurrente', colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', path: '/recurring/new', hideOnPaths: ['/recurring'] },
-  { icon: 'credit_score', label: 'MSI', colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', path: '/installments/new', hideOnPaths: ['/installments'] },
-  { icon: 'handshake', label: 'Préstamo', colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', path: '/loans/new', hideOnPaths: ['/loans'] },
+  { id: 'expense', label: 'Gasto', icon: 'remove', color: 'bg-rose-500 text-white', exclude: [] },
+  { id: 'income', label: 'Ingreso', icon: 'add', color: 'bg-emerald-500 text-white', exclude: [] },
+  { id: 'transfer', label: 'Transferencia', icon: 'sync_alt', color: 'bg-blue-500 text-white', exclude: [] },
+  { id: 'recurring', label: 'Recurrente', icon: 'event_repeat', color: 'bg-purple-500 text-white', exclude: [] },
+  { id: 'installments', label: 'Plazos', icon: 'credit_card', color: 'bg-indigo-500 text-white', exclude: [] },
+  { id: 'loan', label: 'Préstamo', icon: 'handshake', color: 'bg-amber-500 text-white', exclude: [] },
+  { id: 'goal', label: 'Nueva Meta', icon: 'savings', color: 'bg-teal-500 text-white', exclude: [] },
+  { id: 'invest', label: 'Inversión', icon: 'trending_up', color: 'bg-cyan-600 text-white', exclude: [] },
 ];
 
 // Pages where the main BottomNav is visible (so we don't show MobileFAB)
-const MAIN_NAV_PAGES = ['/', '/history', '/accounts', '/more'];
-
-const QuickActionButton: React.FC<{
-  action: typeof QUICK_ACTIONS[0],
-  onClick: () => void
-}> = ({ action, onClick }) => (
-  <button
-    onClick={onClick}
-    className="flex flex-col items-center gap-1.5 group w-full"
-  >
-    <div
-      className={`size-12 rounded-xl flex items-center justify-center shadow-sm border border-transparent hover:border-black/5 dark:hover:border-white/10 active:scale-95 transition-all duration-200 ${action.colorClass}`}
-    >
-      <span className="material-symbols-outlined text-xl">{action.icon}</span>
-    </div>
-    <span className="text-[10px] font-medium text-app-text tracking-tight">{action.label}</span>
-  </button>
-);
+const MAIN_NAV = ['/', '/history', '/accounts', '/more'];
 
 export const MobileFAB: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const {
+    openTransactionSheet,
+    openRecurringSheet,
+    openInstallmentSheet,
+    openLoanSheet,
+    openGoalSheet,
+    openInvestmentSheet
+  } = useGlobalSheets();
 
   // Close menu on route change
   useEffect(() => setIsMenuOpen(false), [location.pathname]);
 
   // Don't render if we're on a main nav page (BottomNav is already visible there)
-  const isMainNavPage = MAIN_NAV_PAGES.includes(location.pathname);
+  // Also check if path starts with main nav items (except root '/')
+  const isMainNavPage = MAIN_NAV.some(path => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path));
   if (isMainNavPage) return null;
 
-  const handleQuickAction = (path: string) => {
+  const handleAction = (id: string) => {
+    setIsMenuOpen(false);
     setTimeout(() => {
-      setIsMenuOpen(false);
-      navigate(path);
-    }, 50);
+      switch (id) {
+        case 'expense': openTransactionSheet(null, { type: 'expense' }); break;
+        case 'income': openTransactionSheet(null, { type: 'income' }); break;
+        case 'transfer': openTransactionSheet(null, { type: 'transfer' }); break;
+        case 'recurring': openRecurringSheet(); break;
+        case 'installments': openInstallmentSheet(); break;
+        case 'loan': openLoanSheet(); break;
+        case 'goal': openGoalSheet(); break;
+        case 'invest': openInvestmentSheet(); break;
+      }
+    }, 100);
   };
 
   return (
@@ -65,14 +69,14 @@ export const MobileFAB: React.FC = () => {
       {/* Backdrop */}
       {isMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] animate-fade-in touch-none"
+          className="lg:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] touch-none"
           onClick={() => setIsMenuOpen(false)}
         />
       )}
 
       {/* Quick Actions Sheet */}
       <div
-        className={`lg:hidden fixed left-4 right-4 z-50 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isMenuOpen
+        className={`lg:hidden fixed left-4 right-4 z-50 transition-all duration-300 ${isMenuOpen
           ? 'opacity-100 translate-y-0 scale-100'
           : 'opacity-0 translate-y-8 scale-95 pointer-events-none'
           }`}
@@ -80,26 +84,31 @@ export const MobileFAB: React.FC = () => {
           bottom: 'calc(env(safe-area-inset-bottom) + 80px)'
         }}
       >
-        <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl p-4 rounded-[24px] border border-black/5 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
-          <div className="flex justify-between items-center mb-4 px-1">
+        <div className="bg-app-surface/95 backdrop-blur-xl p-5 rounded-[28px] border border-app-border shadow-2xl">
+          <div className="flex justify-between items-center mb-5 px-2">
             <span className="text-xs font-bold text-app-muted uppercase tracking-wider">Nueva Transacción</span>
             <button
               onClick={() => setIsMenuOpen(false)}
               className="size-6 rounded-full bg-app-subtle flex items-center justify-center text-app-muted hover:text-app-text transition-colors"
             >
-              <span className="material-symbols-outlined text-sm">close</span>
+              <span className="material-symbols-outlined text-xs">close</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center">
+          <div className="grid grid-cols-4 gap-3">
             {QUICK_ACTIONS
-              .filter(action => !action.hideOnPaths.some(p => location.pathname.startsWith(p)))
+              .filter(action => !action.exclude.some(p => location.pathname.startsWith(p)))
               .map(action => (
-                <QuickActionButton
-                  key={action.label}
-                  action={action}
-                  onClick={() => handleQuickAction(action.path)}
-                />
+                <button
+                  key={action.id}
+                  onClick={() => handleAction(action.id)}
+                  className="flex flex-col items-center gap-2 group active:scale-95 transition-transform"
+                >
+                  <div className={`size-14 rounded-2xl flex items-center justify-center shadow-lg ${action.color}`}>
+                    <span className="material-symbols-outlined text-[26px]">{action.icon}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-app-text">{action.label}</span>
+                </button>
               ))}
           </div>
         </div>
@@ -109,10 +118,9 @@ export const MobileFAB: React.FC = () => {
       <button
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className={`
-          lg:hidden fixed z-50 size-12 rounded-full flex items-center justify-center
-          shadow-lg shadow-app-primary/30
-          transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-          active:scale-90
+          lg:hidden fixed z-50 size-14 rounded-full flex items-center justify-center
+          shadow-lg
+          transition-all duration-300 active:scale-95 border-4 border-app-bg
           ${isMenuOpen
             ? 'bg-app-text text-app-bg rotate-45'
             : 'bg-app-primary text-white'
@@ -124,7 +132,7 @@ export const MobileFAB: React.FC = () => {
         }}
         aria-label="Nueva transacción"
       >
-        <span className="material-symbols-outlined text-2xl font-medium leading-none">add</span>
+        <span className="material-symbols-outlined text-[30px] font-medium leading-none">add</span>
       </button>
     </>
   );

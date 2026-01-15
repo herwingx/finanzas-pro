@@ -1,244 +1,284 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Transaction } from '../types';
 import { useTransactions, useCategories, useDeleteTransaction, useAccounts, useRestoreTransaction, useInstallmentPurchases } from '../hooks/useApi';
-import { toast } from '../utils/toast';
-import { PageHeader } from '../components/PageHeader';
-import { DeleteConfirmationSheet, WarningLevel, ImpactDetail } from '../components/DeleteConfirmationSheet';
-import { SwipeableItem } from '../components/SwipeableItem';
-import { SkeletonTransactionList } from '../components/Skeleton';
-import { formatDateUTC } from '../utils/dateUtils';
-import { TransactionDetailSheet } from '../components/TransactionDetailSheet';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { useGlobalSheets } from '../context/GlobalSheetContext';
+import { toast } from 'sonner';
 
+// Componentes y Utilitarios
+import { formatDateUTC } from '../utils/dateUtils';
+import { SkeletonTransactionList } from '../components/Skeleton';
+import { DeleteConfirmationSheet } from '../components/DeleteConfirmationSheet';
+import { SwipeableItem } from '../components/SwipeableItem';
+import { TransactionDetailSheet } from '../components/TransactionDetailSheet';
+import { Transaction } from '../types';
+
+/* ==================================================================================
+   SUB-COMPONENT: HEADER (Reemplaza PageHeader simple)
+   ================================================================================== */
+const HistoryHeader: React.FC<{
+  filter: string;
+  setFilter: (f: 'all' | 'income' | 'expense' | 'transfer') => void;
+  totalAmount?: number;
+}> = ({ filter, setFilter, totalAmount }) => {
+  return (
+    <div className="sticky top-0 z-30 bg-app-bg/95 backdrop-blur-xl border-b border-app-border">
+      <div className="flex flex-col gap-4 pt-safe pb-4 px-4 md:px-6">
+        <div className="flex items-center justify-between mt-2">
+          <h1 className="text-2xl font-bold text-app-text tracking-tight">Historial</h1>
+          {totalAmount !== undefined && (
+            <span className="text-sm font-bold font-numbers text-app-muted bg-app-subtle px-2 py-1 rounded-md">
+              {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalAmount)}
+            </span>
+          )}
+        </div>
+
+        {/* Filter Pill List - Estilo iOS/Apple */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mask-gradient-r pb-1">
+          {[
+            { id: 'all', label: 'Todos' },
+            { id: 'expense', label: 'Gastos' },
+            { id: 'income', label: 'Ingresos' },
+            { id: 'transfer', label: 'Traspasos' }
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id as any)}
+              className={`shrink-0 h-9 px-5 rounded-full text-xs font-bold transition-all border ${filter === f.id
+                ? f.id === 'all'
+                  ? 'bg-app-text text-app-bg border-transparent shadow-lg'
+                  : f.id === 'income'
+                    ? 'bg-emerald-500 text-white border-transparent shadow-lg shadow-emerald-500/30'
+                    : f.id === 'expense'
+                      ? 'bg-rose-500 text-white border-transparent shadow-lg shadow-rose-500/30'
+                      : 'bg-blue-500 text-white border-transparent shadow-lg shadow-blue-500/30'
+                : 'bg-app-surface text-app-muted border-app-border hover:bg-app-subtle hover:text-app-text'
+                }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+/* ==================================================================================
+   MAIN COMPONENT
+   ================================================================================== */
 const History: React.FC = () => {
   const navigate = useNavigate();
-  const { data: transactions, isLoading: isLoadingTransactions } = useTransactions();
-  const { data: categories, isLoading: isLoadingCategories } = useCategories();
-  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { openTransactionSheet } = useGlobalSheets();
+  const isMobile = useIsMobile();
+
+
+  // Queries
+  const { data: transactions, isLoading: isLoadingTx } = useTransactions();
+  const { data: categories, isLoading: isLoadingCat } = useCategories();
+  const { data: accounts, isLoading: isLoadingAcc } = useAccounts();
   const { data: installments } = useInstallmentPurchases();
 
   // Mutations
-  const deleteTransactionMutation = useDeleteTransaction();
-  const restoreTransactionMutation = useRestoreTransaction();
+  const { mutateAsync: deleteTx, isPending: isDeleting } = useDeleteTransaction();
+  const { mutateAsync: restoreTx } = useRestoreTransaction();
 
-  // State
-  const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  // Local State
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
 
-  // Helpers
-  const getCategoryInfo = (id: string | null) => categories?.find(c => c.id === id) || { icon: 'sell', color: '#71717A', name: 'General' };
-  const getAccount = (id: string | null) => accounts?.find(a => a.id === id);
-  const getAccountName = (id: string | null) => getAccount(id)?.name || 'Cuenta';
+  // Helper Lookups (Memoized maps for O(1) access)
+  const categoryMap = useMemo(() => new Map(categories?.map(c => [c.id, c])), [categories]);
+  const accountMap = useMemo(() => new Map(accounts?.map(a => [a.id, a])), [accounts]);
 
+  const getCategoryInfo = (id: string | null) => categoryMap.get(id || '') || { icon: 'payments', color: 'var(--text-muted)', name: 'General' };
+  const getAccountName = (id: string | null) => accountMap.get(id || '')?.name || 'Cuenta Desconocida';
+
+  // Formatters
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
 
-  // Sorting & Filtering
-  const sortedTxs = useMemo(() => {
-    if (!transactions) return [];
-    const filtered = filterType === 'all' ? transactions : transactions.filter(tx => tx.type === filterType);
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Sorting & Filtering Logic
+  const filteredData = useMemo(() => {
+    if (!transactions) return { groups: {}, sortedList: [], totalSum: 0 };
+
+    // 1. Filter
+    const filtered = filterType === 'all'
+      ? transactions
+      : transactions.filter(tx => tx.type === filterType);
+
+    // 2. Sort
+    const sorted = [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // 3. Group by Date
+    const grouped: Record<string, Transaction[]> = {};
+    let sum = 0;
+
+    sorted.forEach(tx => {
+      const d = formatDateUTC(tx.date, { style: 'long' }); // e.g. "12 de Enero"
+      if (!grouped[d]) grouped[d] = [];
+      grouped[d].push(tx);
+
+      // Sum Logic (expense negative, others positive just for this view's context)
+      sum += tx.type === 'expense' ? -tx.amount : tx.type === 'income' ? tx.amount : 0;
+    });
+
+    return { groups: grouped, sortedList: sorted, totalSum: sum };
   }, [transactions, filterType]);
 
-  const grouped = sortedTxs.reduce((groups, tx) => {
-    const date = formatDateUTC(tx.date, { style: 'long' });
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(tx);
-    return groups;
-  }, {} as Record<string, Transaction[]>);
 
-  // Edit Logic
-  const handleEditClick = (tx: Transaction) => {
-    const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
-    const isAdjustment = tx.description.toLowerCase().includes('ajuste');
+  // Actions
+  const handleEdit = (tx: Transaction) => {
+    // Validation checks...
+    if (tx.installmentPurchaseId && tx.type === 'expense') return toast.info('Gasto protegido', { description: 'Edítalo desde la sección MSI.' });
+    if (tx.loanId) return toast.info('Préstamo vinculado', { description: 'Edítalo desde la sección Préstamos.' });
+    if (tx.description.toLowerCase().includes('ajuste')) return toast.warning('Sistema', { description: 'Ajuste de saldo no editable.' });
 
-    const isLoan = tx.loanId;
-
-    if (isInitialMsi) {
-      toast.info('Bloqueado', { description: 'Edita esta compra desde la sección MSI' });
-      return;
-    }
-
-    if (isLoan) {
-      toast.info('Gestionar Préstamo', {
-        description: 'Redirigiendo al detalle del préstamo...',
-        duration: 1500
-      });
-      navigate(`/loans`, { replace: true });
-      return;
-    }
-
-    if (isAdjustment) {
-      toast.info('No editable', { description: 'Los ajustes de saldo no se pueden modificar' });
-      return;
-    }
-
-    navigate(`/new?editId=${tx.id}`, { replace: true });
+    openTransactionSheet(tx); // Correctly pass the transaction to edit
   };
 
-  // Deletion Logic
   const handleDeleteClick = (tx: Transaction) => {
-    const isInitialMsi = tx.installmentPurchaseId && tx.type === 'expense';
-    const isLoan = tx.loanId;
+    if (tx.installmentPurchaseId && tx.type === 'expense') return toast.error('Bloqueado', { description: 'Elimina la compra completa en MSI.' });
+    if (tx.loanId) return toast.warning('Préstamo', { description: 'Elimínalo desde Préstamos para mantener consistencia.' });
 
-    if (isInitialMsi) {
-      toast.info('Bloqueado', { description: 'Administra esta compra desde MSI' });
-      return;
-    }
-
-    if (isLoan) {
-      toast.warning('Acción requerida', {
-        description: 'Debes eliminar el préstamo desde la sección de Préstamos para asegurar la integridad de los datos.',
-        action: {
-          label: 'Ir a Préstamos',
-          onClick: () => navigate('/loans')
-        }
-      });
-      return;
-    }
     setItemToDelete(tx);
   };
 
-  const handleDelete = async () => {
+  const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
-
     try {
-      await deleteTransactionMutation.mutateAsync(itemToDelete.id);
-
-      const deletedId = itemToDelete.id;
-      const desc = itemToDelete.description;
-      setItemToDelete(null);
+      await deleteTx(itemToDelete.id);
+      const savedItem = itemToDelete;
+      setItemToDelete(null); // Close modal instantly for better UX
 
       toast.success('Transacción eliminada', {
-        description: desc,
         action: {
           label: 'Deshacer',
-          onClick: () => restoreTransactionMutation.mutateAsync(deletedId)
-        },
+          onClick: () => restoreTx(savedItem.id)
+        }
       });
-    } catch (e: any) {
-      toast.error('Error eliminando', { description: e.message });
+    } catch (e) {
+      toast.error('Error al eliminar');
     }
   };
 
-  // Warning Logic
-  const getDeletionImpact = (tx: Transaction): any => {
-    // Simplificación rápida de tu lógica original para mantener el refactor limpio
-    const isMsiPayment = tx.installmentPurchaseId && ['income', 'transfer'].includes(tx.type);
-    const installment = installments?.find(i => i.id === tx.installmentPurchaseId);
-    const isSettled = installment ? (installment.totalAmount - installment.paidAmount) <= 0.05 : false;
 
-    if (isMsiPayment && isSettled) return { warningLevel: 'critical', warningMessage: 'MSI Liquidado afectado' };
-    if (isMsiPayment) return { warningLevel: 'warning', warningMessage: 'Pago de MSI' };
-    return { warningLevel: 'normal', impactPreview: { account: getAccountName(tx.accountId), balanceChange: tx.amount } };
+  const isLoading = isLoadingTx || isLoadingAcc || isLoadingCat;
+
+  // Impact Logic for Modal
+  const getWarningProps = (tx: Transaction) => {
+    if (tx.installmentPurchaseId) return { warningLevel: 'warning' as const, warningMessage: 'Este pago afectará el progreso de tus MSI.' };
+    return { warningLevel: 'normal' as const, impactPreview: { account: getAccountName(tx.accountId), balanceChange: tx.amount } };
   };
 
-  const deletionImpact = itemToDelete ? getDeletionImpact(itemToDelete) : null;
-  const isLoading = isLoadingTransactions || isLoadingCategories || isLoadingAccounts;
-
-
   return (
-    <div className="min-h-dvh bg-app-bg text-app-text font-sans pb-safe">
-      <PageHeader title="Historial" />
+    <div className="bg-app-bg">
+      <HistoryHeader
+        filter={filterType}
+        setFilter={setFilterType}
+        totalAmount={Math.abs(filteredData.totalSum)} // Optional visual
+      />
 
-      {/* Sticky Filter Bar */}
-      <div className="sticky top-14 z-20 bg-app-bg/95 backdrop-blur-md border-b border-app-border pt-3 pb-2 px-4 transition-all">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {(['all', 'income', 'expense', 'transfer'] as const).map((type) => {
-            const labels: any = { all: 'Todo', income: 'Ingresos', expense: 'Gastos', transfer: 'Transferencias' };
-            const active = filterType === type;
-
-            let activeClass = 'bg-app-text text-app-bg shadow-sm'; // default (all)
-            if (active && type === 'income') activeClass = 'bg-emerald-500 text-white shadow-sm';
-            if (active && type === 'expense') activeClass = 'bg-rose-500 text-white shadow-sm';
-            if (active && type === 'transfer') activeClass = 'bg-blue-500 text-white shadow-sm';
-
-            return (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`shrink-0 h-8 px-4 rounded-full text-xs font-bold transition-all border ${active
-                  ? `${activeClass} border-transparent`
-                  : 'bg-app-surface text-app-muted border-app-border hover:bg-app-subtle'
-                  }`}
-              >
-                {labels[type]}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="px-4 py-6"><SkeletonTransactionList count={6} /></div>
-      ) : (
-        <div className="px-4 py-4 max-w-2xl mx-auto min-h-[500px]">
-          {Object.entries(grouped).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 opacity-40">
-              <span className="material-symbols-outlined text-4xl mb-2">history</span>
-              <p className="text-sm font-medium">No hay movimientos recientes</p>
+      <main className="px-4 max-w-2xl mx-auto mt-6 md:mt-10 pb-20 animate-fade-in">
+        {isLoading ? (
+          <SkeletonTransactionList count={8} />
+        ) : Object.keys(filteredData.groups).length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center text-app-muted">
+            <div className="size-20 rounded-full bg-app-subtle flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-4xl opacity-20">search_off</span>
             </div>
-          ) : (
-            Object.entries(grouped).map(([date, txs]) => (
-              <div key={date} className="mb-6 relative">
-                <h3 className="sticky top-[110px] z-10 py-1.5 px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-app-muted bg-app-subtle/80 backdrop-blur-md rounded-lg w-fit">
-                  {date}
-                </h3>
-                <div className="bg-app-surface border border-app-border rounded-2xl overflow-hidden divide-y divide-app-border">
-                  {txs.map((tx, index) => {
+            <p className="font-bold text-lg text-app-text">Sin movimientos</p>
+            <p className="text-sm">No encontramos transacciones para este filtro.</p>
+            {filterType !== 'all' && (
+              <button onClick={() => setFilterType('all')} className="mt-4 text-app-primary text-sm font-bold hover:underline">
+                Ver todo
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(filteredData.groups).map(([dateLabel, groupTxs]) => (
+              <div key={dateLabel} className="mb-10 md:mb-14 last:mb-0">
+                <div className="py-1.5 px-3 mb-4 md:mb-6 rounded-lg bg-app-surface/95 backdrop-blur border border-app-border w-fit shadow-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-app-text/60">
+                    {dateLabel}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {groupTxs.map(tx => {
                     const cat = getCategoryInfo(tx.categoryId);
-                    const isExp = tx.type === 'expense';
-                    const isInc = tx.type === 'income';
-                    const isTrf = tx.type === 'transfer';
                     const accName = getAccountName(tx.accountId);
 
-                    // Badges logic simplified
-                    const isMsi = tx.installmentPurchaseId && !isExp;
-                    const isFirst = index === 0;
-                    const isLast = index === txs.length - 1;
+                    const isExpense = tx.type === 'expense';
+                    const isIncome = tx.type === 'income';
+                    const isTransfer = tx.type === 'transfer';
+                    const isMsi = !!tx.installmentPurchaseId;
+                    const isLoan = !!tx.loanId;
+
+                    const displayIcon = isTransfer ? 'swap_horiz' : cat.icon;
+
+                    // Visual color classes
+                    let amountColor = isExpense ? 'text-app-text' : isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-500';
+
+                    // Dynamic Style for Icon
+                    const iconStyle = isTransfer ? {} : {
+                      backgroundColor: `${cat.color}15`,
+                      color: cat.color
+                    };
 
                     return (
                       <SwipeableItem
                         key={tx.id}
-                        className={`${isFirst ? 'rounded-t-2xl' : ''} ${isLast ? 'rounded-b-2xl' : ''}`}
-                        // Swipe RIGHT -> muestra leftAction (Editar)
-                        leftAction={{ icon: 'edit', color: 'var(--brand-primary)', label: 'Editar' }}
-                        onSwipeRight={() => handleEditClick(tx)}
-                        // Swipe LEFT -> muestra rightAction (Eliminar)
-                        rightAction={{ icon: 'delete', color: '#ef4444', label: 'Borrar' }}
+                        leftAction={{ icon: 'edit', color: 'text-white', bgColor: 'bg-indigo-500', label: 'Editar' }}
+                        rightAction={{ icon: 'delete', color: 'text-white', bgColor: 'bg-rose-500', label: 'Borrar' }}
+                        onSwipeRight={() => handleEdit(tx)}
                         onSwipeLeft={() => handleDeleteClick(tx)}
+                        className="rounded-3xl"
+                        disabled={!isMobile}
                       >
                         <div
                           onClick={() => setSelectedTx(tx)}
-                          className="flex items-center gap-3 p-3.5 transition-colors cursor-pointer hover:bg-app-subtle/50"
+                          className="bento-card p-4 flex items-center gap-3.5 hover:border-app-border-strong cursor-pointer active:scale-[0.99] transition-all bg-app-surface"
                         >
+                          {/* Icon */}
                           <div
-                            className={`size-10 rounded-full flex items-center justify-center shrink-0 border`}
-                            style={{
-                              backgroundColor: isTrf ? '#f1f5f9' : `${cat.color}15`,
-                              borderColor: isTrf ? 'transparent' : `${cat.color}30`,
-                              color: isTrf ? '#64748b' : cat.color
-                            }}
+                            className={`size-10 shrink-0 rounded-xl flex items-center justify-center ${isTransfer ? 'bg-app-subtle text-blue-500' : ''}`}
+                            style={iconStyle}
                           >
-                            <span className="material-symbols-outlined text-lg">
-                              {isTrf ? 'sync_alt' : cat.icon}
-                            </span>
+                            <span className="material-symbols-outlined text-[20px]">{displayIcon}</span>
                           </div>
 
+                          {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-app-text truncate">{isTrf ? 'Transferencia' : tx.description}</span>
-                              {isMsi && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">MSI</span>}
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="font-semibold text-sm text-app-text truncate">
+                                {isTransfer ? 'Transferencia' : tx.description}
+                              </span>
+                              {isMsi && !isExpense && (
+                                <span className="text-[9px] font-bold bg-indigo-500/10 text-indigo-500 px-1.5 rounded">MSI</span>
+                              )}
+                              {isLoan && (
+                                <span className="text-[9px] font-bold bg-violet-500/10 text-violet-600 px-1.5 rounded">Préstamo</span>
+                              )}
                             </div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-xs text-app-muted truncate">{cat.name}</span>
-                              <span className="text-[10px] text-app-border font-light">•</span>
-                              <span className="text-xs text-app-muted truncate max-w-[100px]">{accName}</span>
+                            <div className="flex items-center gap-1 text-xs text-app-muted truncate">
+                              {isLoan && tx.loan ? (
+                                <span className="text-violet-600 dark:text-violet-400 font-medium">
+                                  {tx.loan.loanType === 'lent' ? 'Préstamo otorgado' : 'Préstamo recibido'}
+                                </span>
+                              ) : (
+                                <span>{isTransfer ? 'Interno' : cat.name}</span>
+                              )}
+                              <span className="opacity-40">•</span>
+                              <span className="truncate max-w-[120px]">{accName}</span>
                             </div>
                           </div>
 
-                          <div className={`font-bold tabular-nums text-[15px] shrink-0 ${isInc ? 'text-emerald-600 dark:text-emerald-400' : isExp ? 'text-app-text' : 'text-blue-600 dark:text-blue-400'}`}>
-                            {isExp ? '-' : isInc ? '+' : ''}{formatCurrency(tx.amount)}
+                          {/* Amount */}
+                          <div className={`font-bold font-numbers text-sm md:text-base shrink-0 ${amountColor}`}>
+                            {isExpense ? '-' : isIncome ? '+' : ''}{formatCurrency(tx.amount)}
                           </div>
                         </div>
                       </SwipeableItem>
@@ -246,41 +286,35 @@ const History: React.FC = () => {
                   })}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </main>
 
-      {/* Confirmation Modal Logic */}
-      {itemToDelete && deletionImpact && (
-        <DeleteConfirmationSheet
-          isOpen={!!itemToDelete}
-          onClose={() => setItemToDelete(null)}
-          onConfirm={handleDelete}
-          itemName={itemToDelete.description}
-          isDeleting={deleteTransactionMutation.isPending}
-          {...deletionImpact}
-        />
-      )}
-
-      {/* Transaction Detail Sheet */}
+      {/* DETAILS MODAL */}
       <TransactionDetailSheet
-        transaction={selectedTx}
-        category={selectedTx ? getCategoryInfo(selectedTx.categoryId) : undefined}
-        account={selectedTx ? getAccount(selectedTx.accountId) : undefined}
-        destinationAccount={selectedTx?.destinationAccountId ? getAccount(selectedTx.destinationAccountId) : undefined}
         isOpen={!!selectedTx}
         onClose={() => setSelectedTx(null)}
-        onEdit={(tx) => {
-          setSelectedTx(null);
-          handleEditClick(tx);
-        }}
-        onDelete={(tx) => {
-          setSelectedTx(null);
-          handleDeleteClick(tx);
-        }}
+        transaction={selectedTx}
+        category={selectedTx ? getCategoryInfo(selectedTx.categoryId) : undefined}
+        account={selectedTx ? accountMap.get(selectedTx.accountId) : undefined}
+        destinationAccount={selectedTx?.destinationAccountId ? accountMap.get(selectedTx.destinationAccountId) : undefined}
+        onEdit={(tx) => { setSelectedTx(null); handleEdit(tx); }}
+        onDelete={(tx) => { setSelectedTx(null); handleDeleteClick(tx); }}
         formatCurrency={formatCurrency}
       />
+
+      {/* DELETE CONFIRMATION */}
+      {itemToDelete && (
+        <DeleteConfirmationSheet
+          isOpen={true}
+          onClose={() => setItemToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          isDeleting={isDeleting}
+          itemName={itemToDelete.description}
+          {...getWarningProps(itemToDelete)}
+        />
+      )}
     </div>
   );
 };

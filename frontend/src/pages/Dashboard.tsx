@@ -1,472 +1,214 @@
-import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useTransactions, useCategories, useProfile, useAccounts } from '../hooks/useApi';
+import React, { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+
+// Hooks & Context
+import { useGlobalSheets } from '../context/GlobalSheetContext';
+import { useTransactions, useCategories, useProfile, useAccounts, useInvestments, useLoans, useGoals, useNotifications } from '../hooks/useApi';
+import { useDashboardStats } from '../hooks/useDashboardStats';
+
+// Components
 import { SkeletonDashboard } from '../components/Skeleton';
 import { SpendingTrendChart } from '../components/Charts';
-import { FinancialPlanningWidget } from '../components/FinancialPlanningWidget';
-import { InfoTooltip } from '../components/InfoTooltip';
-import { toastInfo } from '../utils/toast';
+import { NotificationsSheet } from '../components/dashboard/NotificationsSheet'; // <--- IMPORTADO NUEVO
+import { FinancialPlanningWidget } from '../components/FinancialPlanningWidget'; // <--- IMPORTADO NUEVO
+/* =======================================
+   VISUAL COMPONENTS (Bento Style)
+   ======================================= */
 
-// --- Sub-components para modularidad visual ---
-
-const CustomTooltip = ({ active, payload, formatter }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white dark:bg-zinc-900 border border-app-border rounded-xl shadow-xl p-3 min-w-[120px] animate-fade-in ring-1 ring-black/5 dark:ring-white/10 z-50 opacity-100">
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className="size-2 rounded-full ring-2 ring-white dark:ring-black"
-            style={{ backgroundColor: data.color }}
-          />
-          <span className="text-[10px] font-bold text-app-muted uppercase tracking-wider truncate max-w-[90px]">
-            {data.name}
-          </span>
+const BentoCard: React.FC<{ children: React.ReactNode; title?: string; action?: React.ReactNode; className?: string; onClick?: () => void }> =
+  ({ children, title, action, className = '', onClick }) => (
+    <div onClick={onClick} className={`bento-card p-5 md:p-6 flex flex-col ${onClick ? 'cursor-pointer' : ''} ${className}`}>
+      {(title || action) && (
+        <div className="flex justify-between items-center mb-4 md:mb-5">
+          {title && <h3 className="text-xs font-bold text-app-muted uppercase tracking-wider">{title}</h3>}
+          {action && <div>{action}</div>}
         </div>
-        <p className="text-sm font-black text-app-text font-numbers leading-none">
-          {formatter(data.value)}
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
-
-const DashboardHeader: React.FC<{
-  name?: string;
-  avatar?: string;
-  greeting: string;
-  emoji: string;
-}> = ({ name, avatar, greeting, emoji }) => (
-  <header className="flex items-center justify-between py-4 md:py-6 px-4 md:px-6 lg:px-8 gap-3">
-    <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-      {/* Avatar */}
-      <Link
-        to="/profile"
-        className="relative group size-10 md:size-12 rounded-full overflow-hidden ring-2 ring-app-border hover:ring-app-primary transition-all duration-300 shrink-0"
-      >
-        {avatar ? (
-          <img src={avatar} alt="User" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-app-subtle flex items-center justify-center text-app-primary font-bold text-sm md:text-base">
-            {name?.[0]}
-          </div>
-        )}
-      </Link>
-
-      <div className="min-w-0 flex-1">
-        <h1 className="text-base sm:text-lg md:text-2xl font-bold text-app-text tracking-tight flex items-center gap-1.5 truncate">
-          <span className="truncate">{greeting}, {name?.split(' ')[0]}</span>
-          <span className="text-base md:text-xl shrink-0">{emoji}</span>
-        </h1>
-        <p className="text-xs md:text-sm text-app-muted font-medium truncate">Tu resumen financiero</p>
-      </div>
-    </div>
-
-    {/* Botón Notificaciones - Perfectamente circular */}
-    <button
-      onClick={() => toastInfo('Notificaciones')}
-      className="size-10 rounded-full bg-app-surface border border-app-border text-app-text hover:bg-app-subtle active:scale-95 transition-all relative shrink-0 flex items-center justify-center"
-    >
-      <span className="material-symbols-outlined text-[20px]">notifications</span>
-      <span className="absolute top-1 right-1 size-2.5 bg-app-danger rounded-full border-2 border-app-surface"></span>
-    </button>
-  </header>
-);
-
-const BentoCard: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-  title?: string;
-  action?: React.ReactNode
-}> = ({ children, className = '', title, action }) => (
-  <div className={`bg-app-surface border border-app-border rounded-3xl p-5 md:p-6 shadow-subtle flex flex-col ${className}`}>
-    {(title || action) && (
-      <div className="flex justify-between items-center mb-4 md:mb-6">
-        {title && <h3 className="text-sm font-semibold text-app-muted uppercase tracking-wider">{title}</h3>}
-        {action}
-      </div>
-    )}
-    {children}
-  </div>
-);
-
-const MainBalanceCard: React.FC<{
-  balance: number;
-  netWorth: number;
-  format: (n: number) => string;
-  monthChange: number;
-}> = ({ balance, netWorth, format, monthChange }) => {
-  const isPositive = monthChange >= 0;
-
-  return (
-    <BentoCard className="md:col-span-2 relative overflow-hidden group">
-      <div className="relative z-10 flex flex-col justify-between h-full min-h-[160px]">
-        <div>
-          <div className="flex items-center gap-2 text-app-muted mb-1">
-            <span className="text-sm font-medium">Balance Total Disponible</span>
-            <InfoTooltip content="Efectivo + Débito" iconSize="16px" />
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-app-text tracking-tight font-numbers mt-2">
-            {format(balance)}
-          </h2>
-        </div>
-
-        <div className="flex items-center gap-3 mt-6">
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${isPositive
-            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-            : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'
-            }`}>
-            <span className="material-symbols-outlined text-[14px]">
-              {isPositive ? 'trending_up' : 'trending_down'}
-            </span>
-            {isPositive ? '+' : ''}{monthChange.toFixed(1)}% este mes
-          </div>
-          <span className="text-sm text-app-muted">Patrimonio: {format(netWorth)}</span>
-        </div>
-      </div>
-
-      {/* Decoración sutil abstracta (Estilo Monarch) */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 bg-app-primary opacity-[0.03] dark:opacity-[0.1] rounded-full blur-3xl pointer-events-none group-hover:bg-app-primary group-hover:opacity-[0.06] transition-all duration-500" />
-    </BentoCard>
-  );
-};
-
-const QuickStat: React.FC<{
-  label: string;
-  amount: number;
-  type: 'income' | 'expense';
-  format: (n: number) => string;
-  tooltip?: string;
-}> = ({ label, amount, type, format, tooltip }) => {
-  const isIncome = type === 'income';
-  return (
-    <BentoCard className="justify-center">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className={`p-2 w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${isIncome ? 'bg-app-success/10 text-app-success' : 'bg-app-danger/10 text-app-danger'}`}>
-            <span className="material-symbols-outlined">{isIncome ? 'arrow_downward' : 'arrow_upward'}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <p className="text-app-muted text-xs font-bold uppercase tracking-wide">{label}</p>
-            {tooltip && (
-              <InfoTooltip content={tooltip} iconSize="14px" />
-            )}
-          </div>
-          <p className={`text-2xl font-bold mt-1 font-numbers ${isIncome ? 'text-app-text' : 'text-app-text'}`}>
-            {format(amount)}
-          </p>
-        </div>
-        <div className="h-full flex items-end opacity-20">
-          <span className="material-symbols-outlined text-4xl">{isIncome ? 'show_chart' : 'waterfall_chart'}</span>
-        </div>
-      </div>
-    </BentoCard>
-  );
-};
-
-// --- Top Categories Donut Chart ---
-const TopCategoriesChart: React.FC<{
-  transactions: any[];
-  categories: any[];
-  format: (n: number) => string;
-}> = ({ transactions, categories, format }) => {
-  const { data, total } = useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const monthExpenses = transactions
-      .filter(tx => tx.type === 'expense' && new Date(tx.date) >= startOfMonth);
-
-    const totals = monthExpenses.reduce((acc, tx) => {
-      acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const chartData = Object.entries(totals)
-      .map(([id, val]) => {
-        const cat = categories?.find(c => c.id === id);
-        return {
-          name: cat?.name || 'Otros',
-          value: val as number,
-          color: cat?.color || '#94a3b8',
-          icon: cat?.icon || 'category'
-        };
-      })
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-
-    const totalAmount = chartData.reduce((sum, item) => sum + item.value, 0);
-
-    return { data: chartData, total: totalAmount };
-  }, [transactions, categories]);
-
-  if (data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-48 text-app-muted">
-        <span className="material-symbols-outlined text-4xl opacity-20 mb-2">donut_large</span>
-        <p className="text-xs">Sin gastos este mes</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full gap-4">
-      {/* Donut Chart - Centrado arriba */}
-      <div className="h-24 w-24 relative mx-auto shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              innerRadius={28}
-              outerRadius={42}
-              paddingAngle={3}
-              cornerRadius={4}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-              ))}
-            </Pie>
-            <Tooltip
-              content={<CustomTooltip formatter={format} />}
-              wrapperStyle={{ zIndex: 100 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Legend - Lista debajo */}
-      <div className="flex-1 space-y-2">
-        {data.map((item, i) => (
-          <div key={i} className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="size-6 rounded-lg flex items-center justify-center shrink-0"
-                style={{ backgroundColor: `${item.color}20`, color: item.color }}
-              >
-                <span className="material-symbols-outlined text-[12px]">{item.icon}</span>
-              </span>
-              <span className="text-app-text font-medium truncate">{item.name}</span>
-            </div>
-            <span className="font-bold text-app-text font-numbers shrink-0 ml-2">
-              {format(item.value)}
-            </span>
-          </div>
-        ))}
-
-        {/* Total como resumen al final */}
-        <div className="flex items-center justify-between text-xs pt-2 mt-2 border-t border-app-border">
-          <span className="text-app-muted font-bold uppercase tracking-wider">Total</span>
-          <span className="font-bold text-app-text font-numbers">
-            {format(total)}
-          </span>
-        </div>
-      </div>
+      )}
+      <div className="flex-1 relative">{children}</div>
     </div>
   );
-};
 
-// --- Componente Principal ---
+const StatWidget: React.FC<{ label: string; value: number; type: 'income' | 'expense'; format: (n: number) => string; className?: string }> =
+  ({ label, value, type, format, className = '' }) => {
+    const isIncome = type === 'income';
+    return (
+      <div className={`bento-card p-4 flex flex-col justify-center gap-1 hover:bg-app-subtle transition-colors group ${className}`}>
+        <div className="flex items-center gap-2 text-app-muted mb-1">
+          <div className={`size-6 rounded-md flex items-center justify-center ${isIncome ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+            <span className="material-symbols-outlined text-[16px]">{isIncome ? 'arrow_downward' : 'arrow_upward'}</span>
+          </div>
+          <span className="text-xs font-bold uppercase">{label}</span>
+        </div>
+        <p className="text-xl md:text-2xl font-bold font-numbers text-app-text group-hover:scale-[1.02] transition-transform origin-left">{format(value)}</p>
+      </div>
+    );
+  };
+
+/* =======================================
+   DASHBOARD MAIN
+   ======================================= */
 
 const Dashboard: React.FC = () => {
-  const { data: transactions, isLoading: isLoadingTx } = useTransactions();
-  const { data: profile, isLoading: isLoadingProfile } = useProfile();
-  const { data: accounts, isLoading: isLoadingAcc } = useAccounts();
+  const [searchParams] = useSearchParams();
+  const { openTransactionSheet } = useGlobalSheets();
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false); // ESTADO PARA EL SHEET
+
+  React.useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'new') openTransactionSheet(null, { type: 'expense' });
+  }, [searchParams, openTransactionSheet]);
+
+  // Data Fetching
+  const { data: transactions, isLoading: loadingTx } = useTransactions();
+  const { data: accounts, isLoading: loadingAcc } = useAccounts();
+  const { data: investments } = useInvestments();
+  const { data: loans } = useLoans();
+  const { data: goals } = useGoals();
+  const { data: profile, isLoading: loadingProfile } = useProfile();
   const { data: categories } = useCategories();
 
-  // Cálculos...
-  const greeting = useMemo(() => {
-    const hour = new Date().getHours();
-    return hour < 12 ? { text: 'Buenos días', emoji: '☀️' } : hour < 19 ? { text: 'Buenas tardes', emoji: '🌤️' } : { text: 'Buenas noches', emoji: '🌙' };
-  }, []);
+  // Hook de Notificaciones para el badge rojo
+  const { data: notifications } = useNotifications();
+  const unreadCount = notifications?.length || 0;
 
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: profile?.currency || 'MXN', maximumFractionDigits: 0 }).format(val);
+  const stats = useDashboardStats(accounts, investments, loans, goals, transactions, categories, profile?.currency);
 
-  const netWorth = useMemo(() => {
-    if (!accounts) return 0;
-    return accounts.reduce((acc, a) => acc + (a.type === 'CREDIT' ? -a.balance : a.balance), 0);
-  }, [accounts]);
-
-  const availableFunds = useMemo(() => {
-    if (!accounts) return 0;
-    return accounts.filter(a => ['DEBIT', 'CASH'].includes(a.type)).reduce((sum, a) => sum + a.balance, 0);
-  }, [accounts]);
-
-  const { monthStats, monthChange } = useMemo(() => {
-    if (!transactions) return { monthStats: { income: 0, expense: 0 }, monthChange: 0 };
-
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-
-    // Este mes
-    const thisMonthTxs = transactions.filter(tx => new Date(tx.date) >= startOfMonth);
-    const thisMonthIncome = thisMonthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
-    const thisMonthExpense = thisMonthTxs.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
-
-    // Mes anterior
-    const lastMonthTxs = transactions.filter(tx => {
-      const date = new Date(tx.date);
-      return date >= startOfLastMonth && date <= endOfLastMonth;
-    });
-    const lastMonthIncome = lastMonthTxs.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
-    const lastMonthExpense = lastMonthTxs.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
-
-    // Calcular % de cambio en balance neto (ingresos - gastos)
-    const thisMonthNet = thisMonthIncome - thisMonthExpense;
-    const lastMonthNet = lastMonthIncome - lastMonthExpense;
-
-    let change = 0;
-    if (lastMonthNet !== 0) {
-      change = ((thisMonthNet - lastMonthNet) / Math.abs(lastMonthNet)) * 100;
-    } else if (thisMonthNet > 0) {
-      change = 100;
-    }
-
-    return {
-      monthStats: { income: thisMonthIncome, expense: thisMonthExpense },
-      monthChange: change
-    };
-  }, [transactions]);
-
-  if (isLoadingTx || isLoadingProfile || isLoadingAcc) return <SkeletonDashboard />;
+  if (loadingTx || loadingAcc || loadingProfile) return <SkeletonDashboard />;
 
   return (
-    <div className="w-full">
-      {/* Header del Dashboard */}
-      <DashboardHeader
-        name={profile?.name}
-        avatar={profile?.avatar}
-        greeting={greeting.text}
-        emoji={greeting.emoji}
+    <div className="w-full bg-app-bg transition-colors duration-300">
+
+      {/* === HEADER CON CAMPANA DE NOTIFICACIONES === */}
+      <header className="pt-4 pb-2 px-4 md:px-8 max-w-[1400px] mx-auto flex justify-between items-center sticky top-0 z-30 bg-app-bg/80 backdrop-blur-xl md:static md:bg-transparent">
+        <div className="animate-fade-in flex items-center gap-3">
+          <Link to="/profile" className="size-10 rounded-full overflow-hidden border border-app-border hover:ring-2 ring-app-primary transition-all md:hidden">
+            <img src={profile?.avatar || `https://ui-avatars.com/api/?name=${profile?.name}`} alt="Avatar" className="w-full h-full object-cover" />
+          </Link>
+          <div>
+            <p className="text-app-muted text-xs font-bold uppercase tracking-wide">{stats.greeting.text}</p>
+            <h1 className="text-xl md:text-3xl font-bold text-app-text leading-tight">{profile?.name?.split(' ')[0]}</h1>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* BOTÓN NOTIFICACIONES */}
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="size-10 rounded-full bg-app-surface border border-app-border text-app-text hover:bg-app-subtle active:scale-95 transition-all relative flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined text-[20px] fill-current">
+              {unreadCount > 0 ? 'notifications_active' : 'notifications'}
+            </span>
+            {unreadCount > 0 && (
+              <span className="absolute top-0 right-0 size-3 bg-app-danger rounded-full border-2 border-app-surface animate-pulse" />
+            )}
+          </button>
+
+          <Link to="/profile" className="size-10 rounded-full overflow-hidden border border-app-border hover:ring-2 ring-app-primary transition-all hidden md:block">
+            <img src={profile?.avatar || `https://ui-avatars.com/api/?name=${profile?.name}`} alt="Avatar" className="w-full h-full object-cover" />
+          </Link>
+        </div>
+      </header>
+
+      {/* SHEET DE NOTIFICACIONES */}
+      <NotificationsSheet
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
       />
 
-      {/* Grid principal con layout responsive */}
-      <div className="px-4 md:px-6 lg:px-8">
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
+      {/* BENTO GRID PRINCIPAL */}
+      <main className="px-4 md:px-8 py-2 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in">
 
-          {/* Balance Card - Ocupa 2 columnas siempre (full width en mobile/tablet) */}
-          <div className="col-span-2">
-            <MainBalanceCard
-              balance={availableFunds}
-              netWorth={netWorth}
-              format={formatCurrency}
-              monthChange={monthChange}
-            />
-          </div>
-
-          {/* Stats Cards - Lado a lado (1 columna cada uno) */}
-          <QuickStat
-            label="Ingresos Recibidos"
-            amount={monthStats.income}
-            type="income"
-            format={formatCurrency}
-            tooltip="Suma de todos los ingresos registrados este mes"
-          />
-          <QuickStat
-            label="Gastos Realizados"
-            amount={monthStats.expense}
-            type="expense"
-            format={formatCurrency}
-            tooltip="Suma de todos los gastos registrados este mes (no incluye compromisos pendientes)"
-          />
-
-          {/* Financial Planning Widget - Ancho completo */}
-          <div className="col-span-2 xl:col-span-4">
-            <FinancialPlanningWidget />
-          </div>
-
-          {/* Trend Chart - 2 columnas en md, 3 en xl */}
-          <BentoCard title="Tendencia de Gastos" className="col-span-2 xl:col-span-3 min-h-[280px] lg:min-h-[320px]">
-            {transactions && <SpendingTrendChart transactions={transactions} />}
-          </BentoCard>
-
-          {/* Top 5 Categories - 2 columnas en mobile (full width), 1 en xl */}
-          <BentoCard
-            title="Top Categorías"
-            className="col-span-2 xl:col-span-1"
-            action={
-              <Link to="/reports" className="text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
-                Ver más
-                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </Link>
-            }
-          >
-            {transactions && categories && (
-              <TopCategoriesChart
-                transactions={transactions}
-                categories={categories}
-                format={formatCurrency}
-              />
-            )}
-          </BentoCard>
-
-          {/* Recent Transactions */}
-          <BentoCard
-            title="Últimos Movimientos"
-            className="col-span-2 xl:col-span-4"
-            action={
-              <Link to="/history" className="text-xs font-bold text-app-primary hover:underline flex items-center gap-1">
-                Ver todo
-                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </Link>
-            }
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
-              {transactions?.slice(0, 6).map(tx => {
-                const isExpense = tx.type === 'expense';
-                const isTransfer = tx.type === 'transfer';
-                const cat = categories?.find(c => c.id === tx.categoryId);
-                const colorClass = isExpense ? 'text-app-text' : isTransfer ? 'text-blue-500' : 'text-app-success';
-
-                return (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-app-subtle/30 hover:bg-app-subtle transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div
-                        className="size-9 rounded-xl flex items-center justify-center text-sm shrink-0"
-                        style={{
-                          backgroundColor: cat?.color ? `${cat.color}15` : 'var(--bg-subtle)',
-                          color: cat?.color || 'var(--text-muted)'
-                        }}
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {isTransfer ? 'swap_horiz' : cat?.icon || 'payments'}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-app-text truncate">
-                          {tx.description}
-                        </p>
-                        <p className="text-[11px] text-app-muted truncate">
-                          {cat?.name || 'Sin categoría'}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`text-sm font-bold font-numbers shrink-0 ml-2 ${colorClass}`}>
-                      {isExpense ? '-' : isTransfer ? '' : '+'}{formatCurrency(tx.amount)}
-                    </span>
-                  </div>
-                );
-              })}
-
-              {!transactions?.length && (
-                <div className="col-span-full flex flex-col items-center justify-center h-24 text-app-muted">
-                  <span className="material-symbols-outlined text-2xl opacity-20 mb-1">savings</span>
-                  <span className="text-xs">Sin movimientos</span>
-                </div>
-              )}
+        {/* 1. Main Balance con Privacidad */}
+        <div className="md:col-span-2 row-span-2 h-[260px] md:h-auto bento-card relative overflow-hidden bg-linear-to-br from-app-surface to-app-subtle dark:to-[#0A0A0A] p-6 flex flex-col justify-between border-0 shadow-lg">
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-app-primary opacity-10 blur-[80px] rounded-full pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2 opacity-80">
+              <span className="text-xs font-bold text-app-muted uppercase tracking-wide">Disponible</span>
+              <button onClick={() => setPrivacyMode(!privacyMode)} className="hover:text-app-primary">
+                <span className="material-symbols-outlined text-[16px] align-bottom">{privacyMode ? 'visibility_off' : 'visibility'}</span>
+              </button>
             </div>
-          </BentoCard>
-
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-app-text font-numbers tracking-tight">
+              {privacyMode ? '•••••' : stats.formatCurrency(stats.availableFunds)}
+            </h1>
+          </div>
+          <div className="relative z-10 flex items-end justify-between mt-4">
+            <div>
+              <p className="text-[10px] text-app-muted uppercase font-bold mb-0.5">Patrimonio Neto</p>
+              <p className="text-lg font-medium font-numbers">{privacyMode ? '•••••' : stats.formatCurrency(stats.netWorth)}</p>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* 2. Widgets de Estadísticas */}
+        <StatWidget
+          label="Ingresos"
+          value={stats.monthStats.income}
+          type="income"
+          format={stats.formatCurrency}
+          className="col-span-1 md:col-span-1 lg:col-span-2"
+        />
+        <StatWidget
+          label="Gastos"
+          value={stats.monthStats.expense}
+          type="expense"
+          format={stats.formatCurrency}
+          className="col-span-1 md:col-span-1 lg:col-span-2"
+        />
+
+        {/* Financial Planning Widget - Ancho completo */}
+        <div className="col-span-1 md:col-span-2 lg:col-span-4 xl:col-span-4">
+          <FinancialPlanningWidget />
+        </div>
+        {/* 4. Chart Grande */}
+        <BentoCard title="Tendencia" className="col-span-1 md:col-span-2 lg:col-span-3 min-h-[300px]" action={<Link to="/reports" className="text-xs font-bold text-app-primary">Ver detalle</Link>}>
+          <SpendingTrendChart transactions={transactions || []} />
+        </BentoCard>
+
+        {/* 5. Placeholder Presupuesto */}
+        <BentoCard className="col-span-1 md:col-span-2 lg:col-span-1 min-h-[200px]" title="Alertas">
+          {unreadCount > 0 ? (
+            <div className="h-full flex flex-col justify-center items-center text-center">
+              <span className="size-3 bg-app-danger rounded-full animate-ping mb-2" />
+              <p className="text-sm font-bold">{unreadCount} Avisos pendientes</p>
+              <button onClick={() => setShowNotifications(true)} className="text-xs text-app-primary underline mt-1">Revisar</button>
+            </div>
+          ) : (
+            <div className="h-full flex flex-col justify-center items-center text-center opacity-40">
+              <span className="material-symbols-outlined text-3xl mb-2">check_circle</span>
+              <p className="text-xs">Todo al día</p>
+            </div>
+          )}
+        </BentoCard>
+
+        {/* 6. Transacciones Recientes */}
+        <BentoCard title="Últimos Movimientos" className="col-span-1 md:col-span-2 lg:col-span-4" action={<Link to="/history" className="text-xs font-bold text-app-primary">Ver todos</Link>}>
+          <div className="flex flex-col gap-1">
+            {transactions?.slice(0, 5).map(tx => {
+              const cat = categories?.find(c => c.id === tx.categoryId);
+              return (
+                <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-app-subtle transition-colors group cursor-default">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-full bg-app-subtle flex items-center justify-center text-app-muted text-sm dark:bg-white/5">
+                      <span className="material-symbols-outlined text-[20px]">{cat?.icon || 'attach_money'}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-app-text">{tx.description}</p>
+                      <p className="text-[10px] text-app-muted uppercase font-bold tracking-wide">{cat?.name}</p>
+                    </div>
+                  </div>
+                  <span className={`text-sm font-bold font-numbers ${tx.type === 'income' ? 'text-app-success' : 'text-app-text'}`}>
+                    {tx.type === 'expense' ? '-' : '+'}{stats.formatCurrency(tx.amount)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </BentoCard>
+
+      </main>
     </div>
   );
 };

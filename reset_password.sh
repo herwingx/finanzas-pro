@@ -20,6 +20,8 @@
 # REQUISITOS:
 #   - Docker Compose ejecutándose (docker compose up)
 #   - Acceso al container de backend y db
+#   - Variables de entorno COMPOSE_FILE y COMPOSE_PROJECT_NAME o idénticas
+#     a las usadas para levantar los servicios.
 #
 # =============================================================================
 

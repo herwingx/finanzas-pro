@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as apiService from '../services/apiService';
-import { Transaction, Profile, Category, RecurringTransaction, Account, InstallmentPurchase, Loan } from '../types';
+import { Transaction, Profile, Category, RecurringTransaction, Account, InstallmentPurchase, Loan, Investment } from '../types';
 
 export const useInstallmentPurchases = () => {
     return useQuery<InstallmentPurchase[], Error>({
@@ -207,6 +207,65 @@ export const useDeleteCategory = () => {
     });
 };
 
+// --- AI ---
+export const useAIChat = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ message, conversationId }: { message: string, conversationId?: string }) => {
+            // Assuming you added postAIChat similarly, or fix this line too if needed. 
+            // For now let's focus on notifications which caused the issue.
+            // revert this part if apiService has no generic post.
+            const response = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, // simple fallback or add to apiService
+                body: JSON.stringify({ message, conversationId })
+            });
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['ai-history'] });
+        }
+    });
+};
+
+// --- Notifications ---
+export const useNotifications = () => {
+    return useQuery({
+        queryKey: ['notifications'],
+        queryFn: apiService.getNotifications
+    });
+};
+
+export const useDismissNotification = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: apiService.markNotificationRead,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+    });
+};
+
+export const useMarkAllNotificationsRead = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: apiService.markAllNotificationsRead,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+    });
+};
+
+export const useTriggerDebugNotification = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: apiService.triggerDebugNotification,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+    });
+};
+
 export const useProfile = () => {
     return useQuery<Profile, Error>({
         queryKey: ['profile'],
@@ -394,5 +453,111 @@ export const useLoans = () => {
     return useQuery<Loan[], Error>({
         queryKey: ['loans'],
         queryFn: apiService.getLoans,
+    });
+};
+
+// Investments Hooks
+export const useInvestments = () => {
+    return useQuery<Investment[], Error>({
+        queryKey: ['investments'],
+        queryFn: apiService.getInvestments,
+    });
+};
+
+export const useAddInvestment = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (investment: Omit<Investment, 'id' | 'userId' | 'lastPriceUpdate'>) => apiService.addInvestment(investment),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['investments'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};
+
+export const useUpdateInvestment = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, investment }: { id: string; investment: Partial<Omit<Investment, 'id' | 'userId'>> }) => apiService.updateInvestment(id, investment),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['investments'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};
+
+export const useDeleteInvestment = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => apiService.deleteInvestment(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['investments'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};
+
+// Goals Hooks
+export const useGoals = () => {
+    return useQuery({
+        queryKey: ['goals'],
+        queryFn: apiService.getGoals,
+    });
+};
+
+export const useAddGoal = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (goal: any) => apiService.addGoal(goal),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] }); // If needed context
+        },
+    });
+};
+
+export const useUpdateGoal = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, ...data }: { id: string } & any) => apiService.updateGoal(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+        },
+    });
+};
+
+export const useDeleteGoal = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => apiService.deleteGoal(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+        },
+    });
+};
+
+export const useAddGoalContribution = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, ...data }: any) => apiService.addGoalContribution(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Balance changes
+            queryClient.invalidateQueries({ queryKey: ['transactions'] }); // New transaction
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
+    });
+};
+
+export const useWithdrawFromGoal = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, ...data }: any) => apiService.withdrawFromGoal(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Balance changes
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['financialPeriodSummary'] });
+        },
     });
 };

@@ -110,8 +110,20 @@ cmd_update() {
     git pull origin main
     
     # Rebuild y restart
-    log_info "Reconstruyendo contenedores..."
-    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME up -d --build
+    # 1. Detener servicios para liberar memoria (CRUCIAL en servidores pequeños)
+    log_info "Deteniendo servicios para liberar memoria..."
+    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME down
+    
+    # 2. Construir secuencialmente para no saturar CPU/RAM
+    log_info "Construyendo Backend..."
+    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME build backend
+    
+    log_info "Construyendo Frontend..."
+    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME build frontend
+    
+    # 3. Levantar todo
+    log_info "Iniciando servicios..."
+    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME up -d
     
     # Ejecutar migraciones
     cmd_migrate

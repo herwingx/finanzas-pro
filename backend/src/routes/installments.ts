@@ -91,6 +91,11 @@ router.post('/', async (req: AuthRequest, res) => {
 
             // 2. Create the InstallmentPurchase record first
             const monthlyPayment = parseFloat((totalAmount / installments).toFixed(2));
+
+            // Support for Historical Data (migration)
+            const initialPaidInstallments = req.body.initialPaidInstallments ? Number(req.body.initialPaidInstallments) : 0;
+            const initialPaidAmount = initialPaidInstallments > 0 ? monthlyPayment * initialPaidInstallments : 0;
+
             const purchase = await tx.installmentPurchase.create({
                 data: {
                     description,
@@ -101,21 +106,28 @@ router.post('/', async (req: AuthRequest, res) => {
                     accountId,
                     userId,
                     categoryId,
+                    paidInstallments: initialPaidInstallments,
+                    paidAmount: initialPaidAmount
                 }
             });
 
             // 3. Create the initial Transaction record (which also updates account balance)
-            // We import createTransactionAndAdjustBalances dynamically or assume it's imported at top
-            await createTransactionAndAdjustBalances(tx, {
-                amount: totalAmount,
-                description: description || 'Compra a Meses Sin Intereses',
-                date: new Date(purchaseDate),
-                type: 'expense',
-                userId,
-                accountId,
-                categoryId,
-                installmentPurchaseId: purchase.id,
-            });
+            // If this is a historical purchase (initialPaidInstallments > 0), we assume the user's current 
+            // account balance ALREADY includes the paid portion. We only add the REMAINING debt.
+            const remainingDebt = totalAmount - initialPaidAmount;
+
+            if (remainingDebt > 0) {
+                await createTransactionAndAdjustBalances(tx, {
+                    amount: remainingDebt,
+                    description: description || 'Compra a Meses Sin Intereses',
+                    date: new Date(purchaseDate),
+                    type: 'expense',
+                    userId,
+                    accountId,
+                    categoryId,
+                    installmentPurchaseId: purchase.id,
+                });
+            }
 
             return purchase;
         });
@@ -334,21 +346,24 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
             // Step 3: Calculate the net debt impact on the credit card and create one final transaction to reverse it.
             // The net debt added to the card is Total Amount - Paid Amount. We need to reverse this.
+            // NOTE: Even for historical MSIs, proper accounting means (Debt = Total - Paid).
+            // Reversing the debt means reducing the negative balance by the remaining amount.
             const remainingDebt = purchase.totalAmount - purchase.paidAmount;
 
-
-            // To revert the net debt on a CREDIT account, we must DECREMENT its balance.
-            if (purchase.account.type === 'CREDIT') {
-                await tx.account.update({
-                    where: { id: purchase.accountId },
-                    data: { balance: { decrement: remainingDebt } },
-                });
-            } else {
-                // This case should ideally not happen based on creation logic, but handle it for safety.
-                await tx.account.update({
-                    where: { id: purchase.accountId },
-                    data: { balance: { increment: remainingDebt } },
-                });
+            if (remainingDebt > 0) {
+                // To revert the net debt on a CREDIT account, we must DECREMENT its balance.
+                if (purchase.account.type === 'CREDIT') {
+                    await tx.account.update({
+                        where: { id: purchase.accountId },
+                        data: { balance: { decrement: remainingDebt } },
+                    });
+                } else {
+                    // This case should ideally not happen based on creation logic, but handle it for safety.
+                    await tx.account.update({
+                        where: { id: purchase.accountId },
+                        data: { balance: { increment: remainingDebt } },
+                    });
+                }
             }
 
             // Step 4: Hard delete all transactions associated with this installment purchase.

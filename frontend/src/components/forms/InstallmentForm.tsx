@@ -37,6 +37,7 @@ export const InstallmentForm: React.FC<InstallmentFormProps> = ({
   const [date, setDate] = useState<Date>(new Date());
   const [accId, setAccId] = useState('');
   const [catId, setCatId] = useState('');
+  const [paidMonths, setPaidMonths] = useState(''); // New State for historical data
 
   // --- INITIAL LOAD ---
   useEffect(() => {
@@ -66,7 +67,8 @@ export const InstallmentForm: React.FC<InstallmentFormProps> = ({
       installments: parseInt(installments),
       purchaseDate: date.toISOString(),
       accountId: accId,
-      categoryId: catId
+      categoryId: catId,
+      initialPaidInstallments: paidMonths ? parseInt(paidMonths) : 0
     };
 
     try {
@@ -162,6 +164,36 @@ export const InstallmentForm: React.FC<InstallmentFormProps> = ({
                 className="bg-app-subtle border-app-border h-11 rounded-xl px-3 text-sm font-bold shadow-sm hover:bg-app-subtle w-full"
               />
             </div>
+
+            {/* Historical Data Entry (Only on Create) */}
+            {!isEditMode && (
+              <div className="shrink-0 bg-app-subtle/50 border border-app-border/50 rounded-xl p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[10px] font-bold text-app-text uppercase tracking-wide opacity-70">¿Es una compra antigua?</label>
+                  {parseInt(paidMonths) > 0 && (
+                    <span className="text-[10px] font-bold text-app-primary bg-app-primary/10 px-1.5 py-0.5 rounded">
+                      Deuda Restante: ${(parseFloat(total || '0') - (parseFloat(total || '0') / parseInt(installments || '1') * parseInt(paidMonths))).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={paidMonths}
+                    onChange={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      const max = parseInt(installments) - 1;
+                      if (val < 0) setPaidMonths('');
+                      else if (val > max) setPaidMonths(String(max));
+                      else setPaidMonths(e.target.value);
+                    }}
+                    placeholder="0"
+                    className="w-20 bg-app-subtle border border-app-border h-9 rounded-lg px-2 text-center text-sm font-bold outline-none focus:border-app-primary"
+                  />
+                  <span className="text-xs text-app-muted font-medium">meses ya pagados antes de hoy.</span>
+                </div>
+              </div>
+            )}
 
             {/* Category */}
             <div className="flex-1 min-h-0 flex flex-col">

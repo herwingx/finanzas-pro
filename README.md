@@ -209,6 +209,9 @@ chmod +x deploy.sh
 | `./deploy.sh status`  | Estado de los servicios             |
 | `./deploy.sh backup`  | Crea backup de la base de datos     |
 | `./deploy.sh migrate` | Ejecuta migraciones de Prisma       |
+| `./deploy.sh reset-pw`| Resetea contraseña de usuario       |
+
+> 💡 **Tip:** Para backups automáticos y en la nube, consulta [Guía de Backups](docs/BACKUP_GUIDE.md) y usa `scripts/backup.sh`.
 
 ### 🔄 Flujo de Actualización en Producción
 

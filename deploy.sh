@@ -181,6 +181,36 @@ cmd_db() {
         psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 }
 
+cmd_reset_password() {
+    local email="$1"
+    local pass="$2"
+    
+    # Modo interactivo si faltan argumentos
+    if [[ -z "$email" ]]; then
+        echo ""
+        log_info "=== Resetear Contraseña ==="
+        read -p "  📧 Email del usuario: " email
+        read -s -p "  🔑 Nueva contraseña: " pass
+        echo ""
+    fi
+    
+    if [[ -z "$email" ]] || [[ -z "$pass" ]]; then
+        log_error "Email y contraseña son requeridos"
+        return 1
+    fi
+    
+    # Exportar contexto de Docker Compose para el script hijo
+    export COMPOSE_FILE="$COMPOSE_FILE"
+    export COMPOSE_PROJECT_NAME="$PROJECT_NAME"
+    
+    if [ -f "./reset_password.sh" ]; then
+        chmod +x ./reset_password.sh
+        ./reset_password.sh "$email" "$pass"
+    else
+        log_error "No se encuentra reset_password.sh"
+    fi
+}
+
 cmd_help() {
     echo "
 ╔═══════════════════════════════════════════════════════════════════╗
@@ -201,6 +231,7 @@ COMANDOS DISPONIBLES:
   ${GREEN}migrate${NC}   Ejecuta migraciones de Prisma
   ${GREEN}shell${NC}     Abre shell en el backend
   ${GREEN}db${NC}        Conecta a PostgreSQL
+  ${GREEN}reset-pw${NC}  Resetea contraseña de usuario
 
 EJEMPLOS:
 
@@ -208,6 +239,7 @@ EJEMPLOS:
   ./deploy.sh update    # Después de hacer push a main
   ./deploy.sh logs      # Ver qué está pasando
   ./deploy.sh backup    # Antes de cambios importantes
+  ./deploy.sh reset-pw  # Resetear contraseña interactivamente
 
 MODO SELF-HOSTED (sin Cloudflare):
   ./deploy.sh start --self-hosted
@@ -246,10 +278,11 @@ show_menu() {
     echo -e "  ${GREEN}6)${NC} Backup Datos          ${YELLOW}(backup)${NC}"
     echo -e "  ${GREEN}7)${NC} Shell Backend         ${YELLOW}(shell)${NC}"
     echo -e "  ${GREEN}8)${NC} Shell Base Datos      ${YELLOW}(db)${NC}"
-    echo -e "  ${GREEN}9)${NC} Salir"
+    echo -e "  ${GREEN}9)${NC} Reset Password        ${YELLOW}(reset-pw)${NC}"
+    echo -e "  ${GREEN}0)${NC} Salir"
     echo ""
     echo "=========================================================="
-    read -p "  👉 Selecciona una opción [1-9]: " option
+    read -p "  👉 Selecciona una opción [0-9]: " option
     
     case $option in
         1) cmd_start ;;
@@ -260,6 +293,7 @@ show_menu() {
         6) cmd_backup ;;
         7) cmd_shell ;;
         8) cmd_db ;;
+        9) cmd_reset_password ;;
         *) echo "¡Hasta luego! 👋"; exit 0 ;;
     esac
 }
@@ -301,6 +335,10 @@ else
             ;;
         db)
             cmd_db
+            ;;
+        reset-pw|reset-password)
+            shift
+            cmd_reset_password "$@"
             ;;
         help|--help|-h)
             cmd_help

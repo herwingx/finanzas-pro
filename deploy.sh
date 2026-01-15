@@ -110,9 +110,9 @@ cmd_update() {
     git pull origin main
     
     # Rebuild y restart
-    # 1. Detener servicios para liberar memoria (CRUCIAL en servidores pequeños)
-    log_info "Deteniendo servicios para liberar memoria..."
-    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME down
+    # 1. Detener servicios PESADOS para liberar memoria (EXCEPTO el tunnel que mantiene esta conexión)
+    log_info "Deteniendo servicios de aplicación..."
+    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME stop backend frontend db nginx
     
     # 2. Construir secuencialmente para no saturar CPU/RAM
     log_info "Construyendo Backend..."

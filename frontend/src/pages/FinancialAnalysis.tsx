@@ -191,7 +191,7 @@ const FinancialAnalysis: React.FC = () => {
     };
 
     const allExpenses = groupBy(summary.expectedExpenses, x => x.id);
-    const rawMsi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment);
+    const rawMsi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment && (m.isMsi || m.totalInstallments > 1));
     const allMsi = groupBy(rawMsi, x => x.originalId || x.id);
 
     return {
@@ -199,8 +199,18 @@ const FinancialAnalysis: React.FC = () => {
       msi: expandedMsi ? allMsi : allMsi.slice(0, 5),
       countExpensesGrouped: allExpenses.length,
       countMsiGrouped: allMsi.length,
-      msiEnding: summary.msiPaymentsDue.filter((m: any) => m.isLastInstallment),
-      recurringEnding: summary.expectedExpenses.filter((e: any) => e.endDate && new Date(e.endDate) <= new Date(summary.periodEnd))
+      // Deduplicate recurringEnding: Keep only one entry per recurring series that is ending
+      recurringEnding: (() => {
+        const ending = summary.expectedExpenses.filter((e: any) => e.endDate && new Date(e.endDate) <= new Date(summary.periodEnd));
+        const seen = new Set();
+        return ending.filter((e: any) => {
+          // Use recurringTransactionId if available, or fallback to description as a loose key
+          const key = e.recurringTransactionId || e.description;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      })()
     };
   }, [summary, expandedExpenses, expandedMsi]);
 
@@ -452,8 +462,10 @@ const FinancialAnalysis: React.FC = () => {
                 <p className="p-6 text-center text-xs text-app-muted">Sin pagos a plazos activos.</p>
               )}
               {upcomingPayments.msi.map((e: any, i) => {
-                // Safe description handling
-                const desc = e.purchaseName || (e.description ? e.description.replace(/^Cuota \d+\/\d+ - /, '') : 'Pago MSI');
+                // Safe description handling & cleaning of card names in parens e.g. "Description (CardName)" -> "Description"
+                const rawDesc = e.purchaseName || (e.description ? e.description.replace(/^Cuota \d+\/\d+ - /, '') : 'Pago MSI');
+                // Remove content in parenthesis if it looks like a card name (at end of string usually)
+                const desc = rawDesc.replace(/\s*\([^)]+\)$/, '').trim();
                 const label = (e.minInstallment !== undefined && e.maxInstallment !== undefined)
                   ? (e.minInstallment === e.maxInstallment ? `Cuota ${e.minInstallment}` : `${e.minInstallment}-${e.maxInstallment}`)
                   : 'Cuota';

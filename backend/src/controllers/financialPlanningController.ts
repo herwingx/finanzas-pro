@@ -226,14 +226,24 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       expectedExpenses.push({
         id: l.id,
         uniqueId,
-        description: `Pagar: ${l.borrowerName}`, // Short description
+        description: `Pagar: ${l.borrowerName}`,
         amount: l.remainingAmount,
         dueDate: l.expectedPayDate,
-        category: { name: 'Préstamos', color: '#f59e0b', icon: 'credit_score', budgetType: 'need' }, // Debt is a NEED
+        category: { name: 'Préstamos', color: '#f59e0b', icon: 'credit_score', budgetType: 'need' },
         isOverdue: l.expectedPayDate ? new Date(l.expectedPayDate) < userLocalNow : false,
-        isLoan: true
+        isLoan: true,
+        accountId: l.accountId, // Added
+        accountType: l.account?.type
       });
     });
+
+    // ... (Recurring logic requires finding existing loop but we can patch the aggregation part first or split edits)
+    // Actually, I need to patch the push in the recurring loop too.
+    // The replace_file_content tool works best with contiguous blocks.
+    // The locations are far apart (Lines 224 vs 368 vs 661). 
+    // I should use multi_replace for safety or multiple replaces.
+    // I will use multi_replace.
+
 
     // ... (Existing Recurring Expenses Processing)
 
@@ -374,7 +384,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             category: rt.category,
             isOverdue,
             hasEndDate: !!endDateLimit,
-            endDate: endDateLimit
+            endDate: endDateLimit,
+            accountId: rt.accountId,
+            accountType: rt.account?.type
           };
 
           if (rt.type === 'income') {
@@ -429,7 +441,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             category: rt.category,
             isOverdue: true,  // Always true since it's from a previous period
             hasEndDate: !!endDateLimit,
-            endDate: endDateLimit
+            endDate: endDateLimit,
+            accountId: rt.accountId,
+            accountType: rt.account?.type
           };
 
           if (rt.type === 'income') {
@@ -659,8 +673,19 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             });
 
             const nonMsiTotal = cycleExpenses._sum.amount || 0;
+
+            // 3.3 Add Projected Recurring Expenses on this Card that fall within the cycle
+            // This ensures future subscriptions etc. are included in the estimated payment
+            const projectedCardExpenses = expectedExpenses
+              .filter(e =>
+                e.accountId === account.id &&
+                e.dueDate >= cycleStartDate &&
+                e.dueDate <= cutoffDate
+              )
+              .reduce((sum, e) => sum + e.amount, 0);
+
             // Subtract already paid regular amount
-            const remainingRegularTotal = Math.max(0, nonMsiTotal - paidRegularAmount);
+            const remainingRegularTotal = Math.max(0, (nonMsiTotal + projectedCardExpenses) - paidRegularAmount);
 
             const msiTotal = accountMsiDue.reduce((sum, m) => sum + m.monthlyPayment, 0);
             const totalPayable = msiTotal + remainingRegularTotal;

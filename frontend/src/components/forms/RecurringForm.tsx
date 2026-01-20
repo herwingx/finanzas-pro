@@ -258,7 +258,7 @@ export const RecurringForm: React.FC<RecurringFormProps> = ({ existingTransactio
                   <input type="checkbox" checked={hasEnd} onChange={() => {
                     setHasEnd(!hasEnd);
                     if (!hasEnd && !endDate) {
-                      const d = new Date(); d.setMonth(d.getMonth() + 6); setEndDate(d);
+                      setEndDate(new Date());
                     }
                   }} className="sr-only peer" />
                   <div className="w-11 h-6 bg-app-subtle peer-focus:ring-2 peer-focus:ring-app-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-app-primary"></div>

@@ -269,12 +269,22 @@ const Recurring: React.FC = () => {
                                             </div>
                                             <div className="min-w-0">
                                                 <h3 className="text-sm font-bold text-app-text truncate max-w-[150px] md:max-w-xs">{item.description}</h3>
-                                                <p className="text-[11px] text-app-muted flex items-center gap-1.5 mt-0.5">
+                                                <p className="text-[11px] text-app-muted flex flex-wrap items-center gap-1.5 mt-0.5">
                                                     <span className="capitalize">{getFrequencyLabel(item.frequency)}</span>
+
                                                     <span className="size-1 rounded-full bg-app-border" />
                                                     <span className={`font-bold ${isOverdue ? 'text-rose-500' : ''}`}>
                                                         {formatDateUTC(nextDue, { day: 'numeric', month: 'short' })}
                                                     </span>
+
+                                                    {item.endDate && (
+                                                        <span
+                                                            className="flex items-center text-amber-600 dark:text-amber-400 ml-0.5"
+                                                            title={`Temporal: Finaliza el ${formatDateUTC(new Date(item.endDate), { style: 'short' })}`}
+                                                        >
+                                                            <span className="material-symbols-outlined text-[14px]">history</span>
+                                                        </span>
+                                                    )}
                                                 </p>
                                             </div>
                                         </div>

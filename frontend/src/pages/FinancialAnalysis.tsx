@@ -165,7 +165,8 @@ const FinancialAnalysis: React.FC = () => {
     const groupBy = (items: any[], idFn: (x: any) => string) => {
       const map = new Map();
       items.forEach(i => {
-        const key = idFn(i);
+        // Use uniqueId if available (from backend) to avoid duplicates
+        const key = i.uniqueId || idFn(i);
         const instNum = i.installmentNumber ?? i.currentInstallment;
         if (!map.has(key)) {
           map.set(key, {
@@ -311,7 +312,7 @@ const FinancialAnalysis: React.FC = () => {
                     type="monotone"
                     dataKey="Saldo"
                     stroke={chartColor}
-                    strokeWidth={3}
+                    strokeWidth={2}
                     fill="url(#colorSaldo)"
                     fillOpacity={1}
                     animationDuration={1000}
@@ -324,10 +325,10 @@ const FinancialAnalysis: React.FC = () => {
                             key={`dot-${index}`}
                             cx={cx}
                             cy={cy}
-                            r={4}
+                            r={3}
                             fill={chartColor}
                             stroke="white"
-                            strokeWidth={2}
+                            strokeWidth={1.5}
                             className="drop-shadow-sm"
                           />
                         );
@@ -335,7 +336,7 @@ const FinancialAnalysis: React.FC = () => {
                       return null;
                     }}
                     activeDot={{
-                      r: 6,
+                      r: 5,
                       stroke: 'white',
                       strokeWidth: 2,
                       fill: chartColor
@@ -348,24 +349,24 @@ const FinancialAnalysis: React.FC = () => {
         </div>
 
         {/* --- C. KPI CARDS --- */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-app-surface border border-app-border rounded-2xl p-4 text-center">
-            <div className="flex justify-center mb-1 text-emerald-500"><span className="material-symbols-outlined text-xl">arrow_upward</span></div>
-            <p className="text-[10px] uppercase font-bold text-app-muted truncate">Ingresos</p>
-            <p className="text-sm md:text-base font-bold text-app-text font-numbers">{formatCurrency(totalIncome)}</p>
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
+          <div className="bg-app-surface border border-app-border rounded-2xl p-3 md:p-4 text-center min-w-0">
+            <div className="flex justify-center mb-1 text-emerald-500"><span className="material-symbols-outlined text-lg md:text-xl">arrow_upward</span></div>
+            <p className="text-[9px] md:text-[10px] uppercase font-bold text-app-muted truncate">Ingresos</p>
+            <p className="text-xs md:text-base font-bold text-app-text font-numbers truncate">{formatCurrency(totalIncome)}</p>
           </div>
-          <div className="bg-app-surface border border-app-border rounded-2xl p-4 text-center">
-            <div className="flex justify-center mb-1 text-rose-500"><span className="material-symbols-outlined text-xl">arrow_downward</span></div>
-            <p className="text-[10px] uppercase font-bold text-app-muted truncate">Egresos</p>
-            <p className="text-sm md:text-base font-bold text-app-text font-numbers">{formatCurrency(totalExpenses)}</p>
+          <div className="bg-app-surface border border-app-border rounded-2xl p-3 md:p-4 text-center min-w-0">
+            <div className="flex justify-center mb-1 text-rose-500"><span className="material-symbols-outlined text-lg md:text-xl">arrow_downward</span></div>
+            <p className="text-[9px] md:text-[10px] uppercase font-bold text-app-muted truncate">Egresos</p>
+            <p className="text-xs md:text-base font-bold text-app-text font-numbers truncate">{formatCurrency(totalExpenses)}</p>
           </div>
-          <div className="bg-app-surface border border-app-border rounded-2xl p-4 text-center">
-            <div className={`flex justify-center mb-1 ${savingsRate >= 20 ? 'text-indigo-500' : 'text-amber-500'}`}><span className="material-symbols-outlined text-xl">savings</span></div>
-            <div className="flex items-center justify-center gap-1">
-              <p className="text-[10px] uppercase font-bold text-app-muted truncate">Ahorro</p>
-              <InfoTooltip content="(Ingresos - Egresos) / Ingresos" iconSize="12px" />
+          <div className="bg-app-surface border border-app-border rounded-2xl p-3 md:p-4 text-center min-w-0">
+            <div className={`flex justify-center mb-1 ${savingsRate >= 20 ? 'text-indigo-500' : 'text-amber-500'}`}><span className="material-symbols-outlined text-lg md:text-xl">savings</span></div>
+            <div className="flex items-center justify-center gap-0.5 md:gap-1">
+              <p className="text-[9px] md:text-[10px] uppercase font-bold text-app-muted truncate">Ahorro</p>
+              <InfoTooltip content="(Ingresos - Egresos) / Ingresos" iconSize="10px" />
             </div>
-            <p className="text-sm md:text-base font-bold text-app-text font-numbers">{savingsRate.toFixed(0)}%</p>
+            <p className="text-xs md:text-base font-bold text-app-text font-numbers">{savingsRate.toFixed(0)}%</p>
           </div>
         </div>
 

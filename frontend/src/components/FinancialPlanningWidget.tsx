@@ -17,26 +17,28 @@ import { InfoTooltip } from '../components/InfoTooltip';
 const StatusBadge = ({ days, isToday }: { days: number, isToday?: boolean }) => {
   if (days < 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[10px] font-bold uppercase tracking-wider">
-        <span className="material-symbols-outlined text-[12px] filled">warning</span> Vencido
+      <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 text-[10px] font-bold">
+        <span className="size-1.5 rounded-full bg-rose-500 animate-pulse" />
+        Vencido
       </span>
     );
   }
   if (isToday || days === 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
-        <span className="material-symbols-outlined text-[12px] filled">today</span> Hoy
+      <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+        <span className="size-1.5 rounded-full bg-amber-500" />
+        Hoy
       </span>
     );
   }
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider ${days <= 3
-      ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-      }`}>
-      {days}d restantes
-    </span>
-  );
+  if (days <= 3) {
+    return (
+      <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+        {days}d
+      </span>
+    );
+  }
+  return null; // No badge for items far in the future
 };
 
 /* ==================================================================================
@@ -158,46 +160,36 @@ const CreditCardGroup = ({
     `}>
       {/* CARD HEADER (Always Visible) */}
       <div onClick={onToggleExpand} className="p-4 cursor-pointer select-none">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3.5">
-            {/* Brand Logo Placeholder / Icon */}
-            <div className="relative size-11 rounded-xl flex items-center justify-center bg-linear-to-br from-[#2E2E3A] to-[#1C1C22] shadow-inner text-white">
-              <span className="material-symbols-outlined text-[22px] opacity-90">credit_card</span>
-              {isOverdue && !isLongPeriod && (
-                <span className="absolute -top-1 -right-1 size-3 bg-app-danger rounded-full border-2 border-app-surface animate-pulse" />
-              )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Icon */}
+            <div className="size-9 rounded-lg flex items-center justify-center bg-app-subtle text-app-muted">
+              <span className="material-symbols-outlined text-[18px]">credit_card</span>
             </div>
 
             <div>
-              <h4 className="font-semibold text-sm text-app-text tracking-tight flex items-center gap-2">
-                {group.accountName}
+              <p className="text-sm font-semibold text-app-text">{group.accountName}</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-app-muted font-medium">
+                  {isLongPeriod
+                    ? `${group.paymentDatesCount} fechas • ${group.items.length} mov.`
+                    : formatDate(group.dueDate)
+                  }
+                </span>
                 {!isLongPeriod && <StatusBadge days={daysUntil} isToday={isToday} />}
-              </h4>
-              <p className="text-[11px] text-app-muted font-medium mt-0.5">
-                {isLongPeriod
-                  ? `${group.paymentDatesCount} fechas de pago • ${group.items.length} movimientos`
-                  : `Corte: ${formatDate(group.dueDate)}`
-                }
-              </p>
+              </div>
             </div>
           </div>
 
-          <div className="text-right">
-            <p className="text-lg font-bold text-app-text font-numbers tracking-tight">{formatCurrency(group.totalAmount)}</p>
-            {endingMsi.length > 0 && (
-              <div className="flex justify-end items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                <span className="material-symbols-outlined text-[10px]">celebration</span>
-                {endingMsi.length} Terminados
-              </div>
-            )}
-          </div>
+          <p className="text-sm font-bold text-app-text font-numbers">{formatCurrency(group.totalAmount)}</p>
         </div>
 
         {/* Footer info visible when closed */}
-        {!isExpanded && (uniqueMsiPurchases > 0 || regularItems.length > 0) && (
-          <div className="mt-3 flex items-center gap-2 pt-2 border-t border-dashed border-app-border opacity-70 group-hover:opacity-100 transition-opacity">
-            {uniqueMsiPurchases > 0 && <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded flex items-center gap-1"><span className="size-1 rounded-full bg-current" /> {uniqueMsiPurchases} a MSI</span>}
-            {regularItems.length > 0 && <span className="text-[10px] font-bold bg-app-subtle text-app-muted px-1.5 py-0.5 rounded">{regularItems.length} cargos directos</span>}
+        {!isExpanded && (uniqueMsiPurchases > 0 || regularItems.length > 0 || endingMsi.length > 0) && (
+          <div className="mt-2.5 flex items-center gap-2 pt-2 border-t border-dashed border-app-border opacity-70 group-hover:opacity-100 transition-opacity">
+            {uniqueMsiPurchases > 0 && <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded">{uniqueMsiPurchases} MSI</span>}
+            {regularItems.length > 0 && <span className="text-[10px] font-bold bg-app-subtle text-app-muted px-1.5 py-0.5 rounded">{regularItems.length} cargos</span>}
+            {endingMsi.length > 0 && <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded">{endingMsi.length} terminan</span>}
           </div>
         )}
       </div>
@@ -263,14 +255,15 @@ const CreditCardGroup = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold font-numbers">{formatCurrency(item.amount)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold font-numbers text-app-text">{formatCurrency(item.amount)}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); onPayIndividual(item); }}
-                        className="size-7 rounded-full border border-app-border flex items-center justify-center text-app-muted hover:bg-app-primary hover:text-white hover:border-transparent transition-all"
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white text-[10px] font-bold uppercase tracking-wide transition-all flex items-center gap-1"
                         title="Pagar individualmente"
                       >
                         <span className="material-symbols-outlined text-[14px]">payments</span>
+                        Pagar
                       </button>
                     </div>
                   </div>
@@ -482,8 +475,8 @@ export const FinancialPlanningWidget: React.FC = () => {
             Ingresos por Recibir
           </h3>
           <div className="rounded-2xl border border-app-border bg-app-surface overflow-hidden shadow-sm">
-            {(showAllIncome ? summary.expectedIncome : summary.expectedIncome.slice(0, 3)).map((item: any) => (
-              <SwipeableActionRow key={item.id} actionType="receive" onAction={() => executePayAction(item.id, item.amount, item.description, 'receive')}>
+            {(showAllIncome ? summary.expectedIncome : summary.expectedIncome.slice(0, 3)).map((item: any, idx: number) => (
+              <SwipeableActionRow key={`income-${item.id}-${idx}`} actionType="receive" onAction={() => executePayAction(item.id, item.amount, item.description, 'receive')}>
                 <div className="flex justify-between items-center p-3.5">
                   <div className="flex items-center gap-3">
                     <div className="size-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center">
@@ -525,9 +518,9 @@ export const FinancialPlanningWidget: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            {cardKeys.map(key => (
+            {cardKeys.map((key, idx) => (
               <CreditCardGroup
-                key={key}
+                key={`card-${key}-${idx}`}
                 groupKey={key}
                 group={groupedCards[key]}
                 isExpanded={expandedCard === key}
@@ -592,31 +585,28 @@ export const FinancialPlanningWidget: React.FC = () => {
           </div>
 
           <div className="rounded-2xl border border-app-border bg-app-surface overflow-hidden shadow-sm">
-            {(showAllExpenses ? summary.expectedExpenses : summary.expectedExpenses.slice(0, 5)).map((item: any) => {
+            {(showAllExpenses ? summary.expectedExpenses : summary.expectedExpenses.slice(0, 5)).map((item: any, idx: number) => {
               // Check Status
               const due = new Date(item.dueDate);
               const now = new Date();
               const diff = Math.ceil((due.getTime() - now.getTime()) / 86400000);
 
               return (
-                <SwipeableActionRow key={item.id} actionType="pay" onAction={() => executePayAction(item.id, item.amount, item.description, 'pay')}>
-                  <div className="flex justify-between items-center p-3.5 group-hover:bg-app-subtle transition-colors">
+                <SwipeableActionRow key={`expense-${item.id}-${idx}`} actionType="pay" onAction={() => executePayAction(item.id, item.amount, item.description, 'pay')}>
+                  <div className="flex justify-between items-center p-3.5">
                     <div className="flex items-center gap-3">
-                      <div className={`size-9 rounded-lg flex items-center justify-center bg-app-subtle text-app-muted`}>
+                      <div className="size-9 rounded-lg flex items-center justify-center bg-app-subtle text-app-muted">
                         <span className="material-symbols-outlined text-[18px]">receipt</span>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-app-text truncate">{item.description}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <StatusBadge days={diff} isToday={diff === 0} />
+                      <div>
+                        <p className="text-sm font-semibold text-app-text">{item.description}</p>
+                        <div className="flex items-center gap-1.5">
                           <span className="text-[11px] text-app-muted font-medium">{formatDate(item.dueDate)}</span>
+                          <StatusBadge days={diff} isToday={diff === 0} />
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm text-app-text font-numbers">{formatCurrency(item.amount)}</p>
-                      <span className="text-[10px] text-app-muted">Desliza para pagar</span>
-                    </div>
+                    <p className="font-bold text-sm text-app-text font-numbers">-{formatCurrency(item.amount)}</p>
                   </div>
                 </SwipeableActionRow>
               );

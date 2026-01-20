@@ -133,12 +133,20 @@ body {
 /* iOS Safe Areas & Scroll Fixes */
 html {
   overscroll-behavior-y: none;
-  /* Previene el rebote elástico global */
+  overflow-x: hidden;
 }
 
 body {
   min-height: 100vh;
   min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+}
+
+#root {
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* Typography Enhancements for Fintech */

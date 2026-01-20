@@ -689,351 +689,344 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
             // Subtract already paid regular amount
             const remainingRegularTotal = Math.max(0, (nonMsiTotal + projectedCardExpenses) - paidRegularAmount);
-            e.accountId === account.id &&
-              e.dueDate >= cycleStartDate &&
-              e.dueDate <= cutoffDate
-              )
-              .reduce((sum, e) => sum + e.amount, 0);
 
-// Subtract already paid regular amount
-const remainingRegularTotal = Math.max(0, (nonMsiTotal + projectedCardExpenses) - paidRegularAmount);
 
-const msiTotal = accountMsiDue.reduce((sum, m) => sum + m.monthlyPayment, 0);
-const totalPayable = msiTotal + remainingRegularTotal;
+            const msiTotal = accountMsiDue.reduce((sum, m) => sum + m.monthlyPayment, 0);
+            const totalPayable = msiTotal + remainingRegularTotal;
 
-if (totalPayable > 0) {
-  accountMsiDue.forEach(msi => {
-    // Calcular cuota actual: paidAmount / monthlyPayment + 1
-    const paidInstallments = Math.round(msi.paidAmount / msi.monthlyPayment);
-    const currentInstallment = paidInstallments + 1;
-    const isLastInstallment = currentInstallment >= msi.installments;
+            if (totalPayable > 0) {
+              accountMsiDue.forEach(msi => {
+                // Calcular cuota actual: paidAmount / monthlyPayment + 1
+                const paidInstallments = Math.round(msi.paidAmount / msi.monthlyPayment);
+                const currentInstallment = paidInstallments + 1;
+                const isLastInstallment = currentInstallment >= msi.installments;
 
-    msiPaymentsDue.push({
-      id: msi.id,
-      originalId: msi.id,
-      description: `Cuota ${currentInstallment}/${msi.installments} - ${msi.description}`,
-      purchaseName: msi.description,
-      amount: msi.monthlyPayment,
-      dueDate: payDate,
-      category: msi.category,
-      accountId: account.id,
-      accountName: account.name,
-      isMsi: true,
-      isLastInstallment,
-      installmentNumber: currentInstallment,
-      totalInstallments: msi.installments,
-      msiTotal: msi.totalAmount,
-      paidAmount: msi.paidAmount
-    });
-  });
+                msiPaymentsDue.push({
+                  id: msi.id,
+                  originalId: msi.id,
+                  description: `Cuota ${currentInstallment}/${msi.installments} - ${msi.description}`,
+                  purchaseName: msi.description,
+                  amount: msi.monthlyPayment,
+                  dueDate: payDate,
+                  category: msi.category,
+                  accountId: account.id,
+                  accountName: account.name,
+                  isMsi: true,
+                  isLastInstallment,
+                  installmentNumber: currentInstallment,
+                  totalInstallments: msi.installments,
+                  msiTotal: msi.totalAmount,
+                  paidAmount: msi.paidAmount
+                });
+              });
 
-  if (remainingRegularTotal > 0) {
-    msiPaymentsDue.push({
-      id: `cc-spent-${account.id}-${payDate.getTime()}`,
-      description: `Consumos del Periodo (${account.name})`,
-      amount: remainingRegularTotal,
-      dueDate: payDate,
-      accountId: account.id,
-      accountName: account.name,
-      isMsi: false,
-      category: { name: 'Tarjeta', color: '#64748b', icon: 'credit_card' }
-    });
-  }
-}
+              if (remainingRegularTotal > 0) {
+                msiPaymentsDue.push({
+                  id: `cc-spent-${account.id}-${payDate.getTime()}`,
+                  description: `Consumos del Periodo (${account.name})`,
+                  amount: remainingRegularTotal,
+                  dueDate: payDate,
+                  accountId: account.id,
+                  accountName: account.name,
+                  isMsi: false,
+                  category: { name: 'Tarjeta', color: '#64748b', icon: 'credit_card' }
+                });
+              }
+            }
           }
         }
       }
     } // Fin del bloque para períodos cortos
 
-// 3.5 For LONG periods (bimestral+), project ALL future MSI payments
-// This ensures we see all upcoming installments, not just the next billing cycle
-if (isLongPeriod) {
+    // 3.5 For LONG periods (bimestral+), project ALL future MSI payments
+    // This ensures we see all upcoming installments, not just the next billing cycle
+    if (isLongPeriod) {
 
-  for (const account of creditAccounts) {
-    // Skip accounts without defined cutoff/payment days for projection alignment
-    // (If not defined, fallback to old logic or skip, but better to be safe)
-    const hasCycleInfo = account.cutoffDay && account.paymentDay;
+      for (const account of creditAccounts) {
+        // Skip accounts without defined cutoff/payment days for projection alignment
+        // (If not defined, fallback to old logic or skip, but better to be safe)
+        const hasCycleInfo = account.cutoffDay && account.paymentDay;
 
-    for (const msi of account.installmentPurchases) {
-      // Calculate remaining installments
-      const paidInstallments = Math.floor(msi.paidAmount / msi.monthlyPayment);
-      const remainingInstallments = msi.installments - paidInstallments;
+        for (const msi of account.installmentPurchases) {
+          // Calculate remaining installments
+          const paidInstallments = Math.floor(msi.paidAmount / msi.monthlyPayment);
+          const remainingInstallments = msi.installments - paidInstallments;
 
-      if (remainingInstallments <= 0) continue;
+          if (remainingInstallments <= 0) continue;
 
-      const purchaseDate = new Date(msi.purchaseDate);
+          const purchaseDate = new Date(msi.purchaseDate);
 
-      // Project each remaining installment
-      for (let i = 0; i < remainingInstallments; i++) {
-        // 1. Calculate the 'theoretical' charge date (when the store charges the card)
-        // This happens on the anniversary of the purchase each month
-        const chargeDate = new Date(purchaseDate);
-        chargeDate.setMonth(chargeDate.getMonth() + paidInstallments + i + 1);
+          // Project each remaining installment
+          for (let i = 0; i < remainingInstallments; i++) {
+            // 1. Calculate the 'theoretical' charge date (when the store charges the card)
+            // This happens on the anniversary of the purchase each month
+            const chargeDate = new Date(purchaseDate);
+            chargeDate.setMonth(chargeDate.getMonth() + paidInstallments + i + 1);
 
-        let finalPaymentDate = new Date(chargeDate);
+            let finalPaymentDate = new Date(chargeDate);
 
-        // 2. If account has cycle info, align to the correct Card Payment Date
-        if (hasCycleInfo && account.cutoffDay && account.paymentDay) {
-          // Logic:
-          // If ChargeDate <= CutoffDay (of that month) -> It falls in THIS month's cycle -> Payment is this month's PaymentDay (or next month if PaymentDay < CutoffDay)
-          // If ChargeDate > CutoffDay -> It falls in NEXT month's cycle -> Payment is NEXT month's PaymentDay
+            // 2. If account has cycle info, align to the correct Card Payment Date
+            if (hasCycleInfo && account.cutoffDay && account.paymentDay) {
+              // Logic:
+              // If ChargeDate <= CutoffDay (of that month) -> It falls in THIS month's cycle -> Payment is this month's PaymentDay (or next month if PaymentDay < CutoffDay)
+              // If ChargeDate > CutoffDay -> It falls in NEXT month's cycle -> Payment is NEXT month's PaymentDay
 
-          // Construct Cutoff Date for the Charge Month
-          const cutoffThisMonth = new Date(chargeDate.getFullYear(), chargeDate.getMonth(), account.cutoffDay);
-          cutoffThisMonth.setHours(23, 59, 59, 999);
+              // Construct Cutoff Date for the Charge Month
+              const cutoffThisMonth = new Date(chargeDate.getFullYear(), chargeDate.getMonth(), account.cutoffDay);
+              cutoffThisMonth.setHours(23, 59, 59, 999);
 
-          if (chargeDate <= cutoffThisMonth) {
-            // Falls in current cycle
-            // Payment date is derived from this cycle's cutoff
-            // Usually payment is ~20 days after cutoff.
-            // Impl: Set year/month to this cycle's month, then set day to paymentDay.
-            // IF paymentDay <= cutoffDay, it means payment is in NEXT month.
-            // (When they're equal, like both being day 30, payment is still next month)
-            finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth(), account.paymentDay);
-            if (account.paymentDay <= account.cutoffDay) {
-              finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
+              if (chargeDate <= cutoffThisMonth) {
+                // Falls in current cycle
+                // Payment date is derived from this cycle's cutoff
+                // Usually payment is ~20 days after cutoff.
+                // Impl: Set year/month to this cycle's month, then set day to paymentDay.
+                // IF paymentDay <= cutoffDay, it means payment is in NEXT month.
+                // (When they're equal, like both being day 30, payment is still next month)
+                finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth(), account.paymentDay);
+                if (account.paymentDay <= account.cutoffDay) {
+                  finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
+                }
+              } else {
+                // Falls in next cycle (after cutoff)
+                // So it enters the NEXT statement.
+                // Payment will be roughly 1 month + 20 days later.
+                // Start with Next Month
+                finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth() + 1, account.paymentDay);
+                if (account.paymentDay <= account.cutoffDay) {
+                  finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
+                }
+              }
             }
-          } else {
-            // Falls in next cycle (after cutoff)
-            // So it enters the NEXT statement.
-            // Payment will be roughly 1 month + 20 days later.
-            // Start with Next Month
-            finalPaymentDate = new Date(chargeDate.getFullYear(), chargeDate.getMonth() + 1, account.paymentDay);
-            if (account.paymentDay <= account.cutoffDay) {
-              finalPaymentDate.setMonth(finalPaymentDate.getMonth() + 1);
+
+            // Ensure we're within the period and haven't already added this payment
+            if (finalPaymentDate >= periodStart && finalPaymentDate <= periodEnd) {
+              // Check if this specific payment was already added in the regular cycle logic
+              const alreadyAdded = msiPaymentsDue.some(
+                (p: any) => p.id === msi.id &&
+                  new Date(p.dueDate).getMonth() === finalPaymentDate.getMonth() &&
+                  new Date(p.dueDate).getFullYear() === finalPaymentDate.getFullYear()
+              );
+
+              if (!alreadyAdded) {
+                const isLastInstallment = (i === remainingInstallments - 1);
+
+                msiPaymentsDue.push({
+                  id: `${msi.id}-proj-${i}`,
+                  originalId: msi.id,
+                  description: isLastInstallment
+                    ? `Última cuota de "${msi.description}"`
+                    : `Cuota ${paidInstallments + i + 1}/${msi.installments} - ${msi.description}`,
+                  purchaseName: msi.description,
+                  amount: msi.monthlyPayment,
+                  dueDate: finalPaymentDate,
+                  category: msi.category,
+                  accountId: account.id,
+                  accountName: account.name,
+                  isMsi: true,
+                  isProjection: true,
+                  isLastInstallment,
+                  installmentNumber: paidInstallments + i + 1,
+                  totalInstallments: msi.installments,
+                  msiTotal: msi.totalAmount,
+                  paidAmount: msi.paidAmount,
+                  remainingAmount: msi.totalAmount - msi.paidAmount - (msi.monthlyPayment * (i + 1))
+                });
+              }
             }
-          }
-        }
-
-        // Ensure we're within the period and haven't already added this payment
-        if (finalPaymentDate >= periodStart && finalPaymentDate <= periodEnd) {
-          // Check if this specific payment was already added in the regular cycle logic
-          const alreadyAdded = msiPaymentsDue.some(
-            (p: any) => p.id === msi.id &&
-              new Date(p.dueDate).getMonth() === finalPaymentDate.getMonth() &&
-              new Date(p.dueDate).getFullYear() === finalPaymentDate.getFullYear()
-          );
-
-          if (!alreadyAdded) {
-            const isLastInstallment = (i === remainingInstallments - 1);
-
-            msiPaymentsDue.push({
-              id: `${msi.id}-proj-${i}`,
-              originalId: msi.id,
-              description: isLastInstallment
-                ? `Última cuota de "${msi.description}"`
-                : `Cuota ${paidInstallments + i + 1}/${msi.installments} - ${msi.description}`,
-              purchaseName: msi.description,
-              amount: msi.monthlyPayment,
-              dueDate: finalPaymentDate,
-              category: msi.category,
-              accountId: account.id,
-              accountName: account.name,
-              isMsi: true,
-              isProjection: true,
-              isLastInstallment,
-              installmentNumber: paidInstallments + i + 1,
-              totalInstallments: msi.installments,
-              msiTotal: msi.totalAmount,
-              paidAmount: msi.paidAmount,
-              remainingAmount: msi.totalAmount - msi.paidAmount - (msi.monthlyPayment * (i + 1))
-            });
           }
         }
       }
     }
-  }
-}
 
-// 4. Calculate Balances & Totals - CORRECTED
-const accounts = await prisma.account.findMany({ where: { userId } });
+    // 4. Calculate Balances & Totals - CORRECTED
+    const accounts = await prisma.account.findMany({ where: { userId } });
 
-// Liquid Assets: Cash, Debit, Savings. Everything NOT Credit.
-const liquidAccounts = accounts.filter(a => !['credit', 'CREDIT', 'Credit Card'].includes(a.type));
-const currentBalance = liquidAccounts.reduce((sum, a) => sum + a.balance, 0);
+    // Liquid Assets: Cash, Debit, Savings. Everything NOT Credit.
+    const liquidAccounts = accounts.filter(a => !['credit', 'CREDIT', 'Credit Card'].includes(a.type));
+    const currentBalance = liquidAccounts.reduce((sum, a) => sum + a.balance, 0);
 
-// Debt info for display (Total debt stock)
-const currentDebt = accounts.filter(a => ['credit', 'CREDIT', 'Credit Card'].includes(a.type)).reduce((sum, a) => sum + Math.abs(a.balance), 0);
+    // Debt info for display (Total debt stock)
+    const currentDebt = accounts.filter(a => ['credit', 'CREDIT', 'Credit Card'].includes(a.type)).reduce((sum, a) => sum + Math.abs(a.balance), 0);
 
-// Calculate MSI remaining debt stock
-// Calculate MSI remaining debt stock
-let currentMSIDebt = 0;
-for (const account of creditAccounts) {
-  for (const msi of account.installmentPurchases) {
-    currentMSIDebt += (msi.totalAmount - msi.paidAmount);
-  }
-}
-
-// Filter income/expenses to only those strictly in the FUTURE of Now (for Disposable calculation)??
-// Actually, "Period Summary" usually includes the whole period.
-// Disposable Final = (Starting Balance of Period + Income) - (Expenses + Payments).
-// But "currentBalance" is NOW. So we should add remaining income and subtract remaining expenses.
-
-// We already filtered `expectedIncome` and `expectedExpenses` by Period Date Range.
-// We should treat them as "projected for this period".
-
-// Calculate Total Actual Income received in this period (for display purposes)
-const actualIncome = await prisma.transaction.aggregate({
-  _sum: { amount: true },
-  where: {
-    userId,
-    type: 'income',
-    date: {
-      gte: periodStart,
-      lte: periodEnd
-    },
-    deletedAt: null
-  }
-});
-
-const totalReceivedIncome = actualIncome._sum.amount || 0;
-const totalExpectedIncome = expectedIncome.reduce((acc, curr) => acc + curr.amount, 0);
-const totalPeriodIncome = totalReceivedIncome + totalExpectedIncome;
-const totalRecurringExpenses = expectedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-const totalMsiPayments = msiPaymentsDue.reduce((acc, curr: any) => acc + curr.amount, 0);
-
-const totalCommitments = totalRecurringExpenses + totalMsiPayments;
-
-// Disposable Income Logic:
-// "How much money will I have left at the end of the period?"
-// = Current Cash + Future Income in Period - Future Bills in Period.
-// (We assume Current Cash already paid for Past Bills).
-
-const disposableIncome = currentBalance + totalExpectedIncome - totalCommitments;
-const isSufficient = disposableIncome >= 0;
-const shortfall = isSufficient ? 0 : Math.abs(disposableIncome);
-
-// 5. 50/30/20 Analysis (Projected + Actual)
-// FIX-002: Use designated Net Income if available for accurate planning
-let baseIncomeForAnalysis = totalPeriodIncome || currentBalance;
-
-if (user?.monthlyNetIncome) {
-  // Adjust monthly income to the requested period
-  switch (periodType) {
-    case 'semanal': baseIncomeForAnalysis = user.monthlyNetIncome / 4; break;
-    case 'quincenal': baseIncomeForAnalysis = user.monthlyNetIncome / 2; break;
-    case 'mensual': baseIncomeForAnalysis = user.monthlyNetIncome; break;
-    case 'bimestral': baseIncomeForAnalysis = user.monthlyNetIncome * 2; break;
-    case 'semestral': baseIncomeForAnalysis = user.monthlyNetIncome * 6; break;
-    case 'anual': baseIncomeForAnalysis = user.monthlyNetIncome * 12; break;
-  }
-}
-
-const budgetAnalysis = {
-  needs: { projected: 0, ideal: baseIncomeForAnalysis * 0.5 },
-  wants: { projected: 0, ideal: baseIncomeForAnalysis * 0.3 },
-  savings: { projected: 0, ideal: baseIncomeForAnalysis * 0.2 }
-};
-
-// Helper to categorize (normalize to uppercase for comparison)
-const categorize = (amount: number, type: string) => {
-  const normalizedType = (type || '').toUpperCase();
-  if (normalizedType === 'NEEDS' || normalizedType === 'NEED') budgetAnalysis.needs.projected += amount;
-  else if (normalizedType === 'WANTS' || normalizedType === 'WANT') budgetAnalysis.wants.projected += amount;
-  else if (normalizedType === 'SAVINGS' || normalizedType === 'SAVING') budgetAnalysis.savings.projected += amount;
-  else budgetAnalysis.needs.projected += amount; // Default to needs
-};
-
-// 5.1 Include ACTUAL expenses from this period
-const actualExpenses = await prisma.transaction.findMany({
-  where: {
-    userId,
-    type: 'expense',
-    date: { gte: periodStart, lte: periodEnd },
-    deletedAt: null
-  },
-  include: {
-    category: true,
-    loan: true // Need this to identify loan type
-  }
-});
-
-for (const tx of actualExpenses) {
-  if (tx.loan) {
-    // Handle Loan Transactions
-    if (tx.loan.loanType === 'lent') {
-      // I lent money = Asset allocation = SAVINGS
-      categorize(tx.amount, 'SAVINGS');
-    } else {
-      // I paid debt = Obligation = NEEDS
-      categorize(tx.amount, 'NEEDS');
+    // Calculate MSI remaining debt stock
+    // Calculate MSI remaining debt stock
+    let currentMSIDebt = 0;
+    for (const account of creditAccounts) {
+      for (const msi of account.installmentPurchases) {
+        currentMSIDebt += (msi.totalAmount - msi.paidAmount);
+      }
     }
-  } else {
-    // Standard expense
-    categorize(tx.amount, tx.category?.budgetType || 'NEEDS');
-  }
-}
 
-// 5.2 Include PROJECTED (Future) expenses
+    // Filter income/expenses to only those strictly in the FUTURE of Now (for Disposable calculation)??
+    // Actually, "Period Summary" usually includes the whole period.
+    // Disposable Final = (Starting Balance of Period + Income) - (Expenses + Payments).
+    // But "currentBalance" is NOW. So we should add remaining income and subtract remaining expenses.
 
-expectedExpenses.forEach(bg => categorize(bg.amount, bg.category?.budgetType || 'NEEDS'));
-msiPaymentsDue.forEach(msi => categorize(msi!.amount, msi!.category?.budgetType || 'NEEDS'));
+    // We already filtered `expectedIncome` and `expectedExpenses` by Period Date Range.
+    // We should treat them as "projected for this period".
 
-// Include loan collections (lent) as Savings in 50/30/20 analysis
-// These are filtered by expectedPayDate in the period (line 193-200), so only loans
-// with a payment date within the period are included
-expectedIncome
-  .filter((income: any) => income.isLoan)
-  .forEach((loanIncome: any) => {
-    // Préstamos que te van a pagar = Ahorro (es capital tuyo que regresa)
-    budgetAnalysis.savings.projected += loanIncome.amount;
-  });
+    // Calculate Total Actual Income received in this period (for display purposes)
+    const actualIncome = await prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        userId,
+        type: 'income',
+        date: {
+          gte: periodStart,
+          lte: periodEnd
+        },
+        deletedAt: null
+      }
+    });
 
-// Generate warnings (Smart Logic)
-const warnings: string[] = [];
-const availableLiquidity = currentBalance + totalExpectedIncome;
+    const totalReceivedIncome = actualIncome._sum.amount || 0;
+    const totalExpectedIncome = expectedIncome.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalPeriodIncome = totalReceivedIncome + totalExpectedIncome;
+    const totalRecurringExpenses = expectedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalMsiPayments = msiPaymentsDue.reduce((acc, curr: any) => acc + curr.amount, 0);
 
-// 1. Debt Health
-if (currentDebt > 0 && currentBalance > 0 && currentDebt > currentBalance * 0.6) {
-  warnings.push('Tu deuda en tarjetas es alta comparada con tu efectivo actual.');
-} else if (currentDebt > 0 && currentBalance === 0) {
-  warnings.push('Tienes deuda y cero efectivo. Prioriza la liquidez.');
-}
+    const totalCommitments = totalRecurringExpenses + totalMsiPayments;
 
-// 2. Capacity Coverage (Liquidity vs Commitments)
-if (totalCommitments > 0) {
-  if (availableLiquidity === 0) {
-    warnings.push('Tienes compromisos pendientes y $0 recursos disponibles. ¡Alerta!');
-  } else if (totalCommitments > availableLiquidity) {
-    warnings.push(`Tus compromisos ($${totalCommitments.toFixed(0)}) exceden tus recursos totales ($${availableLiquidity.toFixed(0)}).`);
-  } else if (totalCommitments > availableLiquidity * 0.8) {
-    warnings.push('Tus gastos comprometidos consumen casi todo tu dinero disponible (80%+).');
-  }
-}
+    // Disposable Income Logic:
+    // "How much money will I have left at the end of the period?"
+    // = Current Cash + Future Income in Period - Future Bills in Period.
+    // (We assume Current Cash already paid for Past Bills).
 
-// 3. Needs Ratio (Only if there is significant income/balance flow)
-if (availableLiquidity > 0 && budgetAnalysis.needs.projected > availableLiquidity * 0.6) {
-  warnings.push('Tus necesidades básicas proyectadas son muy altas para tu capacidad actual.');
-}
+    const disposableIncome = currentBalance + totalExpectedIncome - totalCommitments;
+    const isSufficient = disposableIncome >= 0;
+    const shortfall = isSufficient ? 0 : Math.abs(disposableIncome);
 
-const summary = {
-  periodStart: periodStart.toISOString(),
-  periodEnd: periodEnd.toISOString(),
-  displayStart,  // For UI display (local time, YYYY-MM-DD format)
-  displayEnd,    // For UI display (local time, YYYY-MM-DD format)
-  periodType,
-  currentBalance,
-  currentDebt,
-  currentMSIDebt,
-  expectedIncome,
-  expectedExpenses,
-  msiPaymentsDue,
-  totalExpectedIncome,
-  totalReceivedIncome,
-  totalPeriodIncome,
-  totalCommitments,
-  disposableIncome,
-  isSufficient,
-  shortfall,
-  budgetAnalysis,
-  warnings
-};
+    // 5. 50/30/20 Analysis (Projected + Actual)
+    // FIX-002: Use designated Net Income if available for accurate planning
+    let baseIncomeForAnalysis = totalPeriodIncome || currentBalance;
 
-res.json(summary);
+    if (user?.monthlyNetIncome) {
+      // Adjust monthly income to the requested period
+      switch (periodType) {
+        case 'semanal': baseIncomeForAnalysis = user.monthlyNetIncome / 4; break;
+        case 'quincenal': baseIncomeForAnalysis = user.monthlyNetIncome / 2; break;
+        case 'mensual': baseIncomeForAnalysis = user.monthlyNetIncome; break;
+        case 'bimestral': baseIncomeForAnalysis = user.monthlyNetIncome * 2; break;
+        case 'semestral': baseIncomeForAnalysis = user.monthlyNetIncome * 6; break;
+        case 'anual': baseIncomeForAnalysis = user.monthlyNetIncome * 12; break;
+      }
+    }
+
+    const budgetAnalysis = {
+      needs: { projected: 0, ideal: baseIncomeForAnalysis * 0.5 },
+      wants: { projected: 0, ideal: baseIncomeForAnalysis * 0.3 },
+      savings: { projected: 0, ideal: baseIncomeForAnalysis * 0.2 }
+    };
+
+    // Helper to categorize (normalize to uppercase for comparison)
+    const categorize = (amount: number, type: string) => {
+      const normalizedType = (type || '').toUpperCase();
+      if (normalizedType === 'NEEDS' || normalizedType === 'NEED') budgetAnalysis.needs.projected += amount;
+      else if (normalizedType === 'WANTS' || normalizedType === 'WANT') budgetAnalysis.wants.projected += amount;
+      else if (normalizedType === 'SAVINGS' || normalizedType === 'SAVING') budgetAnalysis.savings.projected += amount;
+      else budgetAnalysis.needs.projected += amount; // Default to needs
+    };
+
+    // 5.1 Include ACTUAL expenses from this period
+    const actualExpenses = await prisma.transaction.findMany({
+      where: {
+        userId,
+        type: 'expense',
+        date: { gte: periodStart, lte: periodEnd },
+        deletedAt: null
+      },
+      include: {
+        category: true,
+        loan: true // Need this to identify loan type
+      }
+    });
+
+    for (const tx of actualExpenses) {
+      if (tx.loan) {
+        // Handle Loan Transactions
+        if (tx.loan.loanType === 'lent') {
+          // I lent money = Asset allocation = SAVINGS
+          categorize(tx.amount, 'SAVINGS');
+        } else {
+          // I paid debt = Obligation = NEEDS
+          categorize(tx.amount, 'NEEDS');
+        }
+      } else {
+        // Standard expense
+        categorize(tx.amount, tx.category?.budgetType || 'NEEDS');
+      }
+    }
+
+    // 5.2 Include PROJECTED (Future) expenses
+
+    expectedExpenses.forEach(bg => categorize(bg.amount, bg.category?.budgetType || 'NEEDS'));
+    msiPaymentsDue.forEach(msi => categorize(msi!.amount, msi!.category?.budgetType || 'NEEDS'));
+
+    // Include loan collections (lent) as Savings in 50/30/20 analysis
+    // These are filtered by expectedPayDate in the period (line 193-200), so only loans
+    // with a payment date within the period are included
+    expectedIncome
+      .filter((income: any) => income.isLoan)
+      .forEach((loanIncome: any) => {
+        // Préstamos que te van a pagar = Ahorro (es capital tuyo que regresa)
+        budgetAnalysis.savings.projected += loanIncome.amount;
+      });
+
+    // Generate warnings (Smart Logic)
+    const warnings: string[] = [];
+    const availableLiquidity = currentBalance + totalExpectedIncome;
+
+    // 1. Debt Health
+    if (currentDebt > 0 && currentBalance > 0 && currentDebt > currentBalance * 0.6) {
+      warnings.push('Tu deuda en tarjetas es alta comparada con tu efectivo actual.');
+    } else if (currentDebt > 0 && currentBalance === 0) {
+      warnings.push('Tienes deuda y cero efectivo. Prioriza la liquidez.');
+    }
+
+    // 2. Capacity Coverage (Liquidity vs Commitments)
+    if (totalCommitments > 0) {
+      if (availableLiquidity === 0) {
+        warnings.push('Tienes compromisos pendientes y $0 recursos disponibles. ¡Alerta!');
+      } else if (totalCommitments > availableLiquidity) {
+        warnings.push(`Tus compromisos ($${totalCommitments.toFixed(0)}) exceden tus recursos totales ($${availableLiquidity.toFixed(0)}).`);
+      } else if (totalCommitments > availableLiquidity * 0.8) {
+        warnings.push('Tus gastos comprometidos consumen casi todo tu dinero disponible (80%+).');
+      }
+    }
+
+    // 3. Needs Ratio (Only if there is significant income/balance flow)
+    if (availableLiquidity > 0 && budgetAnalysis.needs.projected > availableLiquidity * 0.6) {
+      warnings.push('Tus necesidades básicas proyectadas son muy altas para tu capacidad actual.');
+    }
+
+    const summary = {
+      periodStart: periodStart.toISOString(),
+      periodEnd: periodEnd.toISOString(),
+      displayStart,  // For UI display (local time, YYYY-MM-DD format)
+      displayEnd,    // For UI display (local time, YYYY-MM-DD format)
+      periodType,
+      currentBalance,
+      currentDebt,
+      currentMSIDebt,
+      expectedIncome,
+      expectedExpenses,
+      msiPaymentsDue,
+      totalExpectedIncome,
+      totalReceivedIncome,
+      totalPeriodIncome,
+      totalCommitments,
+      disposableIncome,
+      isSufficient,
+      shortfall,
+      budgetAnalysis,
+      warnings
+    };
+
+    res.json(summary);
   } catch (error) {
-  console.error('Error getting financial period summary:', error);
-  res.status(500).json({ error: 'Failed to get financial summary' });
-}
+    console.error('Error getting financial period summary:', error);
+    res.status(500).json({ error: 'Failed to get financial summary' });
+  }
 };
 
 export const getUpcomingCommitments = async (req: AuthRequest, res: Response) => {

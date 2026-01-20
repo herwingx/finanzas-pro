@@ -162,11 +162,11 @@ const FinancialAnalysis: React.FC = () => {
     if (!summary) return { expenses: [], msi: [], msiEnding: [], recurringEnding: [], countExpensesGrouped: 0, countMsiGrouped: 0 };
 
     // Helper to group items by unique ID
-    const groupBy = (items: any[], idFn: (x: any) => string) => {
+    const groupBy = (items: any[], idFn: (x: any) => string, forceGroup = false) => {
       const map = new Map();
       items.forEach(i => {
-        // Use uniqueId if available (from backend) to avoid duplicates
-        const key = i.uniqueId || idFn(i);
+        // Use uniqueId if available (from backend) to avoid duplicates, unless strictly grouping by logic (forceGroup)
+        const key = (!forceGroup && i.uniqueId) ? i.uniqueId : idFn(i);
         const instNum = i.installmentNumber ?? i.currentInstallment;
         if (!map.has(key)) {
           map.set(key, {
@@ -190,9 +190,10 @@ const FinancialAnalysis: React.FC = () => {
       return Array.from(map.values()).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     };
 
-    const allExpenses = groupBy(summary.expectedExpenses, x => x.id);
+    // Force group by recurrence ID (for expenses) to totalize them over the period
+    const allExpenses = groupBy(summary.expectedExpenses, x => x.recurringTransactionId || x.description, true);
     const rawMsi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment && (m.isMsi || m.totalInstallments > 1));
-    const allMsi = groupBy(rawMsi, x => x.originalId || x.id);
+    const allMsi = groupBy(rawMsi, x => x.originalId || x.id, false);
 
     return {
       expenses: expandedExpenses ? allExpenses : allExpenses.slice(0, 5),

@@ -410,18 +410,18 @@ export const FinancialPlanningWidget: React.FC = () => {
               </div>
 
               {summary.isSufficient ? (
-                <div className="hidden md:block text-right">
-                  <p className="text-[10px] uppercase font-bold text-indigo-500">Saldo proyectado</p>
-                  <p className="text-xl font-black text-app-text font-numbers text-indigo-600 dark:text-indigo-400">
+                <div className="text-right shrink-0">
+                  <p className="text-[9px] md:text-[10px] uppercase font-bold text-indigo-500">Saldo proyectado</p>
+                  <p className="text-base md:text-xl font-black text-app-text font-numbers text-indigo-600 dark:text-indigo-400 leading-none">
                     {formatCurrency(summary.disposableIncome)}
                   </p>
                 </div>
               ) : (
-                <div className="hidden md:flex items-center gap-2 bg-rose-500/10 text-rose-600 px-3 py-1.5 rounded-lg border border-rose-500/20">
-                  <span className="material-symbols-outlined text-[18px]">warning</span>
+                <div className="flex items-center gap-2 bg-rose-500/10 text-rose-600 px-2 md:px-3 py-1 md:py-1.5 rounded-lg border border-rose-500/20 shrink-0">
+                  <span className="material-symbols-outlined text-[16px] md:text-[18px]">warning</span>
                   <div>
-                    <p className="text-[10px] uppercase font-bold leading-none">Déficit</p>
-                    <p className="text-sm font-bold font-numbers">{formatCurrency(summary.disposableIncome)}</p>
+                    <p className="text-[9px] md:text-[10px] uppercase font-bold leading-none">Déficit</p>
+                    <p className="text-xs md:text-sm font-bold font-numbers">{formatCurrency(summary.disposableIncome)}</p>
                   </div>
                 </div>
               )}

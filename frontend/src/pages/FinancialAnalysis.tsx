@@ -199,6 +199,7 @@ const FinancialAnalysis: React.FC = () => {
       msi: expandedMsi ? allMsi : allMsi.slice(0, 5),
       countExpensesGrouped: allExpenses.length,
       countMsiGrouped: allMsi.length,
+      msiEnding: summary.msiPaymentsDue.filter((m: any) => m.isLastInstallment),
       // Deduplicate recurringEnding: Keep only one entry per recurring series that is ending
       recurringEnding: (() => {
         const ending = summary.expectedExpenses.filter((e: any) => e.endDate && new Date(e.endDate) <= new Date(summary.periodEnd));

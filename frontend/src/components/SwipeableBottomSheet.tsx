@@ -39,6 +39,43 @@ export const SwipeableBottomSheet: React.FC<SheetProps> = ({
   const isDesktop = useIsDesktop();
   const controls = useDragControls();
   const contentRef = useRef<HTMLDivElement>(null);
+  const hasHistoryEntry = useRef(false);
+
+  // Manejar el botón/gesto de "atrás" del navegador
+  useEffect(() => {
+    if (isOpen) {
+      // Al abrir el sheet, agregar una entrada al historial
+      if (!hasHistoryEntry.current) {
+        window.history.pushState({ sheetOpen: true }, '');
+        hasHistoryEntry.current = true;
+      }
+
+      // Escuchar el evento popstate (cuando el usuario presiona "atrás")
+      const handlePopState = (event: PopStateEvent) => {
+        if (hasHistoryEntry.current) {
+          hasHistoryEntry.current = false;
+          onClose();
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    } else {
+      // Al cerrar el sheet, remover la entrada del historial si existe
+      if (hasHistoryEntry.current) {
+        hasHistoryEntry.current = false;
+        // Solo hacemos history.back() si el sheet se cerró programáticamente
+        // (no por el botón atrás, que ya movió el historial)
+        // Verificamos si el estado actual es el que agregamos
+        if (window.history.state?.sheetOpen) {
+          window.history.back();
+        }
+      }
+    }
+  }, [isOpen, onClose]);
 
   // Bloquear scroll del body al abrir
   useEffect(() => {

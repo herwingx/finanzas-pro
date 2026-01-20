@@ -186,10 +186,10 @@ const Dashboard: React.FC = () => {
         {/* 6. Transacciones Recientes */}
         <BentoCard title="Últimos Movimientos" className="col-span-1 md:col-span-2 lg:col-span-4" action={<Link to="/history" className="text-xs font-bold text-app-primary">Ver todos</Link>}>
           <div className="flex flex-col gap-1">
-            {transactions?.slice(0, 5).map(tx => {
+            {transactions?.slice(0, 5).map((tx, index) => {
               const cat = categories?.find(c => c.id === tx.categoryId);
               return (
-                <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-app-subtle transition-colors group cursor-default">
+                <div key={`${tx.id}-${index}`} className="flex items-center justify-between p-3 rounded-xl hover:bg-app-subtle transition-colors group cursor-default">
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-full bg-app-subtle flex items-center justify-center text-app-muted text-sm dark:bg-white/5">
                       <span className="material-symbols-outlined text-[20px]">{cat?.icon || 'attach_money'}</span>

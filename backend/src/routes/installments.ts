@@ -26,6 +26,7 @@ router.get('/', async (req: AuthRequest, res) => {
 
         // Self-healing: Check consistency for ALL items
         // This fixes any desync caused by previous errors
+        // BUT respects historical data (initialPaidInstallments) where payments exist in DB but not as transactions
         for (const purchase of purchases) {
             const actualPayments = purchase.generatedTransactions.filter(
                 (tx: any) => (tx.type === 'income' || tx.type === 'transfer') && !tx.deletedAt
@@ -34,7 +35,14 @@ router.get('/', async (req: AuthRequest, res) => {
             const totalPaidReal = actualPayments.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
             const paidInstallmentsReal = Math.floor((totalPaidReal + 0.01) / purchase.monthlyPayment);
 
-            if (Math.abs(totalPaidReal - purchase.paidAmount) > 0.05 || paidInstallmentsReal !== purchase.paidInstallments) {
+            // IMPORTANT: Only update if calculated values are HIGHER than stored values.
+            // This respects historical data where user marked initial payments that don't have transactions.
+            // If calculated is LOWER, it means user had pre-existing payments without transactions.
+            const shouldUpdate =
+                totalPaidReal > purchase.paidAmount + 0.05 ||
+                paidInstallmentsReal > purchase.paidInstallments;
+
+            if (shouldUpdate) {
                 await prisma.installmentPurchase.update({
                     where: { id: purchase.id },
                     data: {
@@ -129,7 +137,19 @@ router.post('/', async (req: AuthRequest, res) => {
                 });
             }
 
-            return purchase;
+            // Return the purchase with all necessary relations for frontend display
+            const createdPurchase = await tx.installmentPurchase.findUnique({
+                where: { id: purchase.id },
+                include: {
+                    account: true,
+                    generatedTransactions: {
+                        where: { deletedAt: null },
+                        orderBy: { date: 'asc' }
+                    }
+                }
+            });
+
+            return createdPurchase;
         });
 
         res.status(201).json(newPurchase);
@@ -171,9 +191,13 @@ router.get('/:id', async (req: AuthRequest, res) => {
         const totalPaidReal = actualPayments.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
         const paidInstallmentsReal = Math.floor((totalPaidReal + 0.01) / purchase.monthlyPayment);
 
-        // If DB state differs from Reality, Auto-Correct it.
-        if (Math.abs(totalPaidReal - purchase.paidAmount) > 0.01 || paidInstallmentsReal !== purchase.paidInstallments) {
+        // IMPORTANT: Only update if calculated values are HIGHER than stored values.
+        // This respects historical data where user marked initial payments that don't have transactions.
+        const shouldUpdate =
+            totalPaidReal > purchase.paidAmount + 0.01 ||
+            paidInstallmentsReal > purchase.paidInstallments;
 
+        if (shouldUpdate) {
             purchase = await prisma.installmentPurchase.update({
                 where: { id },
                 data: {
@@ -324,54 +348,89 @@ router.delete('/:id', async (req: AuthRequest, res) => {
                 throw new Error('Installment purchase not found or you do not have permission to delete it.');
             }
 
-            // Step 2: For every payment made from a different account (transfers), refund the source account ONLY IF REVERT IS REQUESTED.
+            // Step 2: Revert ALL transaction impacts BEFORE deleting them
+            // We need to revert each transaction's effect individually:
+            // A) Initial expense transaction (added debt to credit card)
+            // B) All payment transactions (reduced debt from credit card)
+            // C) Source accounts for transfer payments (if revert is requested)
+
             const shouldRevert = req.query.revert === 'true';
 
-            if (shouldRevert) {
-                const paymentTransactions = purchase.generatedTransactions.filter(
-                    (trx: any) => trx.type === 'transfer' && trx.destinationAccountId === purchase.accountId
-                );
+            for (const trx of purchase.generatedTransactions) {
+                const { amount, type, accountId: trxAccountId, destinationAccountId } = trx;
 
-                if (paymentTransactions.length > 0) {
-                    for (const payment of paymentTransactions) {
-                        if (payment.accountId) { // accountId is the source of the transfer
-                            await tx.account.update({
-                                where: { id: payment.accountId },
-                                data: { balance: { increment: payment.amount } },
-                            });
+                // Revert impact on credit card (purchase account)
+                if (type === 'expense') {
+                    // Initial purchase: expense INCREASED debt (incremented balance)
+                    // To revert: DECREASE debt (decrement balance)
+                    if (purchase.account.type === 'CREDIT') {
+                        await tx.account.update({
+                            where: { id: purchase.accountId },
+                            data: { balance: { decrement: amount } },
+                        });
+                    } else {
+                        await tx.account.update({
+                            where: { id: purchase.accountId },
+                            data: { balance: { increment: amount } },
+                        });
+                    }
+                } else if (type === 'income') {
+                    // Payment (income): DECREASED debt (decremented balance)
+                    // To revert: INCREASE debt (increment balance)
+                    if (purchase.account.type === 'CREDIT') {
+                        await tx.account.update({
+                            where: { id: purchase.accountId },
+                            data: { balance: { increment: amount } },
+                        });
+                    } else {
+                        await tx.account.update({
+                            where: { id: purchase.accountId },
+                            data: { balance: { decrement: amount } },
+                        });
+                    }
+                } else if (type === 'transfer' && destinationAccountId === purchase.accountId) {
+                    // Payment via transfer TO credit card: DECREASED debt
+                    // To revert: INCREASE debt on credit card
+                    if (purchase.account.type === 'CREDIT') {
+                        await tx.account.update({
+                            where: { id: purchase.accountId },
+                            data: { balance: { increment: amount } },
+                        });
+                    } else {
+                        await tx.account.update({
+                            where: { id: purchase.accountId },
+                            data: { balance: { decrement: amount } },
+                        });
+                    }
+
+                    // Revert source account ONLY if requested
+                    if (shouldRevert && trxAccountId) {
+                        const sourceAccount = await tx.account.findUnique({ where: { id: trxAccountId } });
+                        if (sourceAccount) {
+                            // Transfer FROM source: money left (balance decreased for DEBIT/CASH, debt increased for CREDIT)
+                            // To revert: return money to source
+                            if (sourceAccount.type === 'CREDIT') {
+                                await tx.account.update({
+                                    where: { id: trxAccountId },
+                                    data: { balance: { decrement: amount } },
+                                });
+                            } else {
+                                await tx.account.update({
+                                    where: { id: trxAccountId },
+                                    data: { balance: { increment: amount } },
+                                });
+                            }
                         }
                     }
                 }
             }
 
-            // Step 3: Calculate the net debt impact on the credit card and create one final transaction to reverse it.
-            // The net debt added to the card is Total Amount - Paid Amount. We need to reverse this.
-            // NOTE: Even for historical MSIs, proper accounting means (Debt = Total - Paid).
-            // Reversing the debt means reducing the negative balance by the remaining amount.
-            const remainingDebt = purchase.totalAmount - purchase.paidAmount;
-
-            if (remainingDebt > 0) {
-                // To revert the net debt on a CREDIT account, we must DECREMENT its balance.
-                if (purchase.account.type === 'CREDIT') {
-                    await tx.account.update({
-                        where: { id: purchase.accountId },
-                        data: { balance: { decrement: remainingDebt } },
-                    });
-                } else {
-                    // This case should ideally not happen based on creation logic, but handle it for safety.
-                    await tx.account.update({
-                        where: { id: purchase.accountId },
-                        data: { balance: { increment: remainingDebt } },
-                    });
-                }
-            }
-
-            // Step 4: Hard delete all transactions associated with this installment purchase.
+            // Step 3: Hard delete all transactions associated with this installment purchase.
             await tx.transaction.deleteMany({
                 where: { installmentPurchaseId: id },
             });
 
-            // Step 5: Delete the installment purchase record itself.
+            // Step 4: Delete the installment purchase record itself.
             await tx.installmentPurchase.delete({
                 where: { id },
             });
@@ -442,17 +501,20 @@ router.post('/:id/pay', async (req: AuthRequest, res) => {
             });
 
             // Update the installment purchase progress
+            // Calculate how many NEW installments are covered by THIS payment only
+            const installmentsCoveredByThisPayment = Math.floor(paymentAmount / purchase.monthlyPayment);
+
             const newPaidAmount = purchase.paidAmount + paymentAmount;
             const newPaidInstallments = Math.min(
                 purchase.installments,
-                Math.floor(newPaidAmount / purchase.monthlyPayment)
+                purchase.paidInstallments + installmentsCoveredByThisPayment
             );
 
             const updatedPurchase = await tx.installmentPurchase.update({
                 where: { id: installmentPurchaseId },
                 data: {
                     paidAmount: { increment: paymentAmount },
-                    paidInstallments: newPaidInstallments, // Set directly, not increment
+                    paidInstallments: newPaidInstallments, // Correct: increment by actual payment
                 },
             });
 

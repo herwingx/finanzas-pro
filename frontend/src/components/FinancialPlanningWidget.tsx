@@ -236,6 +236,7 @@ const CreditCardGroup = ({
                   <div key={`${item.id}-${idx}`} className="group flex justify-between items-center p-3 hover:bg-app-subtle/50 transition-colors">
                     <div className="min-w-0 flex-1 pr-3">
                       <div className="flex items-center gap-2">
+                        {item.isOverdue && <span className="text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-1 rounded font-bold">Vencido</span>}
                         {item.isLastInstallment && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded font-bold">Última</span>}
                         <span className="text-xs font-semibold text-app-text truncate">
                           {item.purchaseName || item.description?.replace(/^Cuota \d+\/\d+ - /, '')}

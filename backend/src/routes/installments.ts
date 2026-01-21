@@ -8,6 +8,47 @@ import { createTransactionAndAdjustBalances } from '../services/transactions';
 const router = express.Router();
 router.use(authMiddleware);
 
+// Helper to calculate the REAL credit card payment date for the next installment
+// based on cutoff and payment days, not just the purchase date.
+const calculateNextPaymentDate = (purchase: any) => {
+    if (purchase.installments && purchase.paidInstallments >= purchase.installments) return null;
+
+    const account = purchase.account;
+    // Fallback if no card cycle info
+    if (!account || !account.cutoffDay || !account.paymentDay) {
+        const nextInstallmentNum = purchase.paidInstallments + 1;
+        const d = new Date(purchase.purchaseDate);
+        d.setMonth(d.getMonth() + (nextInstallmentNum - 1));
+        return d;
+    }
+
+    // 1. Calculate the 'Charge Date' (when commerce charges the card)
+    // Installment 1 = Purchase Date + 0 months
+    // Installment 2 = Purchase Date + 1 month
+    const nextInstallmentNum = purchase.paidInstallments + 1;
+    const chargeDate = new Date(purchase.purchaseDate);
+    chargeDate.setMonth(chargeDate.getMonth() + (nextInstallmentNum - 1));
+
+    // 2. Find which Cutoff this charge belongs to
+    let relevantCutoffDate = new Date(chargeDate);
+    relevantCutoffDate.setDate(account.cutoffDay);
+
+    // If charge is AFTER the cutoff day of that month, it rolls over to NEXT month's cutoff
+    if (chargeDate.getDate() > account.cutoffDay) {
+        relevantCutoffDate.setMonth(relevantCutoffDate.getMonth() + 1);
+    }
+
+    // 3. Calculate Payment Date relative to that Cutoff
+    // Rule: If PaymentDay <= CutoffDay, payment is in the NEXT month after cutoff
+    let paymentDate = new Date(relevantCutoffDate);
+    if (account.paymentDay <= account.cutoffDay) {
+        paymentDate.setMonth(paymentDate.getMonth() + 1);
+    }
+    paymentDate.setDate(account.paymentDay);
+
+    return paymentDate;
+};
+
 // GET all installment purchases for the user
 router.get('/', async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
@@ -56,7 +97,12 @@ router.get('/', async (req: AuthRequest, res) => {
             }
         }
 
-        res.json(purchases);
+        const response = purchases.map(p => ({
+            ...p,
+            nextPaymentDate: calculateNextPaymentDate(p)
+        }));
+
+        res.json(response);
     } catch (error) {
         console.error("Failed to retrieve installment purchases:", error);
         res.status(500).json({ message: 'Failed to retrieve installment purchases.' });
@@ -214,7 +260,10 @@ router.get('/:id', async (req: AuthRequest, res) => {
             });
         }
 
-        res.json(purchase);
+        res.json({
+            ...purchase,
+            nextPaymentDate: calculateNextPaymentDate(purchase)
+        });
     } catch (error: any) {
         console.error("Failed to retrieve installment purchase:", error);
         res.status(500).json({ message: error.message || 'Failed to retrieve installment purchase.' });

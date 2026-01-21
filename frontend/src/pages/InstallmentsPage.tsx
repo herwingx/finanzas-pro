@@ -49,9 +49,10 @@ const MSIDetailSheet = ({
     const nextPayNum = purchase.paidInstallments + 1;
     const nextAmount = Math.min(purchase.monthlyPayment, remaining);
 
-    // Naive next date: purchase date + N months
-    const nextDate = new Date(purchase.purchaseDate);
-    nextDate.setMonth(nextDate.getMonth() + purchase.paidInstallments);
+    // Use backend calculated date correct for Credit Card Cycle if available
+    const nextDate = (purchase as any).nextPaymentDate
+        ? new Date((purchase as any).nextPaymentDate)
+        : new Date(new Date(purchase.purchaseDate).setMonth(new Date(purchase.purchaseDate).getMonth() + purchase.paidInstallments));
 
     /* Handlers */
     const handleManualPayment = () => {

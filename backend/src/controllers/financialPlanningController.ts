@@ -487,9 +487,9 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     const msiPaymentsDue: any[] = [];
     const isLongPeriod = ['bimestral', 'semestral', 'anual'].includes(periodType);
 
-    // Para períodos cortos: usar lógica de ciclos de corte
-    // Para períodos largos: usar solo proyección extendida (más abajo)
-    if (!isLongPeriod) {
+    // ALWAYS calculate TDC payments for the period (cycles logic runs for all period types)
+    // For long periods, we ALSO add extended MSI projections below (section 3.5)
+    if (true) { // Was: if (!isLongPeriod) - changed to always run
       for (const account of creditAccounts) {
 
         // P1 FIX: Handle Simple LOAN accounts (Interest only)
@@ -521,21 +521,29 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
 
         // We look for PAYMENT DATES that fall within the user's view period.
-        // E.g. User views "December". Payment Date is Dec 30.
-        const checkDates = [
-          new Date(periodStart.getFullYear(), periodStart.getMonth(), account.paymentDay),
-          new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, account.paymentDay),
-          new Date(periodStart.getFullYear(), periodStart.getMonth() - 1, account.paymentDay),
-          new Date(periodStart.getFullYear(), periodStart.getMonth() - 2, account.paymentDay), // Look further back for overdue
-          new Date(periodStart.getFullYear(), periodStart.getMonth() - 3, account.paymentDay)  // Look even further back
-        ];
+        // For long periods (bimestral+), we need to check more months ahead
+        const monthsToCheck = isLongPeriod ? 12 : 2; // Up to 12 months for long periods
+        const checkDates: Date[] = [];
+
+        // Add dates from 3 months back to monthsToCheck months ahead
+        for (let m = -3; m <= monthsToCheck; m++) {
+          checkDates.push(new Date(periodStart.getFullYear(), periodStart.getMonth() + m, account.paymentDay));
+        }
 
         for (const payDate of checkDates) {
           // Ensure accurate comparison by resetting hours
           payDate.setHours(12, 0, 0, 0);
 
-          // Allow overdue payments (before start) to be checked, as long as they are not too far in future (after end)
-          if (payDate <= periodEnd) {
+          // 1. Calculate the Cutoff Date associated with this Payment Date (Moved UP)
+          let cutoffDate = new Date(payDate);
+          if (account.paymentDay <= account.cutoffDay) {
+            cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+          }
+          cutoffDate.setDate(account.cutoffDay);
+          cutoffDate.setHours(23, 59, 59, 999);
+
+          // Allow overdue payments OR if Cutoff is within period
+          if (payDate <= periodEnd || (cutoffDate >= periodStart && cutoffDate <= periodEnd)) {
 
             // P1 FIX: Check for Frozen Statement (Source of Truth)
             // If we have a generated statement for this due date, use it instead of recalculating
@@ -571,17 +579,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             // - If Payment(30) == Cutoff(30), payment is in the NEXT month (most common for end-of-month cards)
             //   Example: Cutoff Dec 30, Payment Jan 30
             // 
-            // The rule: Payment is ALWAYS after Cutoff. If paymentDay <= cutoffDay,
-            // then payment must be in the following month.
+            // 1. (Cutoff Date already calculated above)
 
-            let cutoffDate = new Date(payDate);
-            if (account.paymentDay <= account.cutoffDay) {
-              // Payment day is same or less than cutoff day, so payment is NEXT month
-              // Therefore, cutoff was the PREVIOUS month
-              cutoffDate.setMonth(cutoffDate.getMonth() - 1);
-            }
-            cutoffDate.setDate(account.cutoffDay);
-            cutoffDate.setHours(23, 59, 59, 999); // End of the cutoff day
 
             // 2. Calculate the Previous Cutoff Date (Start of Cycle)
             const prevCutoffDate = new Date(cutoffDate);
@@ -629,40 +628,53 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             // 3.1 MSI Logic: Which installments fall in this cycle?
             // An installment 'event' happens on the purchase day of each month.
             // We check if that 'event date' falls within [cycleStartDate, cutoffDate].
+            // CRITICAL: Also verify the installment number hasn't been paid yet.
 
-            const accountMsiDue = account.installmentPurchases.filter(msi => {
-              // Skip if already paid in this cycle
-              if (paidMsiIds.has(msi.id)) {
-                return false;
-              }
+            const accountMsiDueWithInfo: Array<{ msi: typeof account.installmentPurchases[0], installmentNumber: number, isLastInstallment: boolean }> = [];
+
+            for (const msi of account.installmentPurchases) {
+              // Skip if already paid in this cycle via transaction
+              if (paidMsiIds.has(msi.id)) continue;
 
               const purchaseDate = new Date(msi.purchaseDate);
               const purchaseDay = purchaseDate.getDate();
 
-              // Construct potential charge dates in the months covered by the cycle
-              // The cycle can span two months (e.g. Nov 13 - Dec 12).
-
-              // We test the "Purchase Day" in the Month of the CycleStart
+              // Construct potential charge dates
               const candidate1 = new Date(cycleStartDate.getFullYear(), cycleStartDate.getMonth(), purchaseDay, 12, 0, 0);
-
-              // We test the "Purchase Day" in the Month of the CutoffDate
               const candidate2 = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), purchaseDay, 12, 0, 0);
 
-              // Is Candidate 1 within the cycle? AND is it after/on the original purchase date?
               const valid1 = candidate1 >= cycleStartDate && candidate1 <= cutoffDate && candidate1 >= purchaseDate;
-
-              // Is Candidate 2 within the cycle?
               const valid2 = candidate2 >= cycleStartDate && candidate2 <= cutoffDate && candidate2 >= purchaseDate;
 
-              if (valid1 || valid2) {
-                return true;
-              }
-              return false;
-            });
+              const chargeDate = valid1 ? candidate1 : (valid2 ? candidate2 : null);
+              if (!chargeDate) continue;
 
-            // 3.2 Regular Purchases Logic
-            const cycleExpenses = await prisma.transaction.aggregate({
-              _sum: { amount: true },
+              // Calculate which installment number this charge date corresponds to
+              // Installment 1 is charged 1 month after purchase, installment 2 is 2 months, etc.
+              const monthsDiff = (chargeDate.getFullYear() - purchaseDate.getFullYear()) * 12
+                + (chargeDate.getMonth() - purchaseDate.getMonth());
+              const cycleInstallmentNumber = monthsDiff;
+
+              // Check if this installment has already been paid (using paidInstallments from DB)
+              // paidInstallments = count of installments already paid
+              // cycleInstallmentNumber is 0-based index (0 = 1st installment, 1 = 2nd installment)
+              // If paid 1, we exclude index 0. We keep index 1.
+              if (cycleInstallmentNumber < msi.paidInstallments) continue; // Already paid
+
+              // Check if beyond total installments (Indices 0 to installments-1 are valid)
+              if (cycleInstallmentNumber >= msi.installments) continue; // Beyond total
+
+              // Include this MSI with its computed installment number
+              // Add 1 to installmentNumber for display (Cuota 1, Cuota 2...)
+              accountMsiDueWithInfo.push({
+                msi,
+                installmentNumber: cycleInstallmentNumber + 1,
+                isLastInstallment: (cycleInstallmentNumber + 1) === msi.installments
+              });
+            }
+
+            // 3.2 Regular Purchases Logic (Fetch DETAILS instead of just aggregate)
+            const cycleTransactions = await prisma.transaction.findMany({
               where: {
                 accountId: account.id,
                 type: 'expense',
@@ -672,39 +684,37 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                   lte: cutoffDate
                 },
                 deletedAt: null
-              }
+              },
+              include: { category: true }
             });
 
-            const nonMsiTotal = cycleExpenses._sum.amount || 0;
+            const nonMsiTotal = cycleTransactions.reduce((sum, t) => sum + t.amount, 0);
 
             // 3.3 Add Projected Recurring Expenses on this Card that fall within the cycle
-            // This ensures future subscriptions etc. are included in the estimated payment
-            const projectedCardExpenses = expectedExpenses
-              .filter(e =>
-                e.accountId === account.id &&
-                e.dueDate >= cycleStartDate &&
-                e.dueDate <= cutoffDate
-              )
-              .reduce((sum, e) => sum + e.amount, 0);
+            // Include details for display
+            const projectedCardExpensesList = expectedExpenses.filter(e =>
+              e.accountId === account.id &&
+              e.dueDate >= cycleStartDate &&
+              e.dueDate <= cutoffDate
+            );
+            const projectedCardExpenses = projectedCardExpensesList.reduce((sum, e) => sum + e.amount, 0);
 
             // Subtract already paid regular amount
             const remainingRegularTotal = Math.max(0, (nonMsiTotal + projectedCardExpenses) - paidRegularAmount);
 
 
-            const msiTotal = accountMsiDue.reduce((sum, m) => sum + m.monthlyPayment, 0);
+            const msiTotal = accountMsiDueWithInfo.reduce((sum, item) => sum + item.msi.monthlyPayment, 0);
             const totalPayable = msiTotal + remainingRegularTotal;
 
             if (totalPayable > 0) {
-              accountMsiDue.forEach(msi => {
-                // Calcular cuota actual: paidAmount / monthlyPayment + 1
-                const paidInstallments = Math.round(msi.paidAmount / msi.monthlyPayment);
-                const currentInstallment = paidInstallments + 1;
-                const isLastInstallment = currentInstallment >= msi.installments;
+              // Calculate if payment is overdue
+              const isPaymentOverdue = payDate < userLocalNow;
 
+              accountMsiDueWithInfo.forEach(({ msi, installmentNumber, isLastInstallment }) => {
                 msiPaymentsDue.push({
                   id: msi.id,
                   originalId: msi.id,
-                  description: `Cuota ${currentInstallment}/${msi.installments} - ${msi.description}`,
+                  description: `Cuota ${installmentNumber}/${msi.installments} - ${msi.description}`,
                   purchaseName: msi.description,
                   amount: msi.monthlyPayment,
                   dueDate: payDate,
@@ -713,24 +723,63 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                   accountName: account.name,
                   isMsi: true,
                   isLastInstallment,
-                  installmentNumber: currentInstallment,
+                  installmentNumber,
                   totalInstallments: msi.installments,
                   msiTotal: msi.totalAmount,
-                  paidAmount: msi.paidAmount
+                  paidAmount: msi.paidAmount,
+                  paidInstallments: msi.paidInstallments,
+                  isOverdue: isPaymentOverdue
                 });
               });
 
               if (remainingRegularTotal > 0) {
-                msiPaymentsDue.push({
-                  id: `cc-spent-${account.id}-${payDate.getTime()}`,
-                  description: `Consumos del Periodo (${account.name})`,
-                  amount: remainingRegularTotal,
-                  dueDate: payDate,
-                  accountId: account.id,
-                  accountName: account.name,
-                  isMsi: false,
-                  category: { name: 'Tarjeta', color: '#64748b', icon: 'credit_card' }
-                });
+                // Feature: Show details if no partial payments made to card (cleanest view)
+                if (paidRegularAmount === 0) {
+                  // 1. Add Actual Transactions
+                  cycleTransactions.forEach(tx => {
+                    msiPaymentsDue.push({
+                      id: tx.id,
+                      description: tx.description,
+                      amount: tx.amount,
+                      dueDate: payDate,
+                      accountId: account.id,
+                      accountName: account.name,
+                      isMsi: false,
+                      category: tx.category || { name: 'Gasto', color: '#64748b', icon: 'receipt' },
+                      isOverdue: isPaymentOverdue
+                    });
+                  });
+
+                  // 2. Add Projected Recurring
+                  projectedCardExpensesList.forEach(proj => {
+                    msiPaymentsDue.push({
+                      id: `proj-${proj.id}`,
+                      description: `${proj.description} (Proyectado)`,
+                      amount: proj.amount,
+                      dueDate: payDate,
+                      accountId: account.id,
+                      accountName: account.name,
+                      isMsi: false,
+                      isProjection: true,
+                      category: proj.category || { name: 'Fijo', color: '#64748b', icon: 'calendar_today' },
+                      isOverdue: isPaymentOverdue
+                    });
+                  });
+
+                } else {
+                  // Fallback to Aggregate if partial payments exist
+                  msiPaymentsDue.push({
+                    id: `cc-spent-${account.id}-${payDate.getTime()}`,
+                    description: `Consumos del Periodo (${account.name}) - Restante`,
+                    amount: remainingRegularTotal,
+                    dueDate: payDate,
+                    accountId: account.id,
+                    accountName: account.name,
+                    isMsi: false,
+                    category: { name: 'Tarjeta', color: '#64748b', icon: 'credit_card' },
+                    isOverdue: isPaymentOverdue
+                  });
+                }
               }
             }
           }
@@ -748,9 +797,10 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         const hasCycleInfo = account.cutoffDay && account.paymentDay;
 
         for (const msi of account.installmentPurchases) {
-          // Calculate remaining installments
-          const paidInstallments = Math.floor(msi.paidAmount / msi.monthlyPayment);
-          const remainingInstallments = msi.installments - paidInstallments;
+          // Use paidInstallments from DB as source of truth
+          // This correctly accounts for pre-paid installments when MSI was created
+          const paidCount = msi.paidInstallments;
+          const remainingInstallments = msi.installments - paidCount;
 
           if (remainingInstallments <= 0) continue;
 
@@ -758,10 +808,12 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
 
           // Project each remaining installment
           for (let i = 0; i < remainingInstallments; i++) {
-            // 1. Calculate the 'theoretical' charge date (when the store charges the card)
-            // This happens on the anniversary of the purchase each month
+            // Calculate the charge date for this installment
+            // Installment 1 is charged 0 months after purchase (usually), Installment 2 is 1 month after, etc.
+            // Formula: PurchaseDate + (InstallmentNumber - 1) months
+            const installmentNum = paidCount + 1 + i;
             const chargeDate = new Date(purchaseDate);
-            chargeDate.setMonth(chargeDate.getMonth() + paidInstallments + i + 1);
+            chargeDate.setMonth(chargeDate.getMonth() + (installmentNum - 1));
 
             let finalPaymentDate = new Date(chargeDate);
 
@@ -815,7 +867,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                   originalId: msi.id,
                   description: isLastInstallment
                     ? `Última cuota de "${msi.description}"`
-                    : `Cuota ${paidInstallments + i + 1}/${msi.installments} - ${msi.description}`,
+                    : `Cuota ${installmentNum}/${msi.installments} - ${msi.description}`,
                   purchaseName: msi.description,
                   amount: msi.monthlyPayment,
                   dueDate: finalPaymentDate,
@@ -825,11 +877,13 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                   isMsi: true,
                   isProjection: true,
                   isLastInstallment,
-                  installmentNumber: paidInstallments + i + 1,
+                  installmentNumber: installmentNum,
                   totalInstallments: msi.installments,
                   msiTotal: msi.totalAmount,
                   paidAmount: msi.paidAmount,
-                  remainingAmount: msi.totalAmount - msi.paidAmount - (msi.monthlyPayment * (i + 1))
+                  paidInstallments: paidCount,
+                  remainingAmount: msi.totalAmount - msi.paidAmount - (msi.monthlyPayment * (i + 1)),
+                  isOverdue: finalPaymentDate < userLocalNow
                 });
               }
             }
@@ -883,7 +937,11 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     const totalExpectedIncome = expectedIncome.reduce((acc, curr) => acc + curr.amount, 0);
     const totalPeriodIncome = totalReceivedIncome + totalExpectedIncome;
     const totalRecurringExpenses = expectedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const totalMsiPayments = msiPaymentsDue.reduce((acc, curr: any) => acc + curr.amount, 0);
+    // Filter MSI payments for CASHFLOW logic:
+    // Only subtract from Projected Balance if Due Date is WITHIN the period (or overdue).
+    // Future payments (next period) shown for visibility should NOT reduce current liquidity.
+    const msiPaymentsForCashflow = msiPaymentsDue.filter((p: any) => p.dueDate <= periodEnd);
+    const totalMsiPayments = msiPaymentsForCashflow.reduce((acc, curr: any) => acc + curr.amount, 0);
 
     const totalCommitments = totalRecurringExpenses + totalMsiPayments;
 
@@ -960,7 +1018,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
     // 5.2 Include PROJECTED (Future) expenses
 
     expectedExpenses.forEach(bg => categorize(bg.amount, bg.category?.budgetType || 'NEEDS'));
-    msiPaymentsDue.forEach(msi => categorize(msi!.amount, msi!.category?.budgetType || 'NEEDS'));
+    msiPaymentsForCashflow.forEach(msi => categorize(msi!.amount, msi!.category?.budgetType || 'NEEDS'));
 
     // Include loan collections (lent) as Savings in 50/30/20 analysis
     // These are filtered by expectedPayDate in the period (line 193-200), so only loans

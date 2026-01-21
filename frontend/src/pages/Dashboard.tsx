@@ -117,15 +117,15 @@ const Dashboard: React.FC = () => {
         onClose={() => setShowNotifications(false)}
       />
 
-      {/* BENTO GRID PRINCIPAL */}
-      <main className="px-4 md:px-8 py-2 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in">
+      {/* BENTO GRID PRINCIPAL - Cambiado a grid-cols-2 en móvil para permitir KPIs lado a lado */}
+      <main className="px-4 md:px-8 py-2 max-w-[1400px] mx-auto grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 animate-fade-in">
 
         {/* 1. Main Balance con Privacidad */}
-        <div className="md:col-span-2 row-span-2 h-[260px] md:h-auto bento-card relative overflow-hidden bg-linear-to-br from-app-surface to-app-subtle dark:to-[#0A0A0A] p-6 flex flex-col justify-between border-0 shadow-lg">
+        <div className="col-span-2 md:col-span-2 row-span-2 min-h-[180px] md:h-auto bento-card relative overflow-hidden bg-linear-to-br from-app-surface to-app-subtle dark:to-[#0A0A0A] p-5 md:p-6 flex flex-col justify-between border-0 shadow-lg">
           <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-app-primary opacity-10 blur-[80px] rounded-full pointer-events-none" />
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2 opacity-80">
-              <span className="text-xs font-bold text-app-muted uppercase tracking-wide">Disponible</span>
+            <div className="flex items-center gap-2 mb-1 md:mb-2 opacity-80">
+              <span className="text-[10px] md:text-xs font-bold text-app-muted uppercase tracking-wide">Disponible</span>
               <button onClick={() => setPrivacyMode(!privacyMode)} className="hover:text-app-primary">
                 <span className="material-symbols-outlined text-[16px] align-bottom">{privacyMode ? 'visibility_off' : 'visibility'}</span>
               </button>
@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. Widgets de Estadísticas */}
+        {/* 2. Widgets de Estadísticas - Ahora lado a lado en móvil (col-span-1 en grid de 2) */}
         <StatWidget
           label="Ingresos"
           value={stats.monthStats.income}
@@ -158,17 +158,17 @@ const Dashboard: React.FC = () => {
           className="col-span-1 md:col-span-1 lg:col-span-2"
         />
 
-        {/* Financial Planning Widget - Ancho completo */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-4 xl:col-span-4">
+        {/* Financial Planning Widget - Ancho completo en móvil */}
+        <div className="col-span-2 md:col-span-2 lg:col-span-4 xl:col-span-4">
           <FinancialPlanningWidget />
         </div>
         {/* 4. Chart Grande */}
-        <BentoCard title="Tendencia" className="col-span-1 md:col-span-2 lg:col-span-3 min-h-[300px]" action={<Link to="/reports" className="text-xs font-bold text-app-primary">Ver detalle</Link>}>
+        <BentoCard title="Tendencia" className="col-span-2 md:col-span-2 lg:col-span-3 min-h-[300px]" action={<Link to="/reports" className="text-xs font-bold text-app-primary">Ver detalle</Link>}>
           <SpendingTrendChart transactions={transactions || []} />
         </BentoCard>
 
         {/* 5. Placeholder Presupuesto */}
-        <BentoCard className="col-span-1 md:col-span-2 lg:col-span-1 min-h-[200px]" title="Alertas">
+        <BentoCard className="col-span-2 md:col-span-2 lg:col-span-1 min-h-[160px] md:min-h-[200px]" title="Alertas">
           {unreadCount > 0 ? (
             <div className="h-full flex flex-col justify-center items-center text-center">
               <span className="size-3 bg-app-danger rounded-full animate-ping mb-2" />
@@ -184,7 +184,7 @@ const Dashboard: React.FC = () => {
         </BentoCard>
 
         {/* 6. Transacciones Recientes */}
-        <BentoCard title="Últimos Movimientos" className="col-span-1 md:col-span-2 lg:col-span-4" action={<Link to="/history" className="text-xs font-bold text-app-primary">Ver todos</Link>}>
+        <BentoCard title="Últimos Movimientos" className="col-span-2 md:col-span-2 lg:col-span-4" action={<Link to="/history" className="text-xs font-bold text-app-primary">Ver todos</Link>}>
           <div className="flex flex-col gap-1">
             {transactions?.slice(0, 5).map((tx, index) => {
               const cat = categories?.find(c => c.id === tx.categoryId);

@@ -192,7 +192,8 @@ const FinancialAnalysis: React.FC = () => {
 
     // Force group by recurrence ID (for expenses) to totalize them over the period
     const allExpenses = groupBy(summary.expectedExpenses, x => x.recurringTransactionId || x.description, true);
-    const rawMsi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment && (m.isMsi || m.totalInstallments > 1));
+    // Include regular credit card charges too, not just MSI
+    const rawMsi = summary.msiPaymentsDue.filter((m: any) => !m.isLastInstallment);
     const allMsi = groupBy(rawMsi, x => x.originalId || x.id, false);
 
     return {
@@ -447,11 +448,11 @@ const FinancialAnalysis: React.FC = () => {
             </div>
           </div>
 
-          {/* MSI List */}
+          {/* MSI & Credit Card List */}
           <div>
             <div className="flex justify-between items-center mb-2 px-1">
               <h4 className="text-xs font-bold text-app-muted uppercase tracking-wider flex items-center gap-2">
-                <span className="size-2 bg-indigo-500 rounded-full" /> Meses s/ Intereses
+                <span className="size-2 bg-indigo-500 rounded-full" /> Pagos de Tarjeta
               </h4>
               {upcomingPayments.countMsiGrouped > 5 && (
                 <button onClick={() => setExpandedMsi(!expandedMsi)} className="text-[10px] font-bold text-app-primary hover:underline">
@@ -461,16 +462,22 @@ const FinancialAnalysis: React.FC = () => {
             </div>
             <div className="bg-app-surface border border-app-border rounded-3xl divide-y divide-app-subtle overflow-hidden">
               {upcomingPayments.msi.length === 0 && (
-                <p className="p-6 text-center text-xs text-app-muted">Sin pagos a plazos activos.</p>
+                <p className="p-6 text-center text-xs text-app-muted">Sin pagos programados.</p>
               )}
               {upcomingPayments.msi.map((e: any, i) => {
                 // Safe description handling & cleaning of card names in parens e.g. "Description (CardName)" -> "Description"
-                const rawDesc = e.purchaseName || (e.description ? e.description.replace(/^Cuota \d+\/\d+ - /, '') : 'Pago MSI');
+                const rawDesc = e.purchaseName || (e.description ? e.description.replace(/^Cuota \d+\/\d+ - /, '') : 'Pago de Tarjeta');
                 // Remove content in parenthesis if it looks like a card name (at end of string usually)
                 const desc = rawDesc.replace(/\s*\([^)]+\)$/, '').trim();
-                const label = (e.minInstallment !== undefined && e.maxInstallment !== undefined)
-                  ? (e.minInstallment === e.maxInstallment ? `Cuota ${e.minInstallment}` : `${e.minInstallment}-${e.maxInstallment}`)
-                  : 'Cuota';
+
+                // Determine if it is MSI or regular charge
+                const isMsi = e.totalInstallments && e.totalInstallments > 1;
+
+                const label = isMsi
+                  ? (e.minInstallment !== undefined && e.maxInstallment !== undefined)
+                    ? (e.minInstallment === e.maxInstallment ? `Cuota ${e.minInstallment}` : `${e.minInstallment}-${e.maxInstallment}`)
+                    : 'Cuota'
+                  : 'Cargo Regular';
 
                 return (
                   <div key={i} className="flex justify-between items-center p-3 hover:bg-app-subtle/50 transition-colors">
@@ -480,8 +487,8 @@ const FinancialAnalysis: React.FC = () => {
                         <span className="text-[10px] bg-app-subtle px-1.5 py-0.5 rounded text-app-muted font-medium font-mono">
                           {formatDateUTC(e.dueDate, { day: 'numeric', month: 'short' })}
                         </span>
-                        <span className="text-[10px] bg-indigo-500/10 px-1.5 py-0.5 rounded text-indigo-600 dark:text-indigo-400 font-bold">
-                          {label} de {e.totalInstallments}
+                        <span className={`text-[10px] bg-indigo-500/10 px-1.5 py-0.5 rounded text-indigo-600 dark:text-indigo-400 font-bold`}>
+                          {isMsi ? `${label} de ${e.totalInstallments}` : label}
                         </span>
                       </div>
                     </div>

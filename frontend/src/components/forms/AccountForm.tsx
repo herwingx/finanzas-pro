@@ -108,7 +108,10 @@ export const AccountForm: React.FC<AccountFormProps> = ({ existingAccount, onClo
 
       toastSuccess(`Saldo corregido a ${target}`);
       onClose();
-    } catch (e) { toastError('Falló ajuste'); }
+    } catch (e: any) {
+      const errorMsg = e?.response?.data?.message || e?.message || 'Falló ajuste';
+      toastError(errorMsg);
+    }
   };
 
   const handleDelete = async () => {
@@ -118,7 +121,10 @@ export const AccountForm: React.FC<AccountFormProps> = ({ existingAccount, onClo
         await deleteAccount.mutateAsync(existingAccount.id);
         toastSuccess('Cuenta eliminada');
         onClose();
-      } catch (e) { toastError('Error al eliminar'); }
+      } catch (e: any) {
+        const errorMsg = e?.response?.data?.message || e?.message || 'Error al eliminar';
+        toastError(errorMsg);
+      }
     }
   };
 

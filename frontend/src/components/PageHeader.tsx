@@ -32,8 +32,21 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const shouldShowBack = showBackButton ?? !isMainPage;
 
   const handleBack = () => {
-    if (onBack) onBack();
-    else navigate(-1);
+    if (onBack) {
+      onBack();
+    } else {
+      // Si hay una ruta de origen en el estado, ir ahí
+      const referrer = location.state?.from as string | undefined;
+      if (referrer && referrer !== location.pathname) {
+        navigate(referrer, { replace: true });
+      } else if (window.history.length > 2) {
+        // Solo usar navigate(-1) si hay historial suficiente
+        navigate(-1);
+      } else {
+        // Fallback: ir al dashboard
+        navigate('/', { replace: true });
+      }
+    }
   };
 
   return (

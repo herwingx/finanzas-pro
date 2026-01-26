@@ -107,10 +107,8 @@ export const deleteAccount = async (id: string): Promise<void> => {
         headers: getAuthHeaders(),
     });
     if (!response.ok) {
-        if (response.status === 409) {
-            throw new Error('Cannot delete account because it has associated transactions.');
-        }
-        throw new Error('Failed to delete account');
+        const errorData = await response.json().catch(() => ({ message: 'Error al eliminar cuenta' }));
+        throw new Error(errorData.message || 'Failed to delete account');
     }
 };
 

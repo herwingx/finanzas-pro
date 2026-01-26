@@ -293,7 +293,7 @@ export const FinancialPlanningWidget: React.FC = () => {
   const [showAllIncome, setShowAllIncome] = useState(false);
 
   // Queries
-  const { data: summary, isLoading, isError } = useFinancialPeriodSummary(periodType);
+  const { data: summary, isLoading, isError, refetch: refetchSummary } = useFinancialPeriodSummary(periodType);
   const { data: accounts } = useAccounts();
 
   // Mutations
@@ -344,6 +344,11 @@ export const FinancialPlanningWidget: React.FC = () => {
       success: (data) => `${type === 'pay' ? 'Pagado' : 'Recibido'}: ${label}`,
       error: 'Hubo un error al procesar'
     });
+
+    // Refetch para actualizar el widget inmediatamente
+    promise.then(() => {
+      refetchSummary();
+    }).catch(() => { });
   };
 
   if (isLoading) return <SkeletonPlanningWidget />;
@@ -544,6 +549,12 @@ export const FinancialPlanningWidget: React.FC = () => {
                     success: 'Pago de tarjeta registrado',
                     error: (err) => `Error: ${err.message || 'No se pudo procesar'}`
                   });
+
+                  // Refetch y colapsar tarjeta después del pago exitoso
+                  promise.then(() => {
+                    setExpandedCard(null);
+                    refetchSummary(); // Actualizar widget inmediatamente
+                  }).catch(() => { });
                 }}
                 onPayIndividual={(item: any) => {
                   const sourceId = selectedSourceAccounts[key];
@@ -560,6 +571,12 @@ export const FinancialPlanningWidget: React.FC = () => {
                       success: 'Mensualidad pagada',
                       error: 'Error al pagar'
                     });
+
+                    // Refetch y colapsar tarjeta después del pago exitoso
+                    promise.then(() => {
+                      setExpandedCard(null);
+                      refetchSummary(); // Actualizar widget inmediatamente
+                    }).catch(() => { });
                   } else {
                     // Regular expense in card (fallback to payRecurring if acts as such, or generic pay)
                     // Assuming for now it's treated like a recurring transaction or similar if it's in this list

@@ -87,7 +87,7 @@ export const useFinancialPeriodSummary = (
   return useQuery<FinancialPeriodSummary>({
     queryKey: ['financialPeriodSummary', periodType, mode],
     queryFn: () => apiService.getFinancialPeriodSummary(periodType, mode),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 segundos - actualizaciones más rápidas después de pagos
   });
 };
 

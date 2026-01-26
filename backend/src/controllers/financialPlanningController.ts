@@ -1209,29 +1209,30 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       };
 
       res.json(summary);
-    } catch (error) {
-      console.error('Error getting financial period summary:', error);
-      res.status(500).json({ error: 'Failed to get financial summary' });
     }
-  };
+  } catch (error) {
+    console.error('Error getting financial period summary:', error);
+    res.status(500).json({ error: 'Failed to get financial summary' });
+  }
+};
 
-  export const getUpcomingCommitments = async (req: AuthRequest, res: Response) => {
-    try {
-      const userId = req.user?.userId;
-      if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const days = parseInt(req.query.days as string) || 7;
-      const now = new Date();
-      const endDate = addDays(now, days);
-
-      // Similar logic but for next X days
-      // ... (simplified version of the above)
-
-      res.json({ message: 'Upcoming commitments endpoint' });
-    } catch (error) {
-      console.error('Error getting upcoming commitments:', error);
-      res.status(500).json({ error: 'Failed to get upcoming commitments' });
+export const getUpcomingCommitments = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-  };
+
+    const days = parseInt(req.query.days as string) || 7;
+    const now = new Date();
+    const endDate = addDays(now, days);
+
+    // Similar logic but for next X days
+    // ... (simplified version of the above)
+
+    res.json({ message: 'Upcoming commitments endpoint' });
+  } catch (error) {
+    console.error('Error getting upcoming commitments:', error);
+    res.status(500).json({ error: 'Failed to get upcoming commitments' });
+  }
+};

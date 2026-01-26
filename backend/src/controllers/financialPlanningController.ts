@@ -329,6 +329,26 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       }
       else if (freq === 'MONTHLY' || freq === 'monthly') d.setMonth(d.getMonth() + 1);
       else if (freq === 'YEARLY' || freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
+      else if (freq === 'MONTHLY' || freq === 'monthly') d.setMonth(d.getMonth() + 1);
+      else if (freq === 'YEARLY' || freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
+      return d;
+    };
+
+    // Helper to calculate PREVIOUS date for backfilling
+    const getPreviousDate = (date: Date, freq: string): Date => {
+      const d = new Date(date);
+      if (freq === 'DAILY' || freq === 'daily') d.setDate(d.getDate() - 1);
+      else if (freq === 'WEEKLY' || freq === 'weekly') d.setDate(d.getDate() - 7);
+      else if (freq === 'BIWEEKLY' || freq === 'biweekly') d.setDate(d.getDate() - 14);
+      else if (freq === 'biweekly_15_30' || freq === 'BIWEEKLY_15_30') {
+        if (d.getDate() > 15) {
+          d.setDate(15);
+        } else {
+          d.setDate(0); // Last day of previous month
+        }
+      }
+      else if (freq === 'MONTHLY' || freq === 'monthly') d.setMonth(d.getMonth() - 1);
+      else if (freq === 'YEARLY' || freq === 'yearly') d.setFullYear(d.getFullYear() - 1);
       return d;
     };
 
@@ -369,8 +389,30 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
           break;
         }
 
+        // Check for payments with fuzzy matching (tolerance based on frequency)
+        // This handles cases where user pays a few days before or after the due date
+        let isPaid = paidDates.has(projDateStr);
+
+        if (!isPaid) {
+          const toleranceDays = (rt.frequency === 'WEEKLY' || rt.frequency === 'weekly') ? 2 : 5;
+
+          // Check surrounding days
+          for (let d = -toleranceDays; d <= toleranceDays; d++) {
+            if (d === 0) continue;
+            const checkDate = new Date(projectionDate);
+            checkDate.setDate(checkDate.getDate() + d);
+            const checkStr = checkDate.toISOString().split('T')[0];
+            if (paidDates.has(checkStr)) {
+              isPaid = true;
+              // Optional: We could "consume" this date to avoid double counting for very close recurring intervals,
+              // but for typical personal finance frequencies (weekly+) this simple check is usually sufficient.
+              break;
+            }
+          }
+        }
+
         // Only add if in period, not already added globally, and not paid
-        if (isInPeriod && !globalAddedIds.has(uniqueId) && !paidDates.has(projDateStr)) {
+        if (isInPeriod && !globalAddedIds.has(uniqueId) && !isPaid) {
           globalAddedIds.add(uniqueId);
 
           const isOverdue = projectionDate < today;
@@ -406,6 +448,64 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         }
 
         instanceCount++;
+      }
+
+      // --- BACKFILLING LOGIC ---
+      // Recover instances between periodStart and nextDueDate that might have been skipped
+      // e.g. If today is Jan 26, period is Jan-Feb, nextDue is Jan 31.
+      // We missed Jan 15. This loop finds it.
+
+      let backfillDate = getPreviousDate(new Date(rt.nextDueDate), rt.frequency);
+
+      // Safety limit to prevent infinite loops (max 1 year back)
+      const backfillLimit = new Date(periodStart);
+      backfillLimit.setFullYear(backfillLimit.getFullYear() - 1);
+
+      while (backfillDate >= periodStart && backfillDate > backfillLimit) {
+        if (rt.startDate && backfillDate < new Date(rt.startDate)) break;
+
+        const projDateStr = backfillDate.toISOString().split('T')[0];
+        const uniqueId = `${rt.id}-${projDateStr}`;
+
+        // Check for payment
+        let isPaid = paidDates.has(projDateStr);
+        if (!isPaid) {
+          const toleranceDays = (rt.frequency === 'WEEKLY' || rt.frequency === 'weekly') ? 2 : 5;
+          for (let d = -toleranceDays; d <= toleranceDays; d++) {
+            if (d === 0) continue;
+            const checkDate = new Date(backfillDate);
+            checkDate.setDate(checkDate.getDate() + d);
+            const checkStr = checkDate.toISOString().split('T')[0];
+            if (paidDates.has(checkStr)) { isPaid = true; break; }
+          }
+        }
+
+        if (!globalAddedIds.has(uniqueId) && !isPaid) {
+          globalAddedIds.add(uniqueId);
+          const isOverdue = backfillDate < today; // Likely true for backfilled items
+
+          const item = {
+            id: rt.id,
+            uniqueId,
+            description: rt.description,
+            amount: rt.amount,
+            dueDate: new Date(backfillDate),
+            category: rt.category,
+            isOverdue,
+            hasEndDate: !!endDateLimit,
+            endDate: endDateLimit,
+            accountId: rt.accountId,
+            accountType: rt.account?.type
+          };
+
+          if (rt.type === 'income') expectedIncome.push(item);
+          else expectedExpenses.push(item);
+        }
+
+        // Move further back
+        const prevTime = backfillDate.getTime();
+        backfillDate = getPreviousDate(backfillDate, rt.frequency);
+        if (backfillDate.getTime() === prevTime) backfillDate.setDate(backfillDate.getDate() - 1); // Safety
       }
     }
 
@@ -715,7 +815,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             let availableSurplus = Math.max(0, paidRegularAmount - (nonMsiTotal + projectedCardExpenses));
 
             // Mark MSI as paid if surplus covers them
-            const msiToPay = [];
+            const msiToPay: typeof accountMsiDueWithInfo = [];
             for (const item of accountMsiDueWithInfo) {
               if (availableSurplus >= item.msi.monthlyPayment) {
                 availableSurplus -= item.msi.monthlyPayment;

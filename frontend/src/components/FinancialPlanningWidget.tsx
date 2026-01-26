@@ -440,9 +440,15 @@ export const FinancialPlanningWidget: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Incoming Money Widget */}
         <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col justify-between h-24 md:h-auto">
-          <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-            <span className="material-symbols-outlined text-[16px]">trending_up</span>
-            <span className="text-[10px] font-bold uppercase">Ingresos</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <span className="material-symbols-outlined text-[16px]">trending_up</span>
+              <span className="text-[10px] font-bold uppercase">Ingresos</span>
+            </div>
+            <InfoTooltip
+              content={`Recibido: ${formatCurrency(summary.totalReceivedIncome || 0)} | Por Recibir: ${formatCurrency(summary.totalExpectedIncome || 0)}`}
+              iconSize="14px"
+            />
           </div>
           <p className="text-xl font-bold text-app-text font-numbers">{formatCurrency(summary.totalPeriodIncome)}</p>
         </div>

@@ -220,8 +220,8 @@ const FinancialAnalysis: React.FC = () => {
 
   // Formatos
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(val);
-  const totalExpenses = summary ? summary.expectedExpenses.reduce((s: number, i: any) => s + i.amount, 0) + summary.msiPaymentsDue.reduce((s: number, i: any) => s + i.amount, 0) : 0;
-  const totalIncome = summary ? summary.expectedIncome.reduce((s: number, i: any) => s + i.amount, 0) : 0;
+  const totalExpenses = summary ? summary.totalCommitments : 0;
+  const totalIncome = summary ? summary.totalPeriodIncome : 0;
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
   if (isLoading) return <SkeletonFinancialAnalysis />;

@@ -815,7 +815,8 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
             let availableSurplus = Math.max(0, paidRegularAmount - (nonMsiTotal + projectedCardExpenses));
 
             // Mark MSI as paid if surplus covers them
-            const msiToPay: typeof accountMsiDueWithInfo = [];
+            // Mark MSI as paid if surplus covers them
+            const msiToPay: any[] = [];
             for (const item of accountMsiDueWithInfo) {
               if (availableSurplus >= item.msi.monthlyPayment) {
                 availableSurplus -= item.msi.monthlyPayment;
@@ -824,6 +825,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                 msiToPay.push(item);
               }
             }
+
 
             const msiTotal = msiToPay.reduce((sum, item) => sum + item.msi.monthlyPayment, 0);
             const totalPayable = msiTotal + remainingRegularTotal;

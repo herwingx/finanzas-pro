@@ -599,7 +599,11 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                 installmentPurchaseId: { not: null },
                 date: {
                   gte: cycleStartDate,
-                  lte: new Date() // Up to now
+                  lte: (() => {
+                    const d = new Date(payDate);
+                    d.setHours(23, 59, 59, 999);
+                    return d;
+                  })()
                 },
                 deletedAt: null
               },
@@ -617,7 +621,11 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
                 installmentPurchaseId: null,
                 date: {
                   gte: cycleStartDate,
-                  lte: new Date()
+                  lte: (() => {
+                    const d = new Date(payDate);
+                    d.setHours(23, 59, 59, 999);
+                    return d;
+                  })()
                 },
                 deletedAt: null
               }

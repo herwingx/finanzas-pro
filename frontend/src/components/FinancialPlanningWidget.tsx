@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 // Hooks & Utils
 import { useFinancialPeriodSummary } from '../hooks/useFinancialPlanning';
-import { usePayRecurringTransaction, useAccounts, usePayFullStatement, usePayMsiInstallment } from '../hooks/useApi';
+import { usePayRecurringTransaction, useAccounts, usePayFullStatement, usePayMsiInstallment, useAddTransaction } from '../hooks/useApi';
 import { formatDateUTC } from '../utils/dateUtils';
 import { SkeletonPlanningWidget } from './Skeleton';
 import { InfoTooltip } from '../components/InfoTooltip';
@@ -300,6 +300,7 @@ export const FinancialPlanningWidget: React.FC = () => {
   const { mutateAsync: payRecurring } = usePayRecurringTransaction();
   const { mutateAsync: payFullStatement } = usePayFullStatement();
   const { mutateAsync: payMsiInstallment } = usePayMsiInstallment();
+  const { mutateAsync: addTransaction } = useAddTransaction();
 
   // --- MEMOIZED DATA PROCESSING ---
   const sourceAccounts = useMemo(() => accounts?.filter(a => !['credit', 'CREDIT'].includes(a.type)) || [], [accounts]);
@@ -584,9 +585,25 @@ export const FinancialPlanningWidget: React.FC = () => {
                       refetchSummary(); // Actualizar widget inmediatamente
                     }).catch(() => { });
                   } else {
-                    // Regular expense in card (fallback to payRecurring if acts as such, or generic pay)
-                    // Assuming for now it's treated like a recurring transaction or similar if it's in this list
-                    executePayAction(item.id, item.amount, item.description || 'Cargo', 'pay');
+                    // Regular expense in card: Pay it off by creating a TRANSFER to the card
+                    const promise = addTransaction({
+                      type: 'transfer',
+                      amount: item.amount,
+                      description: `Pago: ${item.description || 'Consumo tarjeta'}`,
+                      date: new Date().toISOString(),
+                      accountId: sourceId, // From (Debit)
+                      destinationAccountId: groupedCards[key].accountId, // To (Credit)
+                    });
+
+                    toast.promise(promise, {
+                      loading: 'Registrando pago...',
+                      success: 'Pago registrado correctamente',
+                      error: 'Error al registrar pago'
+                    });
+
+                    promise.then(() => {
+                      refetchSummary();
+                    }).catch(() => { });
                   }
                 }}
                 isLongPeriod={isLongPeriod}

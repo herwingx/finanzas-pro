@@ -352,6 +352,19 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
       return d;
     };
 
+    // Helper to determine tolerance range for fuzzy matching payments
+    const getToleranceDays = (freq: string): number => {
+      const f = freq ? freq.toUpperCase() : '';
+      if (f.includes('DAILY')) return 1;
+      if (f === 'WEEKLY') return 3;
+      if (f.includes('BIWEEKLY')) return 10;
+      if (f === 'MONTHLY') return 20;
+      if (f === 'BIMONTHLY') return 40;
+      if (f === 'SEMESTRAL') return 90;
+      if (f === 'ANUAL' || f === 'YEARLY') return 60;
+      return 15;
+    };
+
     const globalAddedIds = new Set<string>();
 
     for (const rt of recurringTransactions) {
@@ -394,7 +407,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         let isPaid = paidDates.has(projDateStr);
 
         if (!isPaid) {
-          const toleranceDays = (rt.frequency === 'WEEKLY' || rt.frequency === 'weekly') ? 2 : 5;
+          const toleranceDays = getToleranceDays(rt.frequency);
 
           // Check surrounding days
           for (let d = -toleranceDays; d <= toleranceDays; d++) {
@@ -470,7 +483,7 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         // Check for payment
         let isPaid = paidDates.has(projDateStr);
         if (!isPaid) {
-          const toleranceDays = (rt.frequency === 'WEEKLY' || rt.frequency === 'weekly') ? 2 : 5;
+          const toleranceDays = getToleranceDays(rt.frequency);
           for (let d = -toleranceDays; d <= toleranceDays; d++) {
             if (d === 0) continue;
             const checkDate = new Date(backfillDate);

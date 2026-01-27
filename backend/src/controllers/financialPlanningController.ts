@@ -494,25 +494,36 @@ export const getFinancialPeriodSummary = async (req: AuthRequest, res: Response)
         }
 
         if (!globalAddedIds.has(uniqueId) && !isPaid) {
-          globalAddedIds.add(uniqueId);
-          const isOverdue = backfillDate < today; // Likely true for backfilled items
+          // Fix: If the current 'nextDueDate' is already in the future relative to today,
+          // we assume the user is "Caught Up". Any backfilled items (which are by definition previous to nextDueDate)
+          // should be considered handled/skipped if they weren't explicitly paid.
+          // This prevents showing "Overdue" ghost items when the user manually advances the date.
+          const isUserCurrent = new Date(rt.nextDueDate) > today;
 
-          const item = {
-            id: rt.id,
-            uniqueId,
-            description: rt.description,
-            amount: rt.amount,
-            dueDate: new Date(backfillDate),
-            category: rt.category,
-            isOverdue,
-            hasEndDate: !!endDateLimit,
-            endDate: endDateLimit,
-            accountId: rt.accountId,
-            accountType: rt.account?.type
-          };
+          if (isUserCurrent && backfillDate < today) {
+            // Skip adding this item as it's considered resolved by the user's future nextDueDate
+            // Move to next iteration (further back) or just continue
+          } else {
+            globalAddedIds.add(uniqueId);
+            const isOverdue = backfillDate < today;
 
-          if (rt.type === 'income') expectedIncome.push(item);
-          else expectedExpenses.push(item);
+            const item = {
+              id: rt.id,
+              uniqueId,
+              description: rt.description,
+              amount: rt.amount,
+              dueDate: new Date(backfillDate),
+              category: rt.category,
+              isOverdue,
+              hasEndDate: !!endDateLimit,
+              endDate: endDateLimit,
+              accountId: rt.accountId,
+              accountType: rt.account?.type
+            };
+
+            if (rt.type === 'income') expectedIncome.push(item);
+            else expectedExpenses.push(item);
+          }
         }
 
         // Move further back

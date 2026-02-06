@@ -49,9 +49,12 @@ services:
     networks:
       - finanzas-pro-network
 
-  # Nginx como reverse proxy INTERNO (sin exponer puertos al exterior)
+  # Nginx como reverse proxy
+  # Puerto 80 expuesto para Cloudflare Tunnel o integración con reverse proxy externo
   nginx:
     image: nginx:alpine
+    ports:
+      - "80:80"
     restart: unless-stopped
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro

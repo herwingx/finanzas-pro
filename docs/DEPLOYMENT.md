@@ -16,6 +16,13 @@ Esta configuración aísla tu red doméstica de Internet.
 - **Acceso**: Todo el tráfico entra por el túnel cifrado.
 - **Config**: Requiere `CLOUDFLARE_TUNNEL_TOKEN` en `.env`.
 
+#### Múltiples Aplicaciones con un Solo Tunnel
+
+Si tienes varias aplicaciones self-hosted bajo un mismo Cloudflare Tunnel (cada una en su propio LXC/VM con IP diferente), todas pueden usar el puerto `80` sin conflicto ya que cada contenedor tiene su propia IP.
+
+- En Finanzas Pro, el puerto `80:80` ya está mapeado en `docker-compose.yml`
+- Configura cada subdominio en el dashboard de Cloudflare Zero Trust apuntando a la IP:puerto correspondiente
+
 ### 2. VPS con IP Pública (Self-Hosted Standard)
 *Ideal para servidores en DigitalOcean, Heterzner, AWS, etc.*
 

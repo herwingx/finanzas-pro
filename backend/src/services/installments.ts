@@ -1,5 +1,6 @@
 import prisma from './database';
 import { createTransactionAndAdjustBalances } from './transactions';
+import { addMonths, endOfDay } from 'date-fns';
 
 /**
  * Checks all active installment purchases for a user and generates any due monthly transactions.
@@ -9,7 +10,7 @@ import { createTransactionAndAdjustBalances } from './transactions';
  */
 export const processInstallmentPurchases = async (userId: string): Promise<void> => {
     const now = new Date();
-    
+
     // Find all installment purchases that are not yet fully paid
     const activePurchases = await prisma.installmentPurchase.findMany({
         where: {
@@ -50,10 +51,9 @@ export const processInstallmentPurchases = async (userId: string): Promise<void>
             await prisma.$transaction(async (tx) => {
                 for (let i = 0; i < installmentsToCreate; i++) {
                     const currentInstallmentNumber = purchase.paidInstallments + i + 1;
-                    const dueDate = new Date(purchase.purchaseDate);
-                    // The due date is for the *end* of the Nth month period
-                    dueDate.setMonth(dueDate.getMonth() + currentInstallmentNumber);
-                    dueDate.setHours(23, 59, 59, 999);
+                    // Mueve los meses usando utilitarios estrictos e inmutables
+                    let dueDate = addMonths(new Date(purchase.purchaseDate), currentInstallmentNumber);
+                    dueDate = endOfDay(dueDate);
 
                     // Only process if the due date is in the past
                     if (dueDate <= now) {

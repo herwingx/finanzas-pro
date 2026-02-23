@@ -55,33 +55,30 @@ export async function createDailyAccountSnapshots(): Promise<{
   let skipped = 0;
   let errors = 0;
 
-  for (const account of accounts) {
-    try {
-      // Usar upsert para evitar duplicados si se ejecuta múltiples veces
-      await prisma.accountSnapshot.upsert({
+  try {
+    const upserts = accounts.map(account =>
+      prisma.accountSnapshot.upsert({
         where: {
           accountId_date: {
             accountId: account.id,
             date: today
           }
         },
-        update: {
-          // Si ya existe, actualizar el balance por si cambió
-          balance: account.balance
-        },
+        update: { balance: account.balance },
         create: {
           accountId: account.id,
           balance: account.balance,
           date: today
         }
-      });
+      })
+    );
 
-      created++;
-
-    } catch (error) {
-      console.error(`[SnapshotJob] Error en ${account.name}:`, error);
-      errors++;
-    }
+    // Ejecuta todos los upserts en una sola transacción segura
+    await prisma.$transaction(upserts);
+    created = accounts.length;
+  } catch (error) {
+    console.error(`[SnapshotJob] Error crítico durante el guardado de snapshots masivo:`, error);
+    errors = accounts.length;
   }
 
   console.log(

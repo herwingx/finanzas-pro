@@ -29,31 +29,23 @@ export const calculateRealAvailableBalance = async (userId: string): Promise<num
       type: AccountType.CREDIT,
       isArchived: false
     },
-    select: { id: true }
+    select: { balance: true }
   });
 
   let totalCreditObligation = 0;
 
   for (const card of creditCards) {
-    // Buscar el último estado de cuenta exigible (Pendiente, Parcial o Vencido)
-    const statement = await prisma.creditCardStatement.findFirst({
-      where: {
-        accountId: card.id,
-        status: { in: [StatementStatus.PENDING, StatementStatus.PARTIAL, StatementStatus.OVERDUE] }
-      },
-      orderBy: { cycleEnd: 'desc' }, // El más reciente
-    });
-
-    if (statement) {
-      // Lo que falta por pagar del corte
-      const remaining = statement.totalDue - (statement.paidAmount || 0);
-      if (remaining > 0) {
-        totalCreditObligation += remaining;
-      }
+    // Si la tarjeta tiene saldo deudor (balance > 0), es una obligación.
+    // Si la tarjeta tiene saldo a favor (balance < 0), representa más liquidez, 
+    // pero para este cálculo "Real Disponible", usualmente ignoras saldo a favor en TD.
+    // Opcional: Sumar saldo a favor restándolo convencionalmente. Aquí tratamos
+    // solo las deudas.
+    if (card.balance > 0) {
+      totalCreditObligation += card.balance;
+    } else if (card.balance < 0) {
+      // Saldo a favor, es como liquidez 'encerrada' en la tarjeta que se cobrará sola con el gasto.
+      // Opcional: sum -= card.balance para añadirlo, pero lo dejaremos así por ahora.
     }
-    // Nota: Si no hay statement (ej. compraste ayer pero no ha cortado), 
-    // bajo la lógica de "Corte Actual", tu obligación exigible es 0.
-    // Esto alinea con la lógica de "Cash Flow" vs "Net Worth".
   }
 
   return totalLiquid - totalCreditObligation;

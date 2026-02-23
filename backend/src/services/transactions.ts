@@ -77,14 +77,17 @@ export async function updateAccountBalances(tx: any, data: TransactionInput) {
       throw new Error('Destination account not found.');
     }
 
+    // Validar divisas
+    if (sourceAccount.currency !== destinationAccount.currency) {
+      throw new Error('Conversión automática de divisas no soportada. Cuentas deben ser de la misma divisa.');
+    }
+
     // Check for sufficient funds in source for non-credit accounts
     if ((sourceAccount.type === 'DEBIT' || sourceAccount.type === 'CASH') && sourceAccount.balance < amount) {
       throw new Error('Fondos insuficientes en la cuenta de origen.');
     }
-    // Special validation for credit card payments: Cannot pay more than the debt.
-    if (destinationAccount.type === 'CREDIT' && amount > destinationAccount.balance) {
-      throw new Error('No puedes transferir más que la deuda actual de la tarjeta de crédito.');
-    }
+    // Para pagos a tarjeta de crédito permitimos sobrepagar (saldo a favor)
+    // por lo tanto no validamos "amount > destinationAccount.balance" como un fallo restrictivo.
 
     // Validate source credit account won't go below 0 (can't have money in favor from withdrawing)
     if (sourceAccount.type === 'CREDIT') {
@@ -124,13 +127,9 @@ export async function updateAccountBalances(tx: any, data: TransactionInput) {
       });
     }
   } else { // 'income' or 'expense'
-    // CRITICAL FIX: Prevent direct income to CREDIT accounts
-    // This is confusing because it reduces debt but doesn't increase available funds
-    // Users should use transfers to pay credit cards instead.
-    // EXCEPTION: Allow if it is an MSI payment (installmentPurchaseId is present)
-    if (type === 'income' && sourceAccount.type === 'CREDIT' && !data.installmentPurchaseId) {
-      throw new Error('No puedes registrar ingresos directamente en una tarjeta de crédito. Para pagar tu tarjeta, usa una Transferencia desde tu cuenta de efectivo/débito.');
-    }
+    // NOTA FIX: Se eliminó la restricción de Income sobre CREDIT.
+    // Esto es completamente válido en la vida real para procesar reembolsos / Cashbacks.
+    // Un ingreso a una TDC recude su deuda o incrementa el saldo a favor.
 
     // Check for sufficient funds for expense from non-credit accounts
     if (type === 'expense' && (sourceAccount.type === 'DEBIT' || sourceAccount.type === 'CASH') && sourceAccount.balance < amount) {
@@ -143,12 +142,7 @@ export async function updateAccountBalances(tx: any, data: TransactionInput) {
       // - expense = debt increases (balance goes up)
       // - income = debt decreases (balance goes down) - BUT WE BLOCKED THIS ABOVE
       newBalance = type === 'expense' ? sourceAccount.balance + amount : sourceAccount.balance - amount;
-
-      // Validate credit card won't have negative balance (money in favor)
-      // This can happen if someone registers an income (refund) that exceeds the debt
-      if (type === 'income' && newBalance < 0) {
-        throw new Error('Este abono excede la deuda actual de la tarjeta. La tarjeta quedaría con saldo a favor, lo cual no es válido.');
-      }
+      // Ya no bloqueamos 'newBalance < 0'. Si baja de 0 es saldo a favor y es legal en el banco.
     } else { // DEBIT or CASH
       // For DEBIT/CASH accounts:
       // - expense = balance decreases

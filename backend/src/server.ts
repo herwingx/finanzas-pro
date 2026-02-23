@@ -2,6 +2,9 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import path from 'path';
 
+// Force timezone for the server to prevent cut-off shifts in CRON
+process.env.TZ = 'America/Mexico_City';
+
 // Security middleware
 import {
   corsMiddleware,

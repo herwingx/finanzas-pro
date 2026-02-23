@@ -14,7 +14,7 @@
  */
 
 import prisma from '../services/database';
-import { addMonths, startOfDay } from 'date-fns';
+import { addMonths, startOfDay, addDays, setDate } from 'date-fns';
 
 /**
  * Genera estados de cuenta para todas las tarjetas de crédito
@@ -73,14 +73,14 @@ export async function generateCreditCardStatements(): Promise<{
       const statement = await prisma.$transaction(async (tx) => {
         // 2a. Calcular fechas del ciclo
         const cycleEnd = startOfDay(today);
-        const cycleStart = addMonths(cycleEnd, -1);
-        cycleStart.setDate(cycleStart.getDate() + 1);
+        const cycleStart = addDays(addMonths(cycleEnd, -1), 1);
 
         // Calcular fecha de pago (paymentDay o 20 días después del corte)
-        const paymentDueDate = new Date(today);
-        paymentDueDate.setDate(account.paymentDay || today.getDate() + 20);
+        let paymentDueDate = startOfDay(new Date(today));
+        paymentDueDate = setDate(paymentDueDate, account.paymentDay || today.getDate() + 20);
+
         if (paymentDueDate <= today) {
-          paymentDueDate.setMonth(paymentDueDate.getMonth() + 1);
+          paymentDueDate = addMonths(paymentDueDate, 1);
         }
 
         // 2b. Sumar transacciones regulares no facturadas
